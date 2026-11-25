@@ -26,16 +26,17 @@ Ask me everything you need in one message first. Then reproduce Figure 1B and sh
 the paper's numbers next to yours, and then help me explore the data with my own questions.
 ```
 
-Your agent needs only [`uv`](https://docs.astral.sh/uv/). It downloads the laptop-size ("lite") files straight from the
-paper's original public repositories, verifies every checksum, reproduces the figure first so you can see the numbers
-match, and then writes transparent Python scripts in `analyses/` for your own questions.
+Your agent needs only [`uv`](https://docs.astral.sh/uv/). It fetches the pack first (no bulk data download up front),
+downloads only the files needed for the panel being run straight from the paper's original public repositories, verifies
+every checksum, reproduces the figure so you can see the numbers match, and then writes transparent Python scripts in
+`analyses/` for your own questions.
 
 Or run it directly from a terminal:
 
 ```bash
 RP="uvx --from git+https://github.com/runpapers/runpapers runpapers"   # "uvx runpapers" once it is on PyPI
 $RP get 10.1016/j.cell.2026.10.012     # or by PMID: $RP get 43020019
-cd johansen2026 && $RP run fig1b
+cd 10-1016-j-cell-2026-10-012 && $RP needs && $RP run fig1b
 ```
 
 ### Local MCP server & multi-paper meetings
@@ -68,7 +69,7 @@ recipe, target, data entry, or `SKILL.md` marks earlier badges as `stale` (`re-c
 
 | Badge | What was verified |
 |---|---|
-| **Runs** | Format, licenses, and security checks pass; lite data checksums match; every lite recipe re-ran from the original data under laptop/free-CI limits (4 CPUs, 14 GB RAM) and hit the paper's target numbers (`rp verify`). |
+| **Runs** | Format, licenses, and security checks pass; source data checksums match; every recipe in the pack met the paper's target numbers on the current content hash (re-run automatically under free-CI limits of 4 CPUs and 14 GB RAM, or recorded from HPC via `rp verify --record` for heavier/GPU panels). |
 | **Checked** | An independent reviewer (never the pack builder) compared every reproduced panel side by side with the published figure and audited targets and guardrails (`rp gallery`, `rp review`). |
 | **Reproduces** | A named scientist signed off the reproduction after a passing independent review (`rp signoff`). |
 | **Agent-tested** | Fresh AI agents from at least two companies (e.g. Claude Code, Antigravity, Codex), given only the copy-prompt in an empty folder, reproduced the figure and answered held-out test questions (`rp usertest`). |
@@ -98,8 +99,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [spec/pack-spec.md](spec/pack-spec.md
 
 ```bash
 rp new <DOI or PMID> --online   # scaffold papers/<doi>/ from Crossref and PubMed metadata
-rp lint <DOI>                   # Level-0 checks: format, licenses, lite budget, completeness, security scan
-rp verify <DOI>                 # Level-1 check: fetch lite data, run lite recipes under CI limits, check targets
+rp lint <DOI>                   # Level-0 checks: format 0.2, licenses, per-recipe needs, completeness, security scan
+rp verify <DOI>                 # Level-1 check: run CI-fitting recipes and verify every recipe meets its targets
 rp status <DOI>                 # current stage, badges, and next step
 ```
 
@@ -109,7 +110,7 @@ The `skills/runpapers-builder` skill walks an AI agent step by step through buil
 
 Every command supports `--help` and `--json` for machine-readable output:
 
-- **Scientists & workspaces:** `rp get <id>` · `rp recipes [id]` · `rp run [id] <recipe>|--all` · `rp fetch [id]` · `rp meeting "<topic>"` · `rp mcp`
+- **Scientists & workspaces:** `rp get <id>` · `rp needs [id]` · `rp recipes [id]` · `rp run [id] <recipe>|--all` · `rp fetch [id]` · `rp meeting "<topic>"` · `rp mcp`
 - **Discovery & paper queue:** `rp search [query]` · `rp resolve <id> [--online]` · `rp list` · `rp show <id>` · `rp request <id>` · `rp vote <id>` · `rp requests`
 - **Building & verification:** `rp new <id> [--online]` · `rp lint [id|--all]` · `rp verify [id|--all]` · `rp status [id|--all]` · `rp gallery <id>` · `rp review <id>` · `rp signoff <id>` · `rp endorse <id>` · `rp usertest <id>`
 - **Releases, website & maintainer ops:** `rp release check|build <id>` · `rp publish github|zenodo|huggingface <id>` · `rp site build|serve` · `rp ops board|nightly|targets|prepublish|fresh-history|github-setup`

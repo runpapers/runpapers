@@ -54,9 +54,11 @@ analysis (`level = "new"`). **Compute every answer twice**: once with the recipe
 that doesn't import the pack. Record both in `source`. Mark a few `public = true` as examples for the paper's page.
 
 ## 6. Verify
-`rp lint <DOI>` until clean, then `rp verify <DOI>` (L1 under CI limits). If a target fails: check your pipeline
-first, then the paper's definitions; never loosen a tolerance just to pass. A failed reproduction, documented, is a
-result. Then `rp status <DOI>`: the next step is an independent review.
+`rp lint <DOI>` until clean, then `rp verify <DOI>` (runs every recipe that fits CI limits: <= 14 GB RAM, no GPU,
+< 60 min; run heavier or GPU recipes on HPC and record their outputs with `rp verify <DOI> --record <out_dir>`).
+Every recipe in the pack must pass on the current content hash for `runs` to pass. If a target fails: check your
+pipeline first, then the paper's definitions; never loosen a tolerance just to pass. A failed reproduction, documented,
+is a result. Then `rp status <DOI>`: the next step is an independent review.
 
 ## 7. Independent review, sign-off and user tests (other people do these)
 - Reviewer (never the builder): `rp gallery <DOI>`, compare every panel with the published one, then

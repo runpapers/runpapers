@@ -1,13 +1,15 @@
 """Verification levels, records and the pipeline stage of each paper.
 
 Badges (each record in papers/<doi>/verify/ is bound to the pack's content hash; a change makes it 'stale'):
-  runs         L1: lint passes, lite data verified, every lite recipe meets its targets under CI limits (automatic)
+  runs         L1: lint passes and every recipe meets its targets on this content (CI for recipes within CI limits;
+               HPC runs recorded with `rp verify --record` for heavier or GPU recipes)
   checked      an independent critic compared every reproduced panel with the published one (agent review)
   reproduces   L2: a named human signed off the paper after the critic's check (the PI, once per paper)
   agent-tested L3: fresh agents from >= 2 families, given only the copy-prompt, reproduced and answered the test questions
   endorsed     an author of the paper approved the pack (ORCID-matched)
 """
 import datetime as dt
+import json
 import platform
 import shutil
 import tempfile
@@ -19,6 +21,7 @@ from .registry import read_json, write_json
 STAGES = ["planned", "building", "ready", "runs", "checked", "reproduces", "agent-tested", "released"]
 MIN_FAMILIES = 2
 PUBLIC_TARGETS = {"github", "zenodo", "huggingface"}
+CI_LIMITS = recipes.CI_LIMITS
 
 
 def now():
@@ -37,10 +40,92 @@ def _current(rec, h):
     return bool(rec) and rec.get("pack_hash") == h
 
 
+def fits_ci(pack, r):
+    """True when recipe `r` fits the free CI machine (4 CPUs, <= 14 GB RAM, no GPU, < 60 min)."""
+    n = pack.recipe_needs(r) if not ("memory_gb" in r and "gpu" in r and "minutes" in r) else r
+    return (not bool(n.get("gpu", False))
+            and float(n.get("memory_gb", 8)) <= CI_LIMITS["memory_gb"]
+            and float(n.get("minutes", 20)) < CI_LIMITS["max_minutes"])
+
+
+def _measured_mem_gb(rss_mb):
+    val = round(rss_mb / 1024, 1) if rss_mb >= 102 else max(0.01, round(rss_mb / 1024, 2))
+    return int(val) if isinstance(val, float) and val.is_integer() else val
+
+
+def _measured_minutes(secs):
+    val = round(secs / 60, 1) if secs >= 6 else max(0.01, round(secs / 60, 2))
+    return int(val) if isinstance(val, float) and val.is_integer() else val
+
+
+def needs(pack, out_dirs=()):
+    """Per-recipe and total resource needs for `pack`; measured values from completed runs replace estimates."""
+    h = pack.content_hash()
+    l1 = record(pack, "l1") or {}
+    l1_recs = (l1.get("recipes") or {}) if l1.get("pack_hash") == h else {}
+    rows = []
+    for r in pack.recipes:
+        rid = r["id"]
+        decl = pack.recipe_needs(r)
+        run_rec = None
+        for d in out_dirs or ():
+            cand = read_json(Path(d) / rid / "result.json")
+            if cand and cand.get("pack_hash") in (None, h) and (cand.get("pass") or cand.get("status") == "ok"):
+                run_rec = cand
+                break
+        if run_rec is None:
+            lr = l1_recs.get(rid)
+            if isinstance(lr, dict) and lr.get("pack_hash", h) == h and (lr.get("pass") or lr.get("status") == "ok"):
+                run_rec = lr
+        rss_mb = run_rec.get("peak_rss_mb") if run_rec else None
+        secs = run_rec.get("seconds") if run_rec else None
+        mem_gb = _measured_mem_gb(rss_mb) if rss_mb is not None else decl["memory_gb"]
+        mins = _measured_minutes(secs) if secs is not None else decl["minutes"]
+        rows.append({
+            "id": rid,
+            "panel": r.get("panel", ""),
+            "title": r.get("title", ""),
+            "data": decl["data"],
+            "data_bytes": decl["data_bytes"],
+            "memory_gb": mem_gb,
+            "gpu": decl["gpu"],
+            "minutes": mins,
+            "measured": rss_mb is not None or secs is not None,
+            "peak_rss_mb": rss_mb,
+            "seconds": secs,
+        })
+    tot_min = round(sum(x["minutes"] for x in rows), 2)
+    if isinstance(tot_min, float) and tot_min.is_integer():
+        tot_min = int(tot_min)
+    return {
+        "doi": pack.doi,
+        "version": pack.version,
+        "recipes": rows,
+        "totals": {
+            "data": sorted({did for x in rows for did in x["data"]}),
+            "data_bytes": pack.data_bytes(),
+            "memory_gb": max((x["memory_gb"] for x in rows), default=0),
+            "gpu": any(x["gpu"] for x in rows),
+            "minutes": tot_min,
+        },
+    }
+
+
+def _all_recipes_pass(pack, rec_map, h):
+    return bool(pack.recipes) and all(
+        isinstance(rec_map.get(r["id"]), dict)
+        and rec_map[r["id"]].get("pass")
+        and rec_map[r["id"]].get("pack_hash", h) == h
+        for r in pack.recipes
+    )
+
+
 def run_l1(pack, ci=True, quiet=False, keep_out=None):
-    """L1 on the registry copy of a pack. Writes verify/l1.json. Returns the record."""
+    """L1 on the registry copy of a pack. Runs recipes that fit CI limits and preserves current-hash HPC records."""
     h = pack.content_hash()
     findings = spec.lint(pack)
+    prev = record(pack, "l1") or {}
+    prev_recs = (prev.get("recipes") or {}) if prev.get("pack_hash") == h else {}
     rec = {"level": "L1", "pack_hash": h, "version": pack.version, "at": now(), "rp_version": __version__,
            "platform": f"{platform.system()} {platform.machine()} py{platform.python_version()}",
            "lint": [list(x) for x in findings], "recipes": {}, "pass": False, "notes": []}
@@ -48,16 +133,126 @@ def run_l1(pack, ci=True, quiet=False, keep_out=None):
         rec["notes"].append("lint errors: recipes not run")
         write_json(vdir(pack) / "l1.json", rec)
         return rec
-    paths, notes = data.fetch(pack, "lite", quiet=quiet)
-    rec["notes"] += notes
     out_root = Path(keep_out) if keep_out else Path(tempfile.mkdtemp(prefix="rp-l1-"))
-    lite = [r for r in pack.recipes if r.get("tier", "lite") == "lite"]
-    for r in lite:
-        res = recipes.run(pack, r["id"], data.data_dir(pack.doi), out_root, ci=ci, quiet=quiet)
-        rec["recipes"][r["id"]] = {k: res[k] for k in ("panel", "status", "seconds", "peak_rss_mb", "pass", "checks", "figures")}
-    rec["pass"] = bool(lite) and all(v["pass"] for v in rec["recipes"].values())
-    if not lite:
-        rec["notes"].append("no lite recipes: L1 needs at least one panel that runs on a laptop")
+    if not pack.recipes:
+        rec["notes"].append("no recipes in pack")
+        write_json(vdir(pack) / "l1.json", rec)
+        return rec
+    where = "ci" if ci else "local"
+    for r in pack.recipes:
+        rid = r["id"]
+        if fits_ci(pack, r):
+            only = set(r["data"]) if "data" in r else None
+            _, notes = data.fetch(pack, only=only, quiet=quiet)
+            for n in notes:
+                if n not in rec["notes"]:
+                    rec["notes"].append(n)
+            res = recipes.run(pack, rid, data.data_dir(pack.doi), out_root, ci=ci, quiet=quiet)
+            rec["recipes"][rid] = {
+                **{k: res[k] for k in ("panel", "status", "seconds", "peak_rss_mb", "pass", "checks", "figures")},
+                "where": where, "pack_hash": h, "at": now(),
+            }
+        else:
+            old = prev_recs.get(rid)
+            if isinstance(old, dict) and old.get("pack_hash", h) == h:
+                rec["recipes"][rid] = old
+            else:
+                nd = pack.recipe_needs(r)
+                rec["notes"].append(
+                    f"{rid}: exceeds CI limits ({nd['memory_gb']:g} GB RAM, {'GPU' if nd['gpu'] else 'CPU'}, "
+                    f"{nd['minutes']:g} min); run on HPC and record with `rp verify {pack.doi} --record <out_dir>`"
+                )
+    rec["pass"] = _all_recipes_pass(pack, rec["recipes"], h)
+    write_json(vdir(pack) / "l1.json", rec)
+    return rec
+
+
+def _discover_run_dirs(pack, source_path):
+    p = Path(source_path)
+    if p.is_file() and p.name in ("result.json", "metrics.json"):
+        p = p.parent
+    if not p.is_dir():
+        raise SystemExit(f"record path not found: {source_path}")
+    known = {r["id"] for r in pack.recipes}
+    if (p / "result.json").is_file() or (p / "metrics.json").is_file():
+        res = read_json(p / "result.json") or {}
+        rid = res.get("recipe") or p.name
+        if rid not in known:
+            raise SystemExit(f"unknown recipe {rid!r} in {p} (have: {', '.join(sorted(known))})")
+        return [(rid, p)]
+    found = []
+    for r in pack.recipes:
+        sub = p / r["id"]
+        if (sub / "result.json").is_file() or (sub / "metrics.json").is_file():
+            found.append((r["id"], sub))
+    if not found:
+        raise SystemExit(f"no recipe outputs (result.json or metrics.json) found in {source_path}")
+    return found
+
+
+def record_run(pack, source_path, where="hpc", keep_out=None):
+    """Record external/HPC recipe outputs into verify/l1.json (bound to current pack_hash) and build/l1/<doi>/."""
+    h = pack.content_hash()
+    findings = spec.lint(pack)
+    if spec.errors(findings):
+        raise SystemExit("cannot record runs while pack has lint errors; run `rp lint` first")
+    pairs = _discover_run_dirs(pack, source_path)
+    prev = record(pack, "l1")
+    if prev and prev.get("pack_hash") == h:
+        rec = prev
+        rec["lint"] = [list(x) for x in findings]
+        rec["at"] = now()
+        rec["rp_version"] = __version__
+    else:
+        rec = {"level": "L1", "pack_hash": h, "version": pack.version, "at": now(), "rp_version": __version__,
+               "platform": f"{platform.system()} {platform.machine()} py{platform.python_version()}",
+               "lint": [list(x) for x in findings], "recipes": {}, "pass": False, "notes": []}
+    for rid, rdir in pairs:
+        r = pack.recipe(rid)
+        res = read_json(rdir / "result.json") or {}
+        if res.get("pack_hash") and res["pack_hash"] != h:
+            raise SystemExit(
+                f"{rid}: output was produced on pack_hash {res['pack_hash'][:12]}, "
+                f"current pack is {h[:12]}; re-run on current pack"
+            )
+        metrics = read_json(rdir / "metrics.json")
+        obs_fallback = {c.get("metric"): c.get("observed") for c in (res.get("checks") or []) if "metric" in c}
+        checks = []
+        for t in pack.targets_for(rid):
+            tol = t.get("tolerance") or {"exact": True}
+            obs = metrics.get(t["metric"]) if isinstance(metrics, dict) else obs_fallback.get(t["metric"])
+            ok, detail = recipes.compare(t.get("expected"), obs, tol)
+            checks.append({"metric": t["metric"], "expected": t.get("expected"), "observed": obs,
+                           "tolerance": tol, "ok": ok, "detail": detail, "source": t.get("source", ""),
+                           "kind": t.get("kind", "figure"), "required": t.get("required", True), "note": t.get("note", "")})
+        status_val = res.get("status", "ok" if (metrics is not None or obs_fallback) else "no-metrics")
+        passed = (status_val == "ok" and any(c["required"] for c in checks)
+                  and all(c["ok"] for c in checks if c["required"]))
+        figures = sorted(f.name for f in rdir.iterdir() if f.is_file() and f.suffix.lower() in (".png", ".svg", ".pdf", ".jpg"))
+        secs = res.get("seconds")
+        peak_mb = res.get("peak_rss_mb")
+        if keep_out is not None:
+            dst = Path(keep_out) / rid
+            if dst.resolve() != rdir.resolve():
+                if dst.exists():
+                    shutil.rmtree(dst)
+                dst.mkdir(parents=True, exist_ok=True)
+                for f in sorted(rdir.iterdir()):
+                    if f.is_file() and not f.name.startswith(".") and f.suffix.lower() in (".png", ".svg", ".pdf", ".jpg", ".csv", ".json"):
+                        shutil.copy2(f, dst / f.name)
+            norm_res = {"recipe": rid, "panel": r.get("panel", ""), "pack_hash": h, "status": status_val,
+                        "returncode": res.get("returncode", 0 if status_val == "ok" else 1), "seconds": secs,
+                        "peak_rss_mb": peak_mb, "ci": False, "where": where, "checks": checks,
+                        "pass": passed, "figures": figures, "log": "run.log"}
+            (dst / "result.json").write_text(json.dumps(norm_res, indent=1) + "\n")
+        rec["recipes"][rid] = {"panel": r.get("panel", ""), "status": status_val, "seconds": secs,
+                               "peak_rss_mb": peak_mb, "pass": passed, "checks": checks, "figures": figures,
+                               "where": where, "pack_hash": h, "at": now()}
+    # Prune notes for recipes that have now been recorded cleanly.
+    rec["notes"] = [n for n in (rec.get("notes") or [])
+                    if not any(n.startswith(f"{rid}: exceeds CI limits") and rec["recipes"].get(rid, {}).get("pass")
+                               for rid, _ in pairs)]
+    rec["pass"] = _all_recipes_pass(pack, rec["recipes"], h)
     write_json(vdir(pack) / "l1.json", rec)
     return rec
 
@@ -159,7 +354,7 @@ def status(pack):
             "lint": {"errors": len(errs), "warnings": len(findings) - len(errs)},
             "l1": {"at": l1.get("at"), "pass": l1.get("pass"),
                    "recipes": {k: {"pass": v.get("pass"), "seconds": v.get("seconds"), "peak_rss_mb": v.get("peak_rss_mb"),
-                                   "panel": v.get("panel")} for k, v in (l1.get("recipes") or {}).items()}} if l1 else None,
+                                   "panel": v.get("panel"), "where": v.get("where")} for k, v in (l1.get("recipes") or {}).items()}} if l1 else None,
             "review": {k: rv.get(k) for k in ("at", "by", "verdict", "note")} if rv else None,
             "signoff": {k: so.get(k) for k in ("at", "by", "decision", "note")} if so else None,
             "usertest": {"families": fams, "runs": [{k: r.get(k) for k in ("agent", "model", "at", "pass", "score", "seconds")}
@@ -174,41 +369,49 @@ def tool_available(name):
 
 
 def resources(pack, l1_root=None):
-    """What running this pack costs, measured on our own runs (2026-11-25, the PI): disk (data + outputs), how long
-    the recipes take and their peak memory (the last L1 run), and how long a fresh AI agent took from the pasted
-    prompt to a finished reproduction (naive-user tests on the current version). Nothing here is a guess except
-    'env_bytes', the usual size of the Python packages a recipe installs the first time."""
+    """What running this pack costs, combining per-recipe needs with measured L1/HPC runs and usertest timings."""
     from . import ids
-    lite = [d for d in pack.data if d.get("tier", "lite") == "lite"]
-    full = [d for d in pack.data if d.get("tier", "lite") != "lite"]
-    out = {"data_bytes": sum(int(d.get("size", 0)) for d in lite),
-           "full_data_bytes": sum(int(d.get("size", 0)) for d in full) or None,
-           "env_bytes": 300_000_000, "outputs_bytes": None, "recipes": {}, "recipe_minutes": None,
-           "peak_ram_gb": None, "agent_minutes": None, "measured_on": None, "cluster_recipes": []}
-    if l1_root:
-        d = Path(l1_root) / ids.doi_relpath(pack.doi)
-        if d.is_dir():
-            out["outputs_bytes"] = sum(f.stat().st_size for f in d.rglob("*") if f.is_file())
+    out_dirs = [Path(l1_root) / ids.doi_relpath(pack.doi)] if l1_root else []
+    nd = needs(pack, out_dirs=out_dirs)
+    outputs_bytes = None
+    if out_dirs and out_dirs[0].is_dir():
+        outputs_bytes = sum(f.stat().st_size for f in out_dirs[0].rglob("*") if f.is_file())
     l1 = record(pack, "l1") or {}
-    tiers = {r["id"]: r.get("tier", "lite") for r in pack.recipes}
-    secs, rss = [], []
-    for rid, r in (l1.get("recipes") or {}).items():
-        if isinstance(r, dict) and r.get("seconds") is not None:
-            out["recipes"][rid] = {"seconds": r["seconds"], "peak_ram_mb": r.get("peak_rss_mb"), "tier": tiers.get(rid, "lite")}
-            if tiers.get(rid, "lite") == "lite":
-                secs.append(r["seconds"])
-                if r.get("peak_rss_mb"):
-                    rss.append(r["peak_rss_mb"])
-    out["cluster_recipes"] = [rid for rid, t in tiers.items() if t != "lite"]
-    if secs:
-        out["recipe_minutes"] = round(sum(secs) / 60, 1)
-        out["measured_on"] = l1.get("platform")
-    if rss:
-        out["peak_ram_gb"] = round(max(rss) / 1024, 1)
+    l1_cur = l1 if l1.get("pack_hash") == pack.content_hash() else {}
+    recs = {}
+    for r in nd["recipes"]:
+        rid = r["id"]
+        lr = (l1_cur.get("recipes") or {}).get(rid) or {}
+        recs[rid] = {
+            "data_bytes": r["data_bytes"],
+            "memory_gb": r["memory_gb"],
+            "gpu": r["gpu"],
+            "minutes": r["minutes"],
+            "measured": r["measured"],
+            "seconds": r["seconds"],
+            "peak_ram_mb": r["peak_rss_mb"],
+            "where": lr.get("where"),
+        }
+    hpc_recipes = [r["id"] for r in nd["recipes"] if not fits_ci(pack, r)]
     ut = [r for r in ((record(pack, "usertest") or {}).get("runs") or [])
           if r.get("pass") and r.get("seconds") and r.get("version") == pack.version]
+    agent_min = None
     if ut:
         m = sorted(r["seconds"] for r in ut)
-        out["agent_minutes"] = [round(m[0] / 60), round(m[-1] / 60)]
-    out["disk_bytes"] = out["data_bytes"] + (out["outputs_bytes"] or 0) + out["env_bytes"]
-    return out
+        agent_min = [round(m[0] / 60), round(m[-1] / 60)]
+    env_bytes = 300_000_000
+    data_bytes = nd["totals"]["data_bytes"]
+    return {
+        "data_bytes": data_bytes,
+        "env_bytes": env_bytes,
+        "outputs_bytes": outputs_bytes,
+        "disk_bytes": data_bytes + (outputs_bytes or 0) + env_bytes,
+        "memory_gb": nd["totals"]["memory_gb"],
+        "gpu": nd["totals"]["gpu"],
+        "recipe_minutes": nd["totals"]["minutes"],
+        "peak_ram_gb": nd["totals"]["memory_gb"] if any(r["measured"] for r in nd["recipes"]) else None,
+        "agent_minutes": agent_min,
+        "measured_on": l1_cur.get("platform"),
+        "hpc_recipes": hpc_recipes,
+        "recipes": recs,
+    }

@@ -10,7 +10,7 @@ from . import __version__, ids, spec
 from .recipes import check_tolerance, format_expected
 from .registry import read_json, write_json
 from .requests_log import summary as requests_summary
-from .verify import STAGES, now, record, run_l1, status
+from .verify import STAGES, fits_ci, now, record, run_l1, status
 
 
 def board(reg):
@@ -76,12 +76,14 @@ def gallery(reg, pack, refs_dir=None):
     l1 = record(pack, "l1") or {}
     e = lambda x: html.escape(str(x))
     items, panels = [], []
+    l1_cur = l1 if l1.get("pack_hash") == pack.content_hash() else {}
     for r in pack.recipes:
         rid = r["id"]
-        tier = r.get("tier", "lite")
+        nd = pack.recipe_needs(r)
+        hpc = not fits_ci(pack, r)
         rdir = l1_out(reg, pack) / rid
-        res = read_json(rdir / "result.json") or {}
-        ours = ([rdir / f for f in res["figures"]] if res.get("figures")
+        res = read_json(rdir / "result.json") or ((l1_cur.get("recipes") or {}).get(rid) or {})
+        ours = ([rdir / f for f in res["figures"] if (rdir / f).is_file()] if res.get("figures") and rdir.is_dir()
                 else (sorted(rdir.glob("*.png")) if res and rdir.is_dir() else []))
         theirs = sorted(refs.glob(f"{rid}*.*")) if refs.is_dir() else []
         targets = pack.targets_for(rid)
@@ -95,27 +97,30 @@ def gallery(reg, pack, refs_dir=None):
         else:
             checks = "".join(
                 f"<tr><td>{e(t['metric'])}</td><td>{e(format_expected(t.get('expected'), t.get('tolerance')))}</td><td class='mut'>—</td>"
-                f"<td class='mut'>not run yet</td><td class='mut'>{'cluster / full-tier recipe not run locally yet' if tier == 'full' else 'run recipe to compare'}</td>"
+                f"<td class='mut'>not run yet</td><td class='mut'>{'run on HPC and record with rp verify --record' if hpc else 'run recipe to compare'}</td>"
                 f"<td>{e(t.get('source', ''))}</td></tr>"
                 for t in targets
             )
-        tier_badge = "<span class='tier full'>full tier · cluster</span>" if tier == "full" else "<span class='tier'>lite</span>"
-        run_state = ("PASS" if res.get("pass") else ("not run yet (cluster / full tier)" if not res and tier == "full"
+        where = res.get("where") or ((l1_cur.get("recipes") or {}).get(rid) or {}).get("where")
+        needs_pill = (f"<span class='pill{' hpc' if (hpc or where == 'hpc') else ''}'>"
+                      f"{nd['memory_gb']:g} GB · {'GPU' if nd['gpu'] else 'CPU'} · {nd['minutes']:g}m"
+                      + (f" · {e(where)}" if where == "hpc" else (" · HPC" if hpc else "")) + "</span>")
+        run_state = ("PASS" if res.get("pass") else ("not run yet (HPC)" if not res and hpc
                      else ("not run yet" if not res else "not passing")))
-        none_repro = "not run locally yet (full-tier cluster recipe)" if not res and tier == "full" else "none"
+        none_repro = "not run yet (HPC recipe)" if not res and hpc else "none"
         imgs = lambda ps, lab: "".join(f"<figure><figcaption>{lab}: {e(p.name)}</figcaption><img src='file://{e(str(p))}' alt='{e(lab)}: {e(p.name)}'></figure>" for p in ps) \
             or f"<figure><figcaption>{lab}</figcaption><p class='mut'>{'none (published images are kept privately in refs/ until the paper license allows showing them)' if lab == 'Published' else none_repro}</p></figure>"
-        items.append(f"<section><h2>{e(r.get('panel', ''))} · <code>{e(rid)}</code> {tier_badge} · {run_state}</h2>"
+        items.append(f"<section><h2>{e(r.get('panel', ''))} · <code>{e(rid)}</code> {needs_pill} · {run_state}</h2>"
                      f"<p>{e(r.get('title', ''))}</p><div class='pair'>{imgs(theirs, 'Published')}{imgs(ours, 'Reproduced')}</div>"
                      f"<table><tr><th>Metric</th><th>Paper</th><th>Ours</th><th></th><th>Detail</th><th>Source</th></tr>{checks}</table></section>")
-        panels.append({"recipe": rid, "panel": r.get("panel"), "tier": tier, "pass": res.get("pass"),
+        panels.append({"recipe": rid, "panel": r.get("panel"), "needs": nd, "where": where, "pass": res.get("pass"),
                        "ours": [str(p) for p in ours], "published": [str(p) for p in theirs], "checks": res.get("checks", [])})
     page = f"""<!doctype html><meta charset=utf-8><title>Sign-off: {e(pack.title)}</title>
 <style>body{{font:15px/1.5 system-ui,sans-serif;max-width:1200px;margin:20px auto;padding:0 16px;color:#1d2230}}
 .pair{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}figure{{margin:0;border:1px solid #e3e7ef;border-radius:8px;padding:8px}}
 img{{width:100%}}table{{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0 24px}}td,th{{border-bottom:1px solid #e3e7ef;padding:5px;text-align:left}}
-.tier{{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:12px;background:#f3f4f6;color:#374151;vertical-align:middle}}
-.tier.full{{background:#eef2ff;color:#1e3a8a;border:1px solid #c7d2fe}}
+.pill{{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:12px;background:#f3f4f6;color:#374151;vertical-align:middle}}
+.pill.hpc{{background:#eef2ff;color:#1e3a8a;border:1px solid #c7d2fe}}
 .mut{{color:#5b6475}}section{{border-top:2px solid #1d2230;margin-top:20px}}</style>
 <h1>{e(pack.title)}</h1><p>DOI {e(pack.doi)} · pack v{e(pack.version)} · hash {pack.content_hash()[:12]} · L1 at {e(l1.get('at', 'never'))}</p>
 {''.join(items)}"""
@@ -126,7 +131,7 @@ img{{width:100%}}table{{border-collapse:collapse;width:100%;font-size:13px;margi
 
 
 def nightly(reg, run_l1_stale=True, quiet=True):
-    """Lint every pack; re-run L1 where it is missing or stale (lite data is cached, so this is cheap); rebuild
+    """Lint every pack; re-run CI-eligible recipes where L1 is missing or stale; rebuild
     the site; write build/nightly.json. Never touches sign-offs or reviews."""
     from . import site
     rep = {"at": now(), "packs": {}, "site": None}

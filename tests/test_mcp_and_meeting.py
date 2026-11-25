@@ -57,7 +57,7 @@ def _make_pack(reg, cache_dir, *, doi, pmid, citekey, title, first_author, profi
     (d / "evals").mkdir()
     prof_lines = "\n".join(f"{k} = {json.dumps(v)}" for k, v in profile.items())
     (d / "pack.toml").write_text(
-        f'spec = "runpapers/0.1"\n'
+        f'spec = "runpapers/0.2"\n'
         f'[paper]\n'
         f'doi = "{doi}"\n'
         f'pmid = "{pmid}"\n'
@@ -81,7 +81,6 @@ def _make_pack(reg, cache_dir, *, doi, pmid, citekey, title, first_author, profi
         f'url = "https://example.org/counts.csv"\n'
         f'size = {len(CSV_BYTES)}\n'
         f'md5 = "{CSV_MD5}"\n'
-        f'tier = "lite"\n'
         f'source = "Test Archive v1"\n'
         f'license = {json.dumps(data_license)}\n'
         f'[[recipes]]\n'
@@ -89,9 +88,8 @@ def _make_pack(reg, cache_dir, *, doi, pmid, citekey, title, first_author, profi
         f'title = "Summary counts"\n'
         f'panel = "Figure 1B"\n'
         f'script = "recipes/fig1.py"\n'
-        f'tier = "lite"\n'
         f'data = ["counts"]\n'
-        f'max_minutes = 2\n'
+        f'needs = {{ memory_gb = 4, gpu = false, minutes = 2 }}\n'
     )
     (d / "targets.toml").write_text(TARGETS_SRC)
     (d / "SKILL.md").write_text(
@@ -312,17 +310,18 @@ class McpAndMeetingTests(unittest.TestCase):
         self.assertFalse(r_plan["structuredContent"]["packed"])
         self.assertEqual(r_plan["structuredContent"]["stage"], "planned")
 
-        # list_recipes includes locked targets (and optional discrepancy target) and filters by tier
-        recs = mcp_server.handle_tool_call(self.cat, "list_recipes", {"id": "11111111", "tier": "lite", "include_targets": True})
+        # list_recipes includes locked targets (and optional discrepancy target) and filters by resource needs
+        recs = mcp_server.handle_tool_call(self.cat, "list_recipes", {"id": "11111111", "max_memory_gb": 8, "gpu": False, "include_targets": True})
         self.assertFalse(recs["isError"])
         rlist = recs["structuredContent"]["recipes"]
         self.assertEqual(len(rlist), 1)
+        self.assertEqual(rlist[0]["needs"], {"memory_gb": 4, "gpu": False, "minutes": 2})
         self.assertTrue(rlist[0]["l1_pass"])
         self.assertEqual(len(rlist[0]["targets"]), 2)
         self.assertTrue(any(not t.get("required", True) for t in rlist[0]["targets"]))
 
-        recs_full = mcp_server.handle_tool_call(self.cat, "list_recipes", {"id": "11111111", "tier": "full"})
-        self.assertEqual(recs_full["structuredContent"]["recipes"], [])
+        recs_gpu = mcp_server.handle_tool_call(self.cat, "list_recipes", {"id": "11111111", "gpu": True})
+        self.assertEqual(recs_gpu["structuredContent"]["recipes"], [])
 
     # 4. Skills over MCP (full SKILL.md, section filter, references/, skill:// resources) & strict evals/ blocking
     def test_mcp_skills_over_mcp_and_security(self):

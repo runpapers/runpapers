@@ -42,14 +42,39 @@ def c_get(a):
     from .workspace import get
     import shutil
     rp_cmd = os.environ.get("RUNPAPERS_RP_CMD") or ("rp" if shutil.which("rp") else "uvx runpapers")
-    target, notes = get(a.id, dest=a.dir, tier=a.tier, source=a.source, fetch_data=not a.no_data, rp_cmd=a.rp_cmd or rp_cmd)
+    target, notes = get(a.id, dest=a.dir, source=a.source, fetch_data=bool(getattr(a, "fetch_data", False)), rp_cmd=a.rp_cmd or rp_cmd)
     out({"workspace": str(target), "notes": notes}, a.json, f"Ready: {target}\nNext: cd {target} and read SKILL.md")
 
 
 def c_recipes(a):
     pk, *_ = pack_or_workspace(a.id)
-    rows = [{"id": r["id"], "panel": r.get("panel"), "title": r.get("title"), "tier": r.get("tier", "lite")} for r in pk.recipes]
-    out(rows, a.json, "\n".join(f"{r['id']:14} {r['tier']:5} {r['panel']}: {r['title']}" for r in rows))
+    rows = [{"id": r["id"], "panel": r.get("panel"), "title": r.get("title"), **pk.recipe_needs(r)} for r in pk.recipes]
+    out(rows, a.json, "\n".join(
+        f"{r['id']:14} {(r['panel'] or ''):12} {r['memory_gb']:g}G {'GPU' if r['gpu'] else 'CPU'} {r['minutes']:g}m  {r['title']}"
+        for r in rows
+    ))
+
+
+def c_needs(a):
+    from . import site, verify
+    pk, _, _, ws = pack_or_workspace(a.id)
+    if ws is not None:
+        out_dirs = [ws / "out"]
+    else:
+        from .ops import l1_out
+        reg = reg_()
+        base_l1 = l1_out(reg, pk)
+        out_dirs = [base_l1, base_l1.parent / (base_l1.name + "-manual")]
+    nd = verify.needs(pk, out_dirs=out_dirs)
+    t = nd["totals"]
+    lines = [f"{nd['doi']} (v{nd['version']})"]
+    for r in nd["recipes"]:
+        src = "measured" if r["measured"] else "estimated"
+        lines.append(f"  {r['id']:14} {(r['panel'] or ''):12} {site.fmt_bytes(r['data_bytes']):>9}  "
+                     f"{r['memory_gb']:g} GB RAM  {'GPU' if r['gpu'] else 'no GPU':6}  {r['minutes']:g} min ({src})")
+    lines.append(f"  {'total':14} {'(unique data)':12} {site.fmt_bytes(t['data_bytes']):>9}  "
+                 f"{t['memory_gb']:g} GB RAM  {'GPU' if t['gpu'] else 'no GPU':6}  {t['minutes']:g} min")
+    out(nd, a.json, "\n".join(lines))
 
 
 def c_run(a):
@@ -61,19 +86,23 @@ def c_run(a):
     else:
         ident, rid = None, None
     pk, dd, out_root, ws = pack_or_workspace(ident)
-    todo = [r["id"] for r in pk.recipes if a.all and (r.get("tier", "lite") == "lite" or a.tier == "full")] if a.all else [rid]
+    todo = [r["id"] for r in pk.recipes] if a.all else [rid]
     if not todo or todo == [None]:
         raise SystemExit("which recipe? `rp recipes` lists them")
-    needed = {d for r in todo for d in pk.recipe(r).get("data", [])}
-    data.fetch(pk, a.tier if a.all else pk.recipe(rid).get("tier", "lite"), only=needed, quiet=a.json, dest_dir=dd)
-    res = [recipes.run(pk, r, dd, out_root, ci=a.ci, quiet=a.json) for r in todo]
+    res = []
+    for r in todo:
+        r_obj = pk.recipe(r)
+        only = set(r_obj["data"]) if "data" in r_obj else None
+        data.fetch(pk, only=only, quiet=a.json, dest_dir=dd)
+        res.append(recipes.run(pk, r, dd, out_root, ci=a.ci, quiet=a.json))
     out(res if len(res) > 1 else res[0], a.json, None if a.json else "\n".join(f"{r['recipe']}: {'PASS' if r['pass'] else 'FAIL'} -> {Path(r['log']).parent}" for r in res))
     sys.exit(0 if all(r["pass"] for r in res) else 1)
 
 
 def c_fetch(a):
-    pk, *_ = pack_or_workspace(a.id)
-    paths, notes = data.fetch(pk, a.tier)
+    pk, dd, *_ = pack_or_workspace(a.id)
+    only = set(pk.recipe(a.recipe).get("data", [])) if getattr(a, "recipe", None) else None
+    paths, notes = data.fetch(pk, only=only, quiet=a.json, dest_dir=dd)
     out({"files": paths, "notes": notes}, a.json, "\n".join([f"{k}: {v}" for k, v in paths.items()] + notes))
 
 
@@ -189,8 +218,7 @@ def c_meeting(a):
         genes=a.gene or (),
         max_papers=a.max_papers,
         min_stage=a.min_stage,
-        tier=a.tier,
-        fetch_data=not a.no_data,
+        fetch_data=bool(getattr(a, "fetch_data", False)),
         dest=a.dir,
         source=a.source,
         rp_cmd=rp_cmd,
@@ -234,7 +262,17 @@ def c_lint(a):
 
 def c_verify(a):
     from .ops import l1_out
-    from .verify import run_l1
+    from .verify import record_run, run_l1
+    if a.record:
+        if a.all:
+            raise SystemExit("--record applies to a single paper")
+        reg = reg_()
+        pk = reg.pack(a.id)
+        rec = record_run(pk, a.record, where=a.where, keep_out=l1_out(reg, pk))
+        v = {"pass": rec["pass"], "recipes": {k: x["pass"] for k, x in rec["recipes"].items()}, "notes": rec["notes"]}
+        out({pk.doi: v}, a.json, f"{'PASS' if v['pass'] else 'RECORDED'} L1 {pk.doi} {v['recipes']}"
+            + (("\n  " + "\n  ".join(v["notes"])) if v["notes"] else ""))
+        sys.exit(0 if all(x["pass"] for x in rec["recipes"].values()) else 1)
     reg, packs = _targets(a)
     res = {}
     for pk in packs:
@@ -377,16 +415,17 @@ def main(argv=None):
         sp.set_defaults(fn=fn)
         return sp
 
-    s = cmd("get", c_get, "Create a working folder for a paper (pack + data link + agent instructions).")
+    s = cmd("get", c_get, "Create a working folder for a paper (pack instructions, recipes and targets; data fetched per recipe).")
     s.add_argument("id", help="DOI, PMID, PMCID or doi.org/PubMed URL")
-    s.add_argument("--dir"); s.add_argument("--tier", default="lite", choices=["lite", "full"])
-    s.add_argument("--source", help="registry folder or site URL (default: local registry, else https://runpapers.com)")
-    s.add_argument("--no-data", action="store_true"); s.add_argument("--rp-cmd", help="how the workspace should call rp")
+    s.add_argument("--dir"); s.add_argument("--source", help="registry folder or site URL (default: local registry, else https://runpapers.com)")
+    s.add_argument("--fetch-data", action="store_true", help="also download all open data files now")
+    s.add_argument("--no-data", action="store_true", help=argparse.SUPPRESS)
+    s.add_argument("--rp-cmd", help="how the workspace should call rp")
     s = cmd("recipes", c_recipes, "List a pack's recipes (inside a workspace, or give an id)."); s.add_argument("id", nargs="?")
-    s = cmd("run", c_run, "Run a recipe and compare with the paper's numbers: `rp run fig2f` in a workspace, or `rp run <id> <recipe>`.")
+    s = cmd("needs", c_needs, "Show per-recipe and total resource needs (data size, memory, GPU, minutes)."); s.add_argument("id", nargs="?")
+    s = cmd("run", c_run, "Fetch a recipe's data and run it against the paper's numbers: `rp run fig2f` or `rp run <id> <recipe>`.")
     s.add_argument("args", nargs="*"); s.add_argument("--all", action="store_true"); s.add_argument("--ci", action="store_true", help="run under CI memory/CPU limits")
-    s.add_argument("--tier", default="lite", choices=["lite", "full"])
-    s = cmd("fetch", c_fetch, "Download and verify a pack's data into the cache."); s.add_argument("id", nargs="?"); s.add_argument("--tier", default="lite", choices=["lite", "full"])
+    s = cmd("fetch", c_fetch, "Download and verify a pack's open data into the cache."); s.add_argument("id", nargs="?"); s.add_argument("--recipe", help="fetch only one recipe's data")
     s = cmd("request", c_request, "Ask for a paper to be packed (or add your vote): prints the GitHub link that does it.")
     s.add_argument("id"); s.add_argument("--note"); s.add_argument("--by"); s.add_argument("--source", help="site URL (default https://runpapers.com)")
     s = cmd("vote", c_vote, "Vote for a requested paper."); s.add_argument("id"); s.add_argument("--by"); s.add_argument("--source")
@@ -409,15 +448,18 @@ def main(argv=None):
     s.add_argument("--collection"); s.add_argument("--species", action="append"); s.add_argument("--tissue", action="append")
     s.add_argument("--assay", action="append"); s.add_argument("--cell-type", action="append"); s.add_argument("--gene", action="append")
     s.add_argument("--max-papers", type=int, default=5); s.add_argument("--min-stage", default="runs")
-    s.add_argument("--tier", default="lite", choices=["lite", "full"]); s.add_argument("--no-data", action="store_true")
+    s.add_argument("--fetch-data", action="store_true", help="also download all open data files now")
+    s.add_argument("--no-data", action="store_true", help=argparse.SUPPRESS)
     s.add_argument("--dir"); s.add_argument("--source"); s.add_argument("--rp-cmd")
     s = cmd("new", c_new, "Scaffold a pack for a paper."); s.add_argument("id"); s.add_argument("--online", action="store_true"); s.add_argument("--collection")
     for name, fn, h in (("lint", c_lint, "Level-0 checks (format, licenses, completeness, security)."),
                         ("status", c_status, "Badges, stage and next step.")):
         s = cmd(name, fn, h); s.add_argument("id", nargs="?"); s.add_argument("--all", action="store_true")
-    s = cmd("verify", c_verify, "Run verification (L1 by default: fetch lite data, run lite recipes under CI limits, check targets).")
+    s = cmd("verify", c_verify, "Run verification (CI-eligible recipes under CI limits, or --record external/HPC outputs).")
     s.add_argument("id", nargs="?"); s.add_argument("--all", action="store_true"); s.add_argument("--level", default="L1", choices=["L0", "L1"])
     s.add_argument("--no-cap", action="store_true", help="don't apply CI memory/CPU limits")
+    s.add_argument("--record", help="record completed recipe outputs from an HPC/external run directory")
+    s.add_argument("--where", default="hpc", help="where --record outputs ran (default: hpc)")
     s = cmd("review", c_review, "Record the critic's independent check of every reproduced panel.")
     s.add_argument("id"); s.add_argument("--verdict", required=True, choices=["pass", "revise"]); s.add_argument("--by", required=True)
     s.add_argument("--note"); s.add_argument("--fig", action="append", help="recipe=verdict note (repeatable)")

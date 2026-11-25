@@ -7,7 +7,8 @@ from pathlib import Path
 
 from . import ids
 
-SPEC = "runpapers/0.1"
+SPEC = "runpapers/0.2"
+LEGACY_SPECS = ("runpapers/0.1",)
 PACK_FILE = "pack.toml"
 SKIP_DIRS = {"verify", "out", "__pycache__", ".cache", "data", "analyses", ".git"}
 SKIP_FILES = {".DS_Store"}
@@ -36,6 +37,30 @@ def sha256_file(path, chunk=1 << 20):
         for b in iter(lambda: f.read(chunk), b""):
             h.update(b)
     return h.hexdigest()
+
+
+def _clean_num(x, default):
+    if isinstance(x, bool) or not isinstance(x, (int, float)):
+        return default
+    return int(x) if isinstance(x, float) and x.is_integer() else x
+
+
+def recipe_needs_from_meta(r, data_entries=()):
+    """Declared resource estimates for a recipe dict (0.2 `needs = {...}` or legacy 0.1 `max_*` fields)."""
+    raw = r.get("needs") if isinstance(r.get("needs"), dict) else {}
+    mem = _clean_num(raw.get("memory_gb", r.get("max_mem_gb", 8)), 8)
+    mins = _clean_num(raw.get("minutes", r.get("max_minutes", 20)), 20)
+    gpu = bool(raw.get("gpu", r.get("gpu", False)))
+    d_sizes = {d["id"]: int(d.get("size") or 0) for d in data_entries if "id" in d and d.get("access") != "controlled"}
+    data_ids = list(r.get("data") or [])
+    data_bytes = sum(d_sizes.get(did, 0) for did in data_ids)
+    return {
+        "data": data_ids,
+        "data_bytes": data_bytes,
+        "memory_gb": mem,
+        "gpu": gpu,
+        "minutes": mins,
+    }
 
 
 class Pack:
@@ -85,18 +110,27 @@ class Pack:
 
     # -- content
     @property
+    def spec_version(self):
+        return self.meta.get("spec", "")
+
+    @property
     def data(self):
         return self.meta.get("data", [])
 
     @property
     def recipes(self):
-        return self.meta.get("recipes", [])
+        return self.meta.get("recipes") or self.meta.get("recipe", [])
 
     def recipe(self, rid):
         for r in self.recipes:
             if r.get("id") == rid:
                 return r
         raise KeyError(f"no recipe {rid!r} in {self.doi} (have: {', '.join(r.get('id', '?') for r in self.recipes)})")
+
+    def recipe_needs(self, r):
+        if isinstance(r, str):
+            r = self.recipe(r)
+        return recipe_needs_from_meta(r, self.data)
 
     def data_entry(self, did):
         for d in self.data:
@@ -127,8 +161,10 @@ class Pack:
             h.update(rel.encode() + b"\0" + sha256_file(self.dir / rel).encode() + b"\n")
         return h.hexdigest()
 
-    def lite_bytes(self):
-        return sum(int(d.get("size", 0)) for d in self.data if d.get("tier", "lite") == "lite")
+    def data_bytes(self):
+        used = {did for r in self.recipes for did in (r.get("data") or [])}
+        rows = [d for d in self.data if d.get("access") != "controlled" and (not used or d.get("id") in used)]
+        return sum(int(d.get("size") or 0) for d in rows)
 
     def card(self):
         """Compact machine-readable profile (index.json, MCP search, meeting organizers)."""
@@ -140,9 +176,9 @@ class Pack:
             "collections": p.get("collections", []), "version": self.version,
             "summary": self.meta.get("pack", {}).get("summary", ""),
             "profile": self.meta.get("profile", {}),
-            "recipes": [{"id": r["id"], "title": r.get("title", ""), "panel": r.get("panel", ""), "tier": r.get("tier", "lite")}
+            "recipes": [{"id": r["id"], "title": r.get("title", ""), "panel": r.get("panel", ""), **self.recipe_needs(r)}
                         for r in self.recipes],
-            "lite_bytes": self.lite_bytes(),
+            "data_bytes": self.data_bytes(),
             "questions": [q.get("ask") for q in self.evals if q.get("public", True)][:8],
         }
 

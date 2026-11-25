@@ -1,8 +1,9 @@
-# RunPapers pack specification v0.1 (`spec = "runpapers/0.1"`)
+# RunPapers pack specification v0.2 (`spec = "runpapers/0.2"`)
 
-A pack makes one published paper usable by any AI agent: it says where the paper's data are, how to reproduce
-published panels from them, which of the paper's numbers each panel must hit, and how an agent should (and should
-not) analyse the data. It never contains the data, and never contains published figure images.
+A pack makes one published paper usable by any AI agent: it says where the paper's data are, how to reproduce every
+reproducible main-figure panel from them, which of the paper's numbers each panel must hit, and how an agent should
+(and should not) analyse the data. There is one pack per paper (no tiers). It never contains the data, and never
+contains published figure images.
 
 ## Identity
 - A paper's id is its **DOI**, lowercase (`10.1016/j.cell.2026.10.012`). PMID, PMCID and preprint DOIs are aliases.
@@ -30,7 +31,7 @@ verify/*.json          verification records, written by tools only (l1, review, 
 
 ## pack.toml
 ```toml
-spec = "runpapers/0.1"
+spec = "runpapers/0.2"
 
 [paper]
 doi = "10.1016/j.cell.2026.10.012"      # canonical, lowercase
@@ -52,27 +53,33 @@ maintainers = [{ name = "...", orcid = "0000-..." }]
 [profile]                               # for search and agent meetings; use ontology terms (CL, UBERON, HGNC)
 species = [...]; tissues = [...]; assays = [...]; cell_types = [...]; key_genes = [...]
 
-[[data]]                                # one per file
+[[data]]                                # one per file (no tier field)
 id = "cells"
 title = "..."
 url = "https://..."                     # the ORIGINAL repository; https only
 size = 448741495                        # bytes
 md5 = "..."                             # or sha256
-tier = "lite"                           # lite: laptop + free CI (aim < 2 GB total, max 8 GB); full: everything else
 source = "repository, release, version"
 license = "..."
 access = "open"                         # controlled: never downloaded by RunPapers; give access_note instead
 
-[[recipes]]
+[[recipes]]                             # one per reproducible main-figure panel
 id = "fig2f"                            # [a-z0-9_-]
 title = "..."
 panel = "Figure 2F"
 script = "recipes/fig2f.py"
-tier = "lite"                           # a lite recipe may use only lite data
-data = ["cells", ...]
-max_minutes = 20                        # CI limits: lite recipes must fit 14 GB RAM, 4 CPUs
-max_mem_gb = 6
+data = ["cells"]                        # exact [[data]] ids this recipe reads
+needs = { memory_gb = 6, gpu = false, minutes = 20 }   # builder estimate; measured values replace estimates after a run
 ```
+
+## Getting, needs and running
+- `rp get <DOI>` downloads only the pack files (instructions, recipes, targets) into `./<DOI as a name>/` — no data
+  files are downloaded up front.
+- `rp needs [<DOI>] [--json]` prints each recipe's `data_bytes`, `memory_gb`, `gpu`, and `minutes`, plus the pack
+  totals (unique data bytes across recipes, peak `memory_gb`, whether any recipe needs a GPU, total `minutes`). Once
+  a recipe has been run, measured `peak_rss_mb` and `seconds` replace the builder's estimates.
+- `rp run [<DOI>] <recipe>` downloads and checksum-verifies only `<recipe>`'s `data` files into the shared cache, then
+  runs `<recipe>`. `rp run --all` runs every recipe in the pack.
 
 ## Recipes
 - Python with PEP 723 inline dependencies (`# /// script` block); run by `uv run --script` in a throwaway env.
@@ -121,10 +128,18 @@ hash differs from the current content is **stale**, and the badge must be earned
 
 | Badge | Earned by | Tool |
 |---|---|---|
-| runs | lint clean; lite data verified; every lite recipe meets all required targets under CI limits | `rp verify` |
+| runs | lint clean, and **every recipe** in the pack meets all required targets on the current content hash (recipes fitting 4 CPUs, <= 14 GB RAM, `gpu = false`, `< 60` min run in `rp verify`; heavier or GPU recipes run on HPC and are recorded with `rp verify <DOI> --record <out_dir> [--where hpc]`) | `rp verify` |
 | checked | an independent reviewer (never the builder) compared every reproduced panel with the published one | `rp gallery`, `rp review` |
 | reproduces | a named human signed off, after a passing review | `rp signoff` |
 | agent-tested | passing naive-user runs from >= 2 agent families on this exact content | `rp usertest` |
 | endorsed | an author of the paper (ORCID-matched) approved | `rp endorse` |
 
 Stages: planned -> building -> ready -> runs -> checked -> reproduces -> agent-tested -> released.
+
+## Migration from v0.1 (`spec = "runpapers/0.1"`)
+Packs written in `runpapers/0.1` still load, get and run (`rp lint` emits a `tier.ignored` warning). To migrate a
+pack to `runpapers/0.2`:
+1. Set `spec = "runpapers/0.2"` at the top of `pack.toml`.
+2. Remove `tier` from every `[[data]]` and `[[recipes]]` entry.
+3. Ensure every `[[recipes]]` entry lists its explicit `data = ["<id>", ...]` and `needs = { memory_gb = ..., gpu = false, minutes = ... }` (replacing `max_mem_gb` and `max_minutes`).
+4. Run `rp lint <DOI>` and `rp verify <DOI>` (plus `rp verify <DOI> --record <out_dir>` for any HPC recipes).

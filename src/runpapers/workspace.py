@@ -72,9 +72,10 @@ This folder lets you (an AI agent) reproduce figures from, and answer new questi
 **{title}**, {first_author} et al., *{journal}* {year}. DOI {doi}{pmid_line}.
 
 1. Read `SKILL.md` in full before you do anything else, and follow its guardrails.
-2. Reproduce a published panel: `{rp} run <recipe>` (list them: `{rp} recipes`). Each run writes `out/<recipe>/`
-   with the figure, `metrics.json`, and `result.json` (the paper's numbers next to ours). Show the user the figure
-   and say plainly which numbers matched and which did not.
+2. Reproduce a published panel: `{rp} run <recipe>` (list panels and resource needs: `{rp} needs`). Each run downloads
+   only that recipe's data files into the shared cache, then writes `out/<recipe>/` with the figure, `metrics.json`,
+   and `result.json` (the paper's numbers next to ours). Show the user the figure and say plainly which numbers matched
+   and which did not.
 3. New questions: write scripts in `analyses/`, reading files from `data/` (see `SKILL.md` -> Data). Say what you
    computed and how sure you are; keep observation and interpretation apart.
 4. Cite the paper (DOI {doi}) and the pack (RunPapers {doi} v{version}).
@@ -83,8 +84,8 @@ Data files live in the shared cache: {data_dir}
 """
 
 
-def get(ident, dest=None, tier="lite", source=None, fetch_data=True, rp_cmd="rp", quiet=False):
-    """Create the workspace. source: a registry folder, a site base URL, or None (local registry if any, else the site)."""
+def get(ident, dest=None, source=None, fetch_data=False, rp_cmd="rp", quiet=False, **_ignored):
+    """Create the workspace (pack files only by default; recipes download their own data on demand)."""
     src = source or (str(find_root()) if find_root() else DEFAULT_BASE)
     tmp_dest = None
     if src.startswith(("http://", "https://")):
@@ -123,9 +124,10 @@ def get(ident, dest=None, tier="lite", source=None, fetch_data=True, rp_cmd="rp"
         _copy_from_registry(pk, target)
     pack = Pack(target)
     dd = data.data_dir(pack.doi)
+    dd.mkdir(parents=True, exist_ok=True)
     notes = []
     if fetch_data:
-        _, notes = data.fetch(pack, tier, quiet=quiet)
+        _, notes = data.fetch(pack, quiet=quiet, dest_dir=dd)
     link = target / "data"
     if link.is_symlink() or link.exists():
         if link.is_symlink() or link.is_file():
@@ -149,7 +151,7 @@ def get(ident, dest=None, tier="lite", source=None, fetch_data=True, rp_cmd="rp"
         (sd / "SKILL.md").write_text(skill)
     (target / "analyses").mkdir(exist_ok=True)
     write_json(target / WS_FILE, {"doi": pack.doi, "version": pack.version, "pack_hash": pack.content_hash(),
-                                  "source": src, "tier": tier, "data_dir": str(dd)})
+                                  "source": src, "data_dir": str(dd)})
     if not quiet:
         print(f"workspace ready: {target}", file=sys.stderr)
         for n in notes:

@@ -1,6 +1,6 @@
 """L3 naive-user tests: a fresh agent session, in an empty folder, gets only the paper page's copy-prompt plus
-the held-out questions. It must reproduce the first lite panel and answer; we grade its answers.json and the
-recipe's own target check. Runs the user's real CLIs headless (claude -p, agy -p, codex exec)."""
+the held-out questions. It must reproduce the first laptop-runnable panel and answer; we grade its answers.json and
+the recipe's own target check. Runs the user's real CLIs headless (claude -p, agy -p, codex exec)."""
 import json
 import os
 import shutil
@@ -14,7 +14,7 @@ from . import ids, site
 from .data import cache_root
 from .recipes import compare
 from .registry import read_json, write_json
-from .verify import family, now, vdir
+from .verify import family, fits_ci, now, vdir
 
 AGENTS = {
     "claude": lambda prompt, model: ["claude", "-p", prompt, "--dangerously-skip-permissions", "--output-format", "json"]
@@ -65,10 +65,10 @@ def run(reg, pack, agents, models=None, timeout_min=45, record=True, quiet=False
     from .verify import status
     models = models or {}
     questions = pack.evals
-    lite = [r for r in pack.recipes if r.get("tier", "lite") == "lite"]
-    if not lite:
-        raise SystemExit("no lite recipe to test")
-    rid = lite[0]["id"]
+    if not pack.recipes:
+        raise SystemExit("no recipe to test")
+    ci_recs = [r for r in pack.recipes if fits_ci(pack, r)]
+    rid = (ci_recs or pack.recipes)[0]["id"]
     # Serve a fresh site build on a free local port, with the install command pointing at this source tree.
     tmp = Path(tempfile.mkdtemp(prefix="rp-site-"))
     httpd = site.serve(tmp, port=0, quiet=True)

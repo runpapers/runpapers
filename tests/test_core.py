@@ -30,7 +30,7 @@ RECIPE = textwrap.dedent('''\
     (out / "figure.png").write_bytes(b"\\x89PNG fake")
 ''')
 
-PACK = f'''spec = "runpapers/0.1"
+PACK = f'''spec = "runpapers/0.2"
 [paper]
 doi = "{DOI}"
 pmid = "99999999"
@@ -49,7 +49,6 @@ id = "counts"
 url = "https://example.org/counts.csv"
 size = {len(CSV)}
 md5 = "{hashlib.md5(CSV).hexdigest()}"
-tier = "lite"
 source = "test"
 license = "CC0"
 [[recipes]]
@@ -58,7 +57,7 @@ title = "Counts"
 panel = "Figure 1"
 script = "recipes/fig1.py"
 data = ["counts"]
-max_minutes = 2
+needs = {{ memory_gb = 4, gpu = false, minutes = 2 }}
 '''
 
 TARGETS = '''[[target]]
@@ -185,7 +184,7 @@ class Compare(unittest.TestCase):
 
 class Lint(Base):
     def test_clean_pack(self):
-        self.assertEqual(spec.errors(spec.lint(self.pack(), self.reg.pack_dir(DOI))), [])
+        self.assertEqual(spec.lint(self.pack(), self.reg.pack_dir(DOI)), [])
 
     def test_skill_name_is_the_doi(self):
         (self.dir / "SKILL.md").write_text(SKILL.replace("name: runpapers-10-9999-test-2026-001", "name: runpapers-tester2026"))
@@ -201,11 +200,29 @@ class Lint(Base):
         msgs = " ".join(m for s, c, m in spec.lint(self.pack()))
         self.assertIn("recipes/helper.py", msgs)
 
-    def test_controlled_data_never_lite(self):
-        t = (self.dir / "pack.toml").read_text().replace('access', 'xaccess') + \
-            '[[data]]\nid = "raw"\nurl = "https://e.org/r"\naccess = "controlled"\ntier = "lite"\nsource = "dbGaP"\n'
-        (self.dir / "pack.toml").write_text(t)
+    def test_controlled_data_and_v02_lint_rules(self):
+        from runpapers import data
+        # Invalid access value is an error.
+        bad = (self.dir / "pack.toml").read_text() + '[[data]]\nid = "raw"\nurl = "https://e.org/r"\naccess = "secret"\nsource = "dbGaP"\n'
+        (self.dir / "pack.toml").write_text(bad)
         self.assertIn("data.access", {c for s, c, m in spec.errors(spec.lint(self.pack()))})
+
+        # Controlled-access data with source + access_note lints cleanly and is never downloaded.
+        ctrl = PACK + '[[data]]\nid = "raw"\nurl = "https://e.org/r"\naccess = "controlled"\nsource = "dbGaP"\naccess_note = "Apply at dbGaP."\n'
+        (self.dir / "pack.toml").write_text(ctrl)
+        self.assertEqual(spec.lint(self.pack()), [])
+        paths, notes = data.fetch(self.pack(), quiet=True)
+        self.assertNotIn("raw", paths)
+        self.assertTrue(any("raw: controlled access" in n for n in notes))
+
+        # Format 0.2 warns when a recipe lacks needs or data, and errors if tier is present.
+        no_needs = PACK.replace('data = ["counts"]\nneeds = { memory_gb = 4, gpu = false, minutes = 2 }\n', "")
+        (self.dir / "pack.toml").write_text(no_needs)
+        warns = {c for s, c, _ in spec.lint(self.pack()) if s == "warn"}
+        self.assertIn("recipe.data", warns)
+        self.assertIn("recipe.needs", warns)
+        (self.dir / "pack.toml").write_text(PACK + 'tier = "lite"\n')
+        self.assertIn("recipe.tier", {c for s, c, _ in spec.errors(spec.lint(self.pack()))})
 
 
 class Pipeline(Base):
@@ -345,7 +362,6 @@ id = "atac_bw"
 url = "https://example.org/atac.bw"
 size = {len(atac_bytes)}
 md5 = "{hashlib.md5(atac_bytes).hexdigest()}"
-tier = "full"
 source = "test"
 license = "CC0"
 [[data]]
@@ -353,7 +369,6 @@ id = "huge_rna"
 url = "https://example.org/huge_rna.h5ad"
 size = {len(rna_bytes)}
 md5 = "{hashlib.md5(rna_bytes).hexdigest()}"
-tier = "full"
 source = "test"
 license = "CC0"
 [[recipes]]
@@ -361,17 +376,15 @@ id = "fig6b"
 title = "Enhancer tracks"
 panel = "Figure 6B"
 script = "recipes/fig6b.py"
-tier = "full"
 data = ["atac_bw"]
-max_minutes = 2
+needs = {{ memory_gb = 32, gpu = false, minutes = 2 }}
 [[recipes]]
 id = "fig0"
 title = "Synthetic summary"
 panel = "Figure 0"
 script = "recipes/fig0.py"
-tier = "full"
 data = []
-max_minutes = 2
+needs = {{ memory_gb = 2, gpu = false, minutes = 1 }}
 ''')
         (self.dir / "targets.toml").write_text(TARGETS + '''
 [[target]]
@@ -401,9 +414,8 @@ source = "Fig 0"
             out = Path(os.environ["RP_OUT_DIR"])
             (out / "metrics.json").write_text(json.dumps({"const_ok": 1}))
         '''))
-        self.assertEqual(spec.errors(spec.lint(self.pack())), [])
+        self.assertEqual(spec.lint(self.pack()), [])
 
-        # Clear cached files so every download attempt goes through _download.
         shutil.rmtree(data.data_dir(DOI), ignore_errors=True)
         payloads = {
             "https://example.org/counts.csv": CSV,
@@ -426,7 +438,7 @@ source = "Fig 0"
             self.assertTrue(json.loads(buf0.getvalue())["pass"])
             self.assertEqual(seen_urls, [])
 
-            # Single full recipe fetches ONLY its own data ID (atac_bw), not counts or huge_rna.
+            # Single recipe fetches ONLY its own data ID (atac_bw), not counts or huge_rna.
             buf1 = io.StringIO()
             with contextlib.redirect_stdout(buf1), contextlib.redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit) as ctx1:
@@ -437,16 +449,254 @@ source = "Fig 0"
             self.assertFalse((data.data_dir(DOI) / "huge_rna.h5ad").exists())
             self.assertFalse((data.data_dir(DOI) / "counts.csv").exists())
 
-            # `rp fetch --tier full` continues to fetch all open files of full tier and below.
+            # `rp fetch` downloads all remaining open files of the pack.
             seen_urls.clear()
             buf2 = io.StringIO()
             with contextlib.redirect_stdout(buf2), contextlib.redirect_stderr(io.StringIO()):
-                cli.main(["fetch", "--json", "--tier", "full", DOI])
+                cli.main(["fetch", "--json", DOI])
             self.assertEqual(set(json.loads(buf2.getvalue())["files"]), {"counts", "atac_bw", "huge_rna"})
             self.assertEqual(set(seen_urls), {"https://example.org/counts.csv", "https://example.org/huge_rna.h5ad"})
 
-    def test_mixed_lite_full_gallery_site_and_range_targets(self):
-        from runpapers import data
+    def test_spec005_ac1_v02_get_no_data_and_per_recipe_run(self):
+        import contextlib
+        import io
+        from unittest import mock
+        from runpapers import cli, data
+
+        bytes_a = b"a,10\n"
+        bytes_b = b"b,20\n"
+        (self.dir / "pack.toml").write_text(f'''spec = "runpapers/0.2"
+[paper]
+doi = "{DOI}"
+pmid = "99999999"
+title = "Two-recipe v0.2 paper"
+first_author = "Ada Tester"
+journal = "J Tests"
+year = 2026
+license = "CC-BY-4.0"
+[pack]
+version = "0.2.0"
+summary = "One pack per paper."
+license = "CC-BY-4.0"
+maintainers = [{{ name = "t" }}]
+[[data]]
+id = "file_a"
+url = "https://example.org/file_a.csv"
+size = {len(bytes_a)}
+md5 = "{hashlib.md5(bytes_a).hexdigest()}"
+source = "test"
+license = "CC0"
+[[data]]
+id = "file_b"
+url = "https://example.org/file_b.csv"
+size = {len(bytes_b)}
+md5 = "{hashlib.md5(bytes_b).hexdigest()}"
+source = "test"
+license = "CC0"
+[[recipes]]
+id = "a"
+title = "Panel A"
+panel = "Figure 1A"
+script = "recipes/a.py"
+data = ["file_a"]
+needs = {{ memory_gb = 4, gpu = false, minutes = 5 }}
+[[recipes]]
+id = "b"
+title = "Panel B"
+panel = "Figure 1B"
+script = "recipes/b.py"
+data = ["file_b"]
+needs = {{ memory_gb = 8, gpu = false, minutes = 10 }}
+''')
+        (self.dir / "targets.toml").write_text('''
+[[target]]
+recipe = "a"
+metric = "val_a"
+expected = 10
+tolerance = { exact = true }
+source = "Fig 1A"
+[[target]]
+recipe = "b"
+metric = "val_b"
+expected = 20
+tolerance = { exact = true }
+source = "Fig 1B"
+''')
+        for rid, fname, key in (("a", "file_a.csv", "val_a"), ("b", "file_b.csv", "val_b")):
+            (self.dir / "recipes" / f"{rid}.py").write_text(textwrap.dedent(f'''\
+                import json, os
+                from pathlib import Path
+                v = int((Path(os.environ["RP_DATA_DIR"]) / "{fname}").read_text().split(",")[1])
+                (Path(os.environ["RP_OUT_DIR"]) / "metrics.json").write_text(json.dumps({{"{key}": v}}))
+            '''))
+        self.assertEqual(spec.lint(self.pack()), [])
+
+        shutil.rmtree(data.data_dir(DOI), ignore_errors=True)
+        payloads = {"https://example.org/file_a.csv": bytes_a, "https://example.org/file_b.csv": bytes_b}
+        seen_urls = []
+
+        def fake_download(url, dest, size, quiet=False):
+            seen_urls.append(url)
+            Path(dest).write_bytes(payloads[url])
+
+        ws_dir = self.tmp / "ws-ac1"
+        old_cwd = os.getcwd()
+        with mock.patch("runpapers.data._download", side_effect=fake_download):
+            try:
+                # 1. `rp get` downloads only the pack and NO data.
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    cli.main(["get", "--json", DOI, "--dir", str(ws_dir)])
+                self.assertEqual(seen_urls, [])
+                self.assertEqual(list(data.data_dir(DOI).iterdir()), [])
+
+                # 2. `rp run a` inside workspace fetches only `a`'s file.
+                os.chdir(ws_dir)
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as ctx_a:
+                        cli.main(["run", "--json", "a"])
+                self.assertEqual(ctx_a.exception.code, 0)
+                self.assertEqual(seen_urls, ["https://example.org/file_a.csv"])
+                self.assertFalse((data.data_dir(DOI) / "file_b.csv").exists())
+
+                # 3. `rp run --all` fetches the rest (`file_b.csv`) and runs both recipes.
+                buf_all = io.StringIO()
+                with contextlib.redirect_stdout(buf_all), contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as ctx_all:
+                        cli.main(["run", "--json", "--all"])
+                self.assertEqual(ctx_all.exception.code, 0)
+                self.assertEqual(seen_urls, ["https://example.org/file_a.csv", "https://example.org/file_b.csv"])
+                self.assertEqual([r["recipe"] for r in json.loads(buf_all.getvalue())], ["a", "b"])
+            finally:
+                os.chdir(old_cwd)
+
+    def test_spec005_ac2_v01_pack_compatibility(self):
+        import contextlib
+        import io
+        from runpapers import cli, data
+
+        v01 = f'''spec = "runpapers/0.1"
+[paper]
+doi = "{DOI}"
+pmid = "99999999"
+title = "Legacy v0.1 paper"
+first_author = "Ada Tester"
+journal = "J Tests"
+year = 2026
+license = "CC-BY-4.0"
+[pack]
+version = "0.1.0"
+summary = "Legacy pack."
+license = "CC-BY-4.0"
+maintainers = [{{ name = "t" }}]
+[[data]]
+id = "counts"
+url = "https://example.org/counts.csv"
+size = {len(CSV)}
+md5 = "{hashlib.md5(CSV).hexdigest()}"
+tier = "lite"
+source = "test"
+license = "CC0"
+[[recipes]]
+id = "fig1"
+title = "Counts"
+panel = "Figure 1"
+script = "recipes/fig1.py"
+tier = "lite"
+data = ["counts"]
+max_minutes = 2
+max_mem_gb = 6
+'''
+        (self.dir / "pack.toml").write_text(v01)
+        findings = spec.lint(self.pack())
+        self.assertEqual(spec.errors(findings), [])
+        self.assertIn("tier.ignored", {c for s, c, _ in findings if s == "warn"})
+
+        ws_dir, _ = workspace.get(DOI, dest=self.tmp / "ws-v01", source=str(self.root), quiet=True)
+        self.assertTrue((ws_dir / "SKILL.md").is_file())
+        self.assertNotIn("tier", json.loads((ws_dir / ".runpapers.json").read_text()))
+
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as ctx:
+                cli.main(["run", "--json", DOI, "fig1"])
+        self.assertEqual(ctx.exception.code, 0)
+        self.assertTrue(json.loads(buf.getvalue())["pass"])
+        self.assertTrue((data.data_dir(DOI) / "counts.csv").is_file())
+
+    def test_spec005_ac3_rp_needs_estimates_then_measured(self):
+        import contextlib
+        import io
+        from runpapers import cli, data
+
+        extra = b"x,1\ny,2\n"
+        (data.data_dir(DOI) / "extra.csv").write_bytes(extra)
+        (self.dir / "pack.toml").write_text(PACK + f'''
+[[data]]
+id = "extra"
+url = "https://example.org/extra.csv"
+size = {len(extra)}
+md5 = "{hashlib.md5(extra).hexdigest()}"
+source = "test"
+license = "CC0"
+[[recipes]]
+id = "fig2"
+title = "GPU model panel"
+panel = "Figure 2"
+script = "recipes/fig1.py"
+data = ["counts", "extra"]
+needs = {{ memory_gb = 32, gpu = true, minutes = 90 }}
+''')
+        (self.dir / "targets.toml").write_text(TARGETS + '''
+[[target]]
+recipe = "fig2"
+metric = "n_total"
+expected = 80
+tolerance = { exact = true }
+source = "p.1"
+''')
+        self.assertEqual(spec.lint(self.pack()), [])
+
+        buf_before = io.StringIO()
+        with contextlib.redirect_stdout(buf_before):
+            cli.main(["needs", "--json", DOI])
+        nd1 = json.loads(buf_before.getvalue())
+        by_id1 = {r["id"]: r for r in nd1["recipes"]}
+        self.assertEqual((by_id1["fig1"]["data_bytes"], by_id1["fig1"]["memory_gb"], by_id1["fig1"]["gpu"], by_id1["fig1"]["minutes"], by_id1["fig1"]["measured"]),
+                         (len(CSV), 4, False, 2, False))
+        self.assertEqual((by_id1["fig2"]["data_bytes"], by_id1["fig2"]["memory_gb"], by_id1["fig2"]["gpu"], by_id1["fig2"]["minutes"], by_id1["fig2"]["measured"]),
+                         (len(CSV) + len(extra), 32, True, 90, False))
+        # Unique data bytes counts shared `counts` once.
+        self.assertEqual(nd1["totals"], {
+            "data": ["counts", "extra"],
+            "data_bytes": len(CSV) + len(extra),
+            "memory_gb": 32,
+            "gpu": True,
+            "minutes": 92,
+        })
+
+        # Run fig1 and confirm measured values replace fig1's estimates while fig2 keeps its estimates.
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as ctx:
+                cli.main(["run", "--json", DOI, "fig1"])
+        self.assertEqual(ctx.exception.code, 0)
+
+        buf_after = io.StringIO()
+        with contextlib.redirect_stdout(buf_after):
+            cli.main(["needs", "--json", DOI])
+        nd2 = json.loads(buf_after.getvalue())
+        by_id2 = {r["id"]: r for r in nd2["recipes"]}
+        self.assertTrue(by_id2["fig1"]["measured"])
+        self.assertIsNotNone(by_id2["fig1"]["peak_rss_mb"])
+        self.assertLess(by_id2["fig1"]["memory_gb"], 4)
+        self.assertLess(by_id2["fig1"]["minutes"], 2)
+        self.assertFalse(by_id2["fig2"]["measured"])
+        self.assertEqual(by_id2["fig2"]["memory_gb"], 32)
+        self.assertEqual(nd2["totals"]["memory_gb"], 32)
+
+    def test_spec005_ac4_verify_requires_all_recipes_and_hpc_record(self):
+        import contextlib
+        import io
+        from runpapers import cli, data
 
         atac_bytes = b"BIGWIG_TRACK_BYTES_1234"
         (self.dir / "pack.toml").write_text(PACK + f'''
@@ -455,17 +705,15 @@ id = "atac_bw"
 url = "https://example.org/atac.bw"
 size = {len(atac_bytes)}
 md5 = "{hashlib.md5(atac_bytes).hexdigest()}"
-tier = "full"
 source = "test"
 license = "CC0"
 [[recipes]]
 id = "fig6b"
-title = "Enhancer tracks"
+title = "CREsted GPU enhancer model"
 panel = "Figure 6B"
 script = "recipes/fig6b.py"
-tier = "full"
 data = ["atac_bw"]
-max_minutes = 2
+needs = {{ memory_gb = 32, gpu = true, minutes = 90 }}
 ''')
         (self.dir / "targets.toml").write_text(TARGETS + '''
 [[target]]
@@ -496,60 +744,88 @@ source = "Fig 6B interval"
             (out / "tracks.png").write_bytes(b"\\x89PNG fake6b")
         '''))
         pk = self.pack()
-        self.assertEqual(spec.errors(spec.lint(pk)), [])
+        self.assertEqual(spec.lint(pk), [])
 
-        # Phase 1: before the full-tier recipe has been run locally (and without full data cached).
+        # 1. Local `rp verify` runs CI-fitting fig1, skips GPU/32GB fig6b, and does NOT pass `runs` yet.
         l1_dir = ops.l1_out(self.reg, pk)
-        rec = verify.run_l1(pk, ci=False, quiet=True, keep_out=l1_dir)
-        self.assertTrue(rec["pass"], rec)
-        self.assertEqual(list(rec["recipes"]), ["fig1"])
-        self.assertEqual(verify.status(pk)["stage"], "runs")
+        rec1 = verify.run_l1(pk, ci=False, quiet=True, keep_out=l1_dir)
+        self.assertFalse(rec1["pass"])
+        self.assertTrue(rec1["recipes"]["fig1"]["pass"])
+        self.assertNotIn("fig6b", rec1["recipes"])
+        self.assertEqual(verify.status(pk)["badges"]["runs"], "fail")
+        self.assertEqual(verify.status(pk)["stage"], "ready")
 
-        # result.json preserves backward-compatible expected and detail fields.
+        # Range target formatting and backward-compatible result.json fields work on gallery before HPC record.
         r1 = json.loads((l1_dir / "fig1" / "result.json").read_text())
         by_src = {c["source"]: c for c in r1["checks"]}
         self.assertEqual(by_src["Fig 1 merged stroke interval"]["expected"], 37.5)
         self.assertEqual(by_src["Fig 1 merged stroke interval"]["detail"], "37.5 in [37.0, 38.0]")
+        ghtml1 = (ops.gallery(self.reg, pk) / "index.html").read_text()
+        self.assertIn("<td>[37.0, 38.0]</td><td>37.5</td>", ghtml1)
+        self.assertNotIn("<td>37.5</td><td>37.5</td>", ghtml1)
+        self.assertIn("<td>37.0 ([37.0, 38.0])</td><td>37.5</td>", ghtml1)
+        self.assertIn("not run yet (HPC)", ghtml1)
 
-        gdir = ops.gallery(self.reg, pk)
-        ghtml = (gdir / "index.html").read_text()
-        self.assertIn("<td>[37.0, 38.0]</td><td>37.5</td>", ghtml)
-        self.assertNotIn("<td>37.5</td><td>37.5</td>", ghtml)
-        self.assertIn("<td>37.0 ([37.0, 38.0])</td><td>37.5</td>", ghtml)
-        self.assertIn("full tier · cluster", ghtml)
-        self.assertIn("not run yet (cluster / full tier)", ghtml)
-        self.assertIn("<td>[1.8, 2.2]</td>", ghtml)
-
-        sdir1, _ = site.build(self.reg, out=self.tmp / "site-before", base_url="http://x")
-        pdir1 = sdir1 / "papers" / "10-9999-test-2026-001"
-        phtml1 = (pdir1 / "index.html").read_text()
-        pmd1 = (pdir1 / "index.md").read_text()
-        self.assertTrue((pdir1 / "figures" / "fig1-figure.png").is_file())
-        self.assertFalse((pdir1 / "figures" / "fig6b-tracks.png").exists())
-        self.assertIn("full tier · cluster", phtml1)
-        self.assertIn("full tier, cluster", pmd1)
-        self.assertIn("[37.0, 38.0]", phtml1)
-        self.assertIn("37.0 ([37.0, 38.0])", phtml1)
-
-        # Phase 2: after build/l1/<doi>/fig6b/result.json and PNG exist.
+        # 2. Run fig6b on "HPC" into a separate directory and record via `rp verify --record --where hpc`.
         (data.data_dir(DOI) / "atac.bw").write_bytes(atac_bytes)
-        res_full = recipes.run(pk, "fig6b", data.data_dir(DOI), l1_dir, ci=False, quiet=True)
-        self.assertTrue(res_full["pass"], res_full)
+        hpc_out = self.tmp / "hpc-out"
+        res_hpc = recipes.run(pk, "fig6b", data.data_dir(DOI), hpc_out, ci=False, quiet=True)
+        self.assertTrue(res_hpc["pass"], res_hpc)
 
-        gdir2 = ops.gallery(self.reg, pk)
-        ghtml2 = (gdir2 / "index.html").read_text()
-        self.assertIn("Figure 6B · <code>fig6b</code> <span class='tier full'>full tier · cluster</span> · PASS", ghtml2)
+        buf_rec = io.StringIO()
+        with contextlib.redirect_stdout(buf_rec), contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as ctx_rec:
+                cli.main(["verify", "--json", DOI, "--record", str(hpc_out), "--where", "hpc"])
+        self.assertEqual(ctx_rec.exception.code, 0)
+        self.assertEqual(verify.status(pk)["badges"]["runs"], "pass")
+        self.assertEqual(verify.status(pk)["stage"], "runs")
+        self.assertEqual(verify.record(pk, "l1")["recipes"]["fig6b"]["where"], "hpc")
+
+        # 3. Subsequent `rp verify` on the same content hash re-runs fig1 and preserves fig6b's HPC record.
+        rec2 = verify.run_l1(pk, ci=False, quiet=True, keep_out=l1_dir)
+        self.assertTrue(rec2["pass"])
+        self.assertEqual(rec2["recipes"]["fig6b"]["where"], "hpc")
+
+        # Site and gallery reuse recorded HPC figure and target checks cleanly.
+        ghtml2 = (ops.gallery(self.reg, pk) / "index.html").read_text()
         self.assertIn("<td>[1.8, 2.2]</td><td>2.05</td>", ghtml2)
         self.assertIn("tracks.png", ghtml2)
+        sdir, _ = site.build(self.reg, out=self.tmp / "site-hpc", base_url="http://x")
+        pdir = sdir / "papers" / "10-9999-test-2026-001"
+        self.assertTrue((pdir / "figures" / "fig6b-tracks.png").is_file())
+        self.assertIn("fig6b-tracks.png", (pdir / "index.html").read_text())
+        self.assertIn("[1.8, 2.2]", (pdir / "index.html").read_text())
 
-        sdir2, _ = site.build(self.reg, out=self.tmp / "site-after", base_url="http://x")
-        pdir2 = sdir2 / "papers" / "10-9999-test-2026-001"
-        phtml2 = (pdir2 / "index.html").read_text()
-        pmd2 = (pdir2 / "index.md").read_text()
-        self.assertTrue((pdir2 / "figures" / "fig6b-tracks.png").is_file())
-        self.assertIn("fig6b-tracks.png", phtml2)
-        self.assertIn("[1.8, 2.2]", phtml2)
-        self.assertIn("1/1 paper targets matched", pmd2)
+        # 4. Pack content change invalidates the HPC record and rejects recording stale old-hash outputs.
+        (self.dir / "SKILL.md").write_text(SKILL + "\nupdated guardrail\n")
+        pk_new = self.pack()
+        self.assertEqual(verify.status(pk_new)["badges"]["runs"], "stale")
+        with self.assertRaises(SystemExit):
+            verify.record_run(pk_new, hpc_out, where="hpc", keep_out=l1_dir)
+        rec3 = verify.run_l1(pk_new, ci=False, quiet=True, keep_out=l1_dir)
+        self.assertFalse(rec3["pass"])
+
+    def test_spec005_ac5_zero_tier_language_in_public_outputs(self):
+        import re
+        from runpapers import mcp_server, meeting, newpack
+
+        verify.run_l1(self.pack(), ci=False, quiet=True, keep_out=ops.l1_out(self.reg, self.pack()))
+        sdir, _ = site.build(self.reg, out=self.tmp / "site-clean", base_url="https://runpapers.com")
+        mdir, _ = meeting.build_meeting("A test paper", dest=self.tmp / "meeting-clean", source=str(self.root), quiet=True)
+        scaf = newpack.scaffold(self.reg, "10.9999/planned.1")
+
+        forbidden = re.compile(r"\b(lite|tier|tiers|tiered)\b|full[- ]tier|lite_bytes|full_data_bytes", re.I)
+        checked = 0
+        for root in (sdir, mdir, scaf):
+            for p in root.rglob("*"):
+                if p.is_file() and p.suffix not in (".png",):
+                    txt = p.read_text(errors="ignore")
+                    m = forbidden.search(txt)
+                    self.assertIsNone(m, f"found forbidden tier word {m.group(0)!r} in {p.relative_to(self.tmp)}" if m else "")
+                    checked += 1
+        self.assertGreater(checked, 15)
+        self.assertIsNone(forbidden.search(json.dumps(mcp_server.TOOLS)))
+        self.assertIsNone(forbidden.search(newpack.SKILL_TEMPLATE))
 
 
 if __name__ == "__main__":

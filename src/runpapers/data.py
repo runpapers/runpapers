@@ -10,8 +10,7 @@ from pathlib import Path
 
 from . import DEFAULT_BASE, ids
 
-UA = f"runpapers/0.1 (+{DEFAULT_BASE})"
-TIER_RANK = {"lite": 0, "full": 1}
+UA = f"runpapers/0.2 (+{DEFAULT_BASE})"
 
 
 def cache_root():
@@ -78,15 +77,15 @@ def _download(url, dest, size, quiet=False):
     os.replace(part, dest)
 
 
-def fetch(pack, tier="lite", only=None, quiet=False, dest_dir=None):
-    """Make every open data file of the tier (and below) present and verified. Returns {id: path} and notes."""
+def fetch(pack, only=None, quiet=False, dest_dir=None, **_ignored):
+    """Make requested open data files (or all open files when only is None) present and verified. Returns {id: path} and notes."""
+    if isinstance(only, str):
+        only = None
     dd = Path(dest_dir) if dest_dir else data_dir(pack.doi)
     dd.mkdir(parents=True, exist_ok=True)
     paths, notes = {}, []
     for e in pack.data:
         if only is not None and e["id"] not in only:
-            continue
-        if TIER_RANK.get(e.get("tier", "lite"), 0) > TIER_RANK[tier]:
             continue
         if e.get("access") == "controlled":
             notes.append(f"{e['id']}: controlled access. {e.get('access_note', 'Apply to the repository named in source; RunPapers never downloads it.')}")

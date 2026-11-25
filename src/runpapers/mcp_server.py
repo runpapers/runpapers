@@ -84,14 +84,15 @@ TOOLS = [
     },
     {
         "name": "list_recipes",
-        "description": "List figure-reproducing recipes in a paper's pack, their tier ('lite' vs 'full'), resource budgets, and locked target numbers from `targets.toml`.",
+        "description": "List figure-reproducing recipes in a paper's pack, their resource needs (data size, memory, GPU, minutes), and locked target numbers from `targets.toml`.",
         "annotations": READ_ONLY_ANNOTATIONS,
         "inputSchema": {
             "type": "object",
             "required": ["id"],
             "properties": {
                 "id": {"type": "string", "description": "DOI, PMID, PMCID, or URL of the paper."},
-                "tier": {"type": "string", "enum": ["lite", "full"], "description": "Optional tier filter."},
+                "max_memory_gb": {"type": "number", "description": "Optional maximum memory budget in GB."},
+                "gpu": {"type": "boolean", "description": "Optional filter on whether the recipe requires a GPU."},
                 "include_targets": {"type": "boolean", "default": True, "description": "Include expected paper metrics and tolerances."},
             },
         },
@@ -218,9 +219,10 @@ def handle_tool_call(catalog, name, arguments):
                     "badges": e.get("badges", {}),
                     "summary": e.get("summary", ""),
                     "profile": e.get("profile", {}),
-                    "lite_bytes": e.get("lite_bytes", 0),
+                    "data_bytes": e.get("data_bytes", 0),
                     "data_terms": e.get("data_terms", []),
-                    "recipes": [{"id": r["id"], "panel": r.get("panel", ""), "tier": r.get("tier", "lite")}
+                    "recipes": [{"id": r["id"], "panel": r.get("panel", ""), "data_bytes": r.get("data_bytes", 0),
+                                 "memory_gb": r.get("memory_gb", 8), "gpu": bool(r.get("gpu", False)), "minutes": r.get("minutes", 20)}
                                 for r in (e.get("recipes") or [])],
                 })
             payload = {"total": len(matches), "matches": matches}
@@ -249,14 +251,16 @@ def handle_tool_call(catalog, name, arguments):
                 raise ValueError("missing required argument 'id'")
             res = catalog.list_recipes(
                 args["id"],
-                tier=args.get("tier"),
+                max_memory_gb=args.get("max_memory_gb"),
+                gpu=args.get("gpu"),
                 include_targets=bool(args.get("include_targets", True)),
             )
             lines = [f"Recipes for DOI `{res['doi']}` (stage: `{res['stage']}`):"]
             for r in res["recipes"]:
                 nt = len(r.get("targets") or [])
                 t_info = f", {nt} target(s)" if "targets" in r else ""
-                lines.append(f"- `{r['id']}` ({r['tier']}, {r['panel']}): {r['title']}{t_info} — run: `{r['run_command']}`")
+                hw = f"{r['memory_gb']:g} GB RAM, {'GPU' if r['gpu'] else 'CPU'}, {r['minutes']:g}m"
+                lines.append(f"- `{r['id']}` ({r['panel']}, {hw}): {r['title']}{t_info} — run: `{r['run_command']}`")
             return {"content": [{"type": "text", "text": "\n".join(lines)}], "structuredContent": res, "isError": False}
 
         if name == "request_paper":
@@ -337,7 +341,8 @@ def get_prompt(catalog, name, arguments):
     if not det.get("packed"):
         raise ValueError(f"{det['doi']} is planned and has no pack yet")
     sk = catalog.get_skill(det["doi"])
-    first = next((r for r in det.get("recipes", []) if r.get("tier", "lite") == "lite"), (det.get("recipes") or [{}])[0])
+    first = next((r for r in det.get("recipes", []) if not r.get("gpu") and (r.get("memory_gb") or 8) <= 14),
+                 (det.get("recipes") or [{}])[0])
     panel = first.get("panel") or "a main figure"
     rid = first.get("id") or "<recipe>"
     question = args.get("question") or "<ask the user what question they want answered after reproducing the panel>"
@@ -508,8 +513,8 @@ def serve_streamable_http(catalog, host="127.0.0.1", port=8766):
         return res["structuredContent"]
 
     @srv.tool(description=TOOLS[3]["description"])
-    def list_recipes(id: str, tier: str | None = None, include_targets: bool = True) -> dict:
-        res = handle_tool_call(catalog, "list_recipes", {"id": id, "tier": tier, "include_targets": include_targets})
+    def list_recipes(id: str, max_memory_gb: float | None = None, gpu: bool | None = None, include_targets: bool = True) -> dict:
+        res = handle_tool_call(catalog, "list_recipes", {"id": id, "max_memory_gb": max_memory_gb, "gpu": gpu, "include_targets": include_targets})
         if res["isError"]:
             raise ValueError(res["content"][0]["text"])
         return res["structuredContent"]

@@ -12,7 +12,7 @@ import sys
 import time
 from pathlib import Path
 
-CI_LIMITS = {"mem_gb": 14, "cpus": 4}
+CI_LIMITS = {"cpus": 4, "mem_gb": 14, "memory_gb": 14, "gpu": False, "max_minutes": 60}
 _PEAK = ("import resource,subprocess,sys;rc=subprocess.call(sys.argv[2:]);"
          "open(sys.argv[1],'w').write(str(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss));sys.exit(rc)")   # a free GitHub Actions runner; "if it runs in CI it runs on a laptop"
 
@@ -108,10 +108,11 @@ def run(pack, rid, data_dir, out_root, ci=False, pack_dir=None, quiet=False):
     env = {**os.environ, "RP_DATA_DIR": str(data_dir), "RP_OUT_DIR": str(out), "RP_PACK_DIR": str(base),
            "RP_SEED": "0", "PYTHONHASHSEED": "0", "MPLBACKEND": "Agg"}
     cmd = command_for(script)
-    mem = min(float(r.get("max_mem_gb", 8)), CI_LIMITS["mem_gb"]) if ci else None
+    rn = pack.recipe_needs(r)
+    mem = min(float(rn["memory_gb"]), CI_LIMITS["memory_gb"]) if ci else None
     if ci:
         cmd = capped(cmd, int(math.ceil(mem)), CI_LIMITS["cpus"])
-    timeout = 60 * float(r.get("max_minutes", 30))
+    timeout = 60 * float(rn["minutes"] or 30)
     t0 = time.time()
     rss_file = out / ".peak_rss"
     cmd = [sys.executable, "-c", _PEAK, str(rss_file), *cmd]   # measures this recipe's own peak memory
@@ -145,8 +146,8 @@ def run(pack, rid, data_dir, out_root, ci=False, pack_dir=None, quiet=False):
                        "tolerance": tol, "ok": ok, "detail": detail, "source": t.get("source", ""),
                        "kind": t.get("kind", "figure"), "required": t.get("required", True), "note": t.get("note", "")})
     figures = sorted(p.name for p in out.iterdir() if p.suffix.lower() in (".png", ".svg", ".pdf", ".jpg"))
-    res = {"recipe": rid, "panel": r.get("panel", ""), "status": status, "returncode": rc, "seconds": secs,
-           "peak_rss_mb": peak_mb, "ci": ci, "checks": checks,
+    res = {"recipe": rid, "panel": r.get("panel", ""), "pack_hash": pack.content_hash(), "status": status,
+           "returncode": rc, "seconds": secs, "peak_rss_mb": peak_mb, "ci": ci, "checks": checks,
            "pass": status == "ok" and any(c["required"] for c in checks) and all(c["ok"] for c in checks if c["required"]),
            "figures": figures, "log": str(log)}
     (out / "result.json").write_text(json.dumps({**res, "log": "run.log"}, indent=1) + "\n")   # no local paths in shared files

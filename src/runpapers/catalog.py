@@ -13,7 +13,7 @@ import urllib.request
 from pathlib import Path
 
 from . import DEFAULT_BASE, data, ids, newpack, requests_log, verify, workspace
-from .registry import Registry, find_root, read_json, sha256_file, write_json
+from .registry import Registry, find_root, read_json, recipe_needs_from_meta, sha256_file, write_json
 
 INDEX_TTL_SECONDS = 3600
 
@@ -103,7 +103,7 @@ def _planned_entry(doi, p, votes=0):
         "summary": "",
         "profile": {},
         "recipes": [],
-        "lite_bytes": 0,
+        "data_bytes": 0,
         "questions": [],
         "stage": "planned",
         "badges": {},
@@ -269,30 +269,32 @@ class LocalCatalog(_BaseCatalog):
             "votes": reqs.get(doi, 0),
         }
 
-    def list_recipes(self, ident, tier=None, include_targets=True):
+    def list_recipes(self, ident, max_memory_gb=None, gpu=None, include_targets=True):
         det = self.paper_detail(ident)
         if not det.get("packed"):
             raise ValueError(f"{det['doi']} is planned and has no recipes yet")
         pk = self.reg.pack(det["doi"])
         st = verify.status(pk)
         l1_rec = (st.get("l1") or {}).get("recipes") or {}
-        d_sizes = {d["id"]: int(d.get("size") or 0) for d in pk.data if "id" in d}
         rows = []
         for r in pk.recipes:
-            rtier = r.get("tier", "lite")
-            if tier and rtier != tier:
+            nd = pk.recipe_needs(r)
+            if max_memory_gb is not None and nd["memory_gb"] > float(max_memory_gb):
+                continue
+            if gpu is not None and nd["gpu"] != bool(gpu):
                 continue
             rid = r["id"]
             item = {
                 "id": rid,
                 "panel": r.get("panel", ""),
                 "title": r.get("title", ""),
-                "tier": rtier,
                 "script": r.get("script", ""),
-                "data": list(r.get("data") or []),
-                "data_bytes": sum(d_sizes.get(did, 0) for did in (r.get("data") or [])),
-                "max_minutes": r.get("max_minutes", 20),
-                "max_mem_gb": r.get("max_mem_gb", 8),
+                "data": nd["data"],
+                "data_bytes": nd["data_bytes"],
+                "memory_gb": nd["memory_gb"],
+                "gpu": nd["gpu"],
+                "minutes": nd["minutes"],
+                "needs": {"memory_gb": nd["memory_gb"], "gpu": nd["gpu"], "minutes": nd["minutes"]},
                 "l1_pass": (l1_rec.get(rid) or {}).get("pass"),
                 "run_command": f"rp run {pk.doi} {rid}",
             }
@@ -438,31 +440,35 @@ class RemoteCatalog(_BaseCatalog):
             "workspace_command": f"uvx runpapers get {doi}{src_arg}",
         }
 
-    def list_recipes(self, ident, tier=None, include_targets=True):
+    def list_recipes(self, ident, max_memory_gb=None, gpu=None, include_targets=True):
         det = self.paper_detail(ident)
         if not det.get("packed"):
             raise ValueError(f"{det['doi']} is planned and has no recipes yet")
         doi = det["doi"]
         pack_toml = tomllib.loads(self.read_pack_file(doi, "pack.toml"))
         targets_all = tomllib.loads(self.read_pack_file(doi, "targets.toml")).get("target", []) if include_targets else []
-        d_sizes = {d["id"]: int(d.get("size") or 0) for d in pack_toml.get("data", []) if "id" in d}
+        data_list = pack_toml.get("data", [])
+        recipes_raw = pack_toml.get("recipes") or pack_toml.get("recipe", [])
         rows = []
-        for r in pack_toml.get("recipes", []):
-            rtier = r.get("tier", "lite")
-            if tier and rtier != tier:
+        for r in recipes_raw:
+            nd = recipe_needs_from_meta(r, data_list)
+            if max_memory_gb is not None and nd["memory_gb"] > float(max_memory_gb):
+                continue
+            if gpu is not None and nd["gpu"] != bool(gpu):
                 continue
             rid = r["id"]
             item = {
                 "id": rid,
                 "panel": r.get("panel", ""),
                 "title": r.get("title", ""),
-                "tier": rtier,
                 "script": r.get("script", ""),
-                "data": list(r.get("data") or []),
-                "data_bytes": sum(d_sizes.get(did, 0) for did in (r.get("data") or [])),
-                "max_minutes": r.get("max_minutes", 20),
-                "max_mem_gb": r.get("max_mem_gb", 8),
-                "l1_pass": True if det["badges"].get("runs") == "pass" and rtier == "lite" else None,
+                "data": nd["data"],
+                "data_bytes": nd["data_bytes"],
+                "memory_gb": nd["memory_gb"],
+                "gpu": nd["gpu"],
+                "minutes": nd["minutes"],
+                "needs": {"memory_gb": nd["memory_gb"], "gpu": nd["gpu"], "minutes": nd["minutes"]},
+                "l1_pass": True if det["badges"].get("runs") == "pass" else None,
                 "run_command": f"rp run {doi} {rid}",
             }
             if include_targets:

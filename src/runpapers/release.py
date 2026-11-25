@@ -204,8 +204,9 @@ def build(reg, pack, version=None, force=False):
         for rec in sorted(vdir(pack).glob("*.json")):
             if rec.name != "release.json":
                 z.write(rec, f"{name}/verification/{rec.name}")
+        known_rids = {r["id"] for r in pack.recipes}
         for f in sorted(l1.glob("*/*")):
-            if f.suffix in (".png", ".csv", ".json") and not f.name.startswith("."):
+            if f.parent.name in known_rids and f.suffix in (".png", ".csv", ".json") and not f.name.startswith("."):
                 z.write(f, f"{name}/reproduced/{f.parent.name}/{f.name}")
     entry = {"version": version, "pack_hash": h, "built": now(), "rp_version": __version__, "zip": zpath.name,
              "zip_sha256": sha256_file(zpath), "zip_bytes": zpath.stat().st_size, "published": {}}

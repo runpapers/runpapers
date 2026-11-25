@@ -13,11 +13,11 @@ from .recipes import check_tolerance, format_expected
 from .registry import read_json, sha256_file
 from .requests_log import issue_url as requests_issue_url
 from .requests_log import summary as requests_summary
-from .verify import now, status, resources
+from .verify import now, record, resources, status
 from .workspace import shipped
 
 BADGES = [
-    ("runs", "Runs", "Lint passed, data checksums matched, and every lite recipe re-ran from the original data under laptop/CI limits and met the paper's numbers (automatic)."),
+    ("runs", "Runs", "Lint passed, data checksums matched, and every recipe re-ran from the original data and met the paper's numbers (automatically in CI within CI limits, or recorded from HPC)."),
     ("checked", "Checked", "An independent reviewer (never the pack builder) compared every reproduced panel side by side with the published figure and checked the targets and guardrails."),
     ("reproduces", "Reproduces", "A named scientist signed off the reproduction after a passing independent review."),
     ("agent-tested", "Agent-tested", "Fresh AI agents from at least two companies, given only the copy-prompt in an empty folder, reproduced the figure and answered held-out questions."),
@@ -49,8 +49,8 @@ input.search{width:100%;padding:11px 14px;border:1px solid var(--line);border-ra
 .tabs button.on{background:var(--fg);color:#fff;border-color:var(--fg)}
 table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}
 .figs{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}.figs img{width:100%;border:1px solid var(--line);border-radius:8px}
-.tier{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:12px;background:var(--soft);color:var(--fg);white-space:nowrap}
-.tier.full{background:#eef2ff;color:#1e3a8a;border:1px solid #c7d2fe}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:12px;background:var(--soft);color:var(--fg);white-space:nowrap}
+.pill.hpc{background:#eef2ff;color:#1e3a8a;border:1px solid #c7d2fe}
 details.targets{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:8px 0}
 details.targets summary{cursor:pointer;font-size:14px}
 .tscroll{overflow-x:auto}
@@ -102,9 +102,10 @@ paper's original repository and runs it on your own computer.
 5. **Look at the result.** Your agent shows you the reproduced figure and a table with the paper's numbers next to its
    own, then answers your question.
 
-Behind the scenes, your agent runs `{install} get <DOI>`. This makes a folder named after the paper (for example
-`johansen2026/`), downloads the data from the original repository and checks every file against its checksum. Then it
-reads the pack's instructions (`SKILL.md`) and runs a recipe.
+Behind the scenes, your agent runs `{install} get <DOI>`. This makes a folder named after the paper's DOI (for example
+`10-1016-j-cell-2026-10-012/`) with the pack's instructions (`SKILL.md`), recipes and target numbers. When your agent
+runs a recipe (`{install} run <recipe>`), it downloads only that recipe's data files from the original repository and
+checks every file against its checksum.
 
 What you'll find in the folder:
 
@@ -137,8 +138,8 @@ Each paper's page lists example questions its data can answer. Some tips:
 
 ## What the badges mean {#badges}
 
-- **Runs**: the recipes re-ran from the original data under laptop limits and matched the paper's numbers. This is
-  checked automatically on every change and every website update.
+- **Runs**: every recipe re-ran from the original data and matched the paper's numbers. Recipes within free-CI limits
+  re-run automatically on every update; heavier or GPU panels are verified on HPC and recorded against the exact pack hash.
 - **Checked**: an independent reviewer, never the pack's builder, compared every reproduced panel with the published
   figure and checked the numbers and instructions.
 - **Reproduces**: a named scientist signed off the reproduction after the independent review.
@@ -318,9 +319,29 @@ def page(title, body, depth=0, desc="", md_twin=None):
 <script>{COPY_JS}</script></body></html>"""
 
 
+def fmt_minutes(m):
+    m = float(m or 0)
+    if m <= 0:
+        return "—"
+    if m < 1:
+        return "< 1 min"
+    return f"~{round(m)} min" if m >= 2 else f"~{m:g} min"
+
+
+def _recipe_res(card, r):
+    mr = ((card.get("resources") or {}).get("recipes") or {}).get(r["id"]) or {}
+    return {**r, **{k: mr[k] for k in ("data_bytes", "memory_gb", "gpu", "minutes", "measured", "where") if mr.get(k) is not None}}
+
+
+def fmt_needs(r):
+    data_txt = f"{fmt_bytes(r['data_bytes'])} data" if r.get("data_bytes") else "no external data"
+    return f"{data_txt}, {r.get('memory_gb', 8):g} GB RAM, {'GPU' if r.get('gpu') else 'CPU'}, {fmt_minutes(r.get('minutes', 20))}"
+
+
 def copy_prompt(card, base):
     doi = card["doi"]
-    first = next((r for r in card["recipes"] if r.get("tier") == "lite"), (card["recipes"] or [{}])[0])
+    first = next((r for r in card["recipes"] if not r.get("gpu") and (r.get("memory_gb") or 8) <= 14),
+                 (card["recipes"] or [{}])[0])
     panel = first.get("panel") or "a main figure"
     return (f"I want to work with the data from this paper using RunPapers:\n"
             f"  \"{card['title']}\" ({card.get('first_author', '').split()[-1] if card.get('first_author') else ''} et al., "
@@ -335,24 +356,25 @@ def _data_terms(card):
 
 
 def cost_text(res):
-    """One plain sentence about disk, time and memory, from our own measured runs."""
+    """One plain sentence about disk, memory, GPU and time across the pack."""
     if not res:
         return ""
-    parts = [f"About {fmt_bytes(res['disk_bytes'])} of disk ({fmt_bytes(res['data_bytes'])} of data from the original source, "
-             f"the rest Python packages and results)"]
+    mem_txt = f", up to {res['memory_gb']:g} GB of memory" if res.get("memory_gb") else ""
+    gpu_txt = ", GPU needed for at least one panel" if res.get("gpu") else ""
+    parts = [f"About {fmt_bytes(res['disk_bytes'])} of disk if running every panel ({fmt_bytes(res['data_bytes'])} of unique source data, "
+             f"the rest Python packages and results){mem_txt}{gpu_txt}"]
     if res.get("agent_minutes"):
         a, b = res["agent_minutes"]
         parts.append(f"in our tests a fresh AI agent took {a} to {b} minutes from the pasted prompt to the reproduced figure"
                      if a != b else f"in our tests a fresh AI agent took about {a} minutes from the pasted prompt to the reproduced figure")
     if res.get("recipe_minutes") is not None:
-        parts.append(f"the recipes themselves run in about {max(1, round(res['recipe_minutes']))} minute"
-                     f"{'s' if round(res['recipe_minutes']) > 1 else ''}" + (f" and need about {res['peak_ram_gb']} GB of memory" if res.get("peak_ram_gb") else ""))
+        mins = max(1, round(res["recipe_minutes"])) if res["recipe_minutes"] >= 1 else 1
+        parts.append(f"all recipes together run in about {mins} minute{'s' if mins > 1 else ''}")
     text = "; ".join(parts) + "."
-    if res.get("cluster_recipes"):
-        text += (f" Recipes {', '.join(res['cluster_recipes'])} need a computing cluster"
-                 + (f" (about {fmt_bytes(res['full_data_bytes'])} of data)" if res.get("full_data_bytes") else "") + ".")
+    if res.get("hpc_recipes"):
+        text += f" Panels {', '.join(res['hpc_recipes'])} need an HPC cluster or workstation; each recipe downloads only the files it uses."
     else:
-        text += " Everything runs on a laptop."
+        text += " Every panel runs on a laptop, and each recipe downloads only the files it uses."
     return text
 
 
@@ -379,6 +401,14 @@ def agent_md(card, base, install):
     pmid_txt = f", PMID {card['pmid']}" if card.get("pmid") else ""
     src_arg = f" --source {base}" if base != DEFAULT_BASE else ""
     terms = "; ".join(_data_terms(card)) or "see the paper page and original repository"
+    res = card.get("resources") or {}
+    rec_lines = "\n".join(
+        f"   - `{r['id']}`: {r['panel']}: {r['title']} ({fmt_needs(_recipe_res(card, r))})"
+        for r in card["recipes"]
+    )
+    tot_line = (f"   Totals across all panels (`{install} run --all`): {fmt_bytes(res.get('data_bytes', card.get('data_bytes', 0)))} unique data, "
+                f"{res.get('memory_gb', 0):g} GB peak RAM, {'GPU required' if res.get('gpu') else 'CPU only'}, "
+                f"{fmt_minutes(res.get('recipe_minutes', 0))}.")
     return f"""# RunPapers: agent setup for "{card['title']}"
 
 You are helping a scientist use the verified RunPapers pack for this paper (DOI {doi}{pmid_txt}, version {card['version']}).
@@ -388,12 +418,13 @@ Follow these steps in order. Ask the user before anything not listed here.
 1. Check that `uv` is installed: `uv --version`. If it is missing, install it with the official installer:
    - macOS / Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
    - Windows (PowerShell): `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
-2. Get the pack and its laptop-size ("lite") data, about {fmt_bytes(card['lite_bytes'])}, from the paper's original repositories:
+2. Get the pack (instructions, recipes and target numbers; no data files are downloaded yet):
    `{install} get {doi}{src_arg} --rp-cmd "{install}"`
-   This creates the folder `./{card['slug']}/`. Work inside it from now on (`cd {card['slug']}`).
+   This creates the folder `./{card['slug']}/`. Work inside it from now on (`cd {card['slug']}`). Run `{install} needs` anytime to inspect per-recipe resource needs.
 3. Read `SKILL.md` in that folder completely. It explains the data, the recipes and the guardrails. Follow the guardrails.
-4. Reproduce a published panel: `{install} run <recipe>`. Recipes:
-{chr(10).join(f"   - `{r['id']}`{' (full tier, cluster)' if r.get('tier') == 'full' else ''}: {r['panel']}: {r['title']}" for r in card['recipes'])}
+4. Reproduce a published panel: `{install} run <recipe>` (downloads only that recipe's data files from the original repositories, verifies checksums, and runs it). Recipes:
+{rec_lines}
+{tot_line}
    Each run writes `out/<recipe>/` with the figure, `metrics.json` and `result.json` (the paper's numbers next to yours).
    Show the user the figure and report plainly which numbers matched.
 5. For the user's own questions, write scripts in `analyses/` that read `data/`, as SKILL.md describes. State what you
@@ -409,6 +440,7 @@ def paper_md(card, base, install="uvx runpapers", results=None):
     doi = card["doi"]
     src_arg = f" --source {base}" if base != DEFAULT_BASE else ""
     terms = "; ".join(_data_terms(card)) or "see the original repository"
+    res = card.get("resources") or {}
     lines = [
         f"# {card['title']}", "",
         f"{card.get('first_author', '')} et al. *{card.get('journal', '')}* {card.get('year', '')}. DOI {doi}"
@@ -416,7 +448,7 @@ def paper_md(card, base, install="uvx runpapers", results=None):
         f"RunPapers pack v{card['version']} · stage: {card['stage']} · badges: "
         + (", ".join(k for k, v in card["badges"].items() if v == "pass") or "none yet")
         + (f" · archived: https://doi.org/{card['release']['doi']}" if (card.get("release") or {}).get("doi") else ""), "",
-        f"Size and time: {cost_text(card.get('resources'))}", "",
+        f"Size and time: {cost_text(res)}", "",
         card.get("summary", ""), "",
         "## Use it from your AI agent", "",
         "```", copy_prompt(card, base), "```", "",
@@ -425,18 +457,21 @@ def paper_md(card, base, install="uvx runpapers", results=None):
         "## Reproducible panels", "",
     ]
     for r in card["recipes"]:
-        tlabel = "full tier, cluster" if r.get("tier") == "full" else "lite"
+        rr = _recipe_res(card, r)
         pr = (results or {}).get(r["id"])
         req = [c for c in (pr or {}).get("checks", []) if c.get("required", True)]
         match_txt = f" — {sum(1 for c in req if c.get('ok'))}/{len(req)} paper targets matched" if pr and pr.get("pass") and req else ""
-        lines.append(f"- `{r['id']}` ({tlabel}): {r['panel']}: {r['title']}{match_txt}")
+        lines.append(f"- `{r['id']}`: {r['panel']}: {r['title']} ({fmt_needs(rr)}){match_txt}")
+    if card["recipes"]:
+        lines.append(f"- **Totals across all panels:** {fmt_bytes(res.get('data_bytes', card.get('data_bytes', 0)))} unique data, "
+                     f"{res.get('memory_gb', 0):g} GB peak RAM, {'GPU' if res.get('gpu') else 'CPU'}, {fmt_minutes(res.get('recipe_minutes', 0))}")
     if card.get("questions"):
         lines += ["", "## Example questions", ""] + [f"- {q}" for q in card["questions"]]
     if card.get("data"):
         lines += ["", "## Data and terms", "", f"Source data terms: {terms}", ""]
         for d in card["data"]:
             sz = "controlled access" if d.get("access") == "controlled" else fmt_bytes(d.get("size", 0))
-            lines.append(f"- **{d.get('title') or d['id']}** (`{d.get('tier', 'lite')}`, {sz}) — {d.get('source', '')}")
+            lines.append(f"- **{d.get('title') or d['id']}** (`{d['id']}`, {sz}) — {d.get('source', '')}")
     lines += ["", "## Cite", "",
               f"Cite the paper (https://doi.org/{doi}) and the pack: {_pack_cite(card, base)}"]
     return "\n".join(lines) + "\n"
@@ -451,10 +486,13 @@ def _redirect(d, url, title):
         f'<meta name="robots" content="noindex"></head><body><p>This paper is at <a href="{e(url)}">{e(url)}</a>.</p></body></html>\n')
 
 
-def _tier_pill(tier):
-    if tier == "full":
-        return '<span class="tier full" title="Runs on a computing cluster (full-tier data)">full tier · cluster</span>'
-    return '<span class="tier">lite</span>'
+def _compute_pill(rr):
+    hpc = rr.get("where") == "hpc" or rr.get("gpu") or float(rr.get("memory_gb", 8)) > 14 or float(rr.get("minutes", 20)) >= 60
+    if rr.get("gpu"):
+        return '<span class="pill hpc" title="Requires a GPU (HPC or workstation)">GPU · HPC</span>'
+    if hpc:
+        return '<span class="pill hpc" title="Runs on an HPC cluster or large-memory workstation">CPU · HPC</span>'
+    return '<span class="pill">CPU</span>'
 
 
 def paper_html(card, base, install, figs, results=None):
@@ -463,20 +501,40 @@ def paper_html(card, base, install, figs, results=None):
     up = "../" * depth
     pid = "p0"
     src_arg = f" --source {base}" if base != DEFAULT_BASE else ""
+    res = card.get("resources") or {}
     tabs = "".join(
         f'<button class="{"on" if i == 0 else ""}" data-how="{e(v)}" onclick="tab(this)">{e(k)}</button>'
         for i, (k, v) in enumerate(HOW.items())
     )
-    rec_by_id = {r["id"]: r for r in card["recipes"]}
-    rec_rows = "".join(
-        f"<tr><td><code>{e(r['id'])}</code></td><td>{e(r['panel'])}</td><td>{e(r['title'])}</td><td>{_tier_pill(r.get('tier', 'lite'))}</td></tr>"
-        for r in card["recipes"]
+    rec_by_id = {r["id"]: _recipe_res(card, r) for r in card["recipes"]}
+    rec_rows_list = []
+    for r in card["recipes"]:
+        rr = rec_by_id[r["id"]]
+        mem_cell = f"{rr.get('memory_gb', 8):g} GB"
+        rec_rows_list.append(
+            f"<tr><td><code>{e(r['id'])}</code></td><td>{e(r['panel'])}</td><td>{e(r['title'])}</td>"
+            f"<td>{e(fmt_bytes(rr.get('data_bytes', 0)))}</td>"
+            f"<td>{e(mem_cell)}</td>"
+            f"<td>{_compute_pill(rr)}</td>"
+            f"<td>{e(fmt_minutes(rr.get('minutes', 20)))}</td></tr>"
+        )
+    rec_rows = "".join(rec_rows_list)
+    tot_compute = '<span class="pill hpc">GPU</span>' if res.get("gpu") else '<span class="pill">CPU</span>'
+    tot_mem = f"{res.get('memory_gb', 0):g} GB peak"
+    tot_row = (
+        f'<tr style="font-weight:600"><td>Total</td><td colspan="2">{len(card["recipes"])} panel(s) (shared files counted once)</td>'
+        f'<td>{e(fmt_bytes(res.get("data_bytes", card.get("data_bytes", 0))))}</td>'
+        f'<td>{e(tot_mem)}</td>'
+        f'<td>{tot_compute}</td>'
+        f'<td>{e(fmt_minutes(res.get("recipe_minutes", 0)))}</td></tr>'
+        if card["recipes"] else ""
     )
     target_blocks = []
     for r in card["recipes"]:
         pr = (results or {}).get(r["id"])
         if not pr or not pr.get("pass") or not pr.get("checks"):
             continue
+        rr = rec_by_id[r["id"]]
         req_checks = [c for c in pr["checks"] if c.get("required", True)]
         n_ok = sum(1 for c in req_checks if c.get("ok"))
         trows = "".join(
@@ -488,7 +546,7 @@ def paper_html(card, base, install, figs, results=None):
         )
         target_blocks.append(
             f'<details class="targets"><summary><b>{e(r.get("panel") or r["id"])}</b> '
-            f'(<code>{e(r["id"])}</code>) {_tier_pill(r.get("tier", "lite"))} · '
+            f'(<code>{e(r["id"])}</code>) {_compute_pill(rr)} · '
             f'{n_ok}/{len(req_checks)} paper targets matched</summary>'
             f'<div class="tscroll"><table><tr><th>Metric</th><th>Paper</th><th>Ours</th><th>Status</th><th>Source</th></tr>'
             f'{trows}</table></div></details>'
@@ -496,19 +554,19 @@ def paper_html(card, base, install, figs, results=None):
     targets_html = "".join(target_blocks)
     fig_items = []
     for fname, rid in figs:
-        r = rec_by_id.get(rid, {})
-        cap = f"{r.get('panel', rid)}: {r.get('title', fname)}" if r else fname
-        tier_note = f' {_tier_pill("full")}' if r.get("tier") == "full" else ""
+        rr = rec_by_id.get(rid, {})
+        cap = f"{rr.get('panel', rid)}: {rr.get('title', fname)}" if rr else fname
+        hpc_tag = f' {_compute_pill(rr)}' if rr and (rr.get("where") == "hpc" or rr.get("gpu") or float(rr.get("memory_gb", 8)) > 14) else ""
         fig_items.append(
             f'<figure style="margin:0"><img src="figures/{e(fname)}" alt="{e(cap)}">'
-            f'<figcaption class="small mut">{e(cap)}{tier_note}</figcaption></figure>'
+            f'<figcaption class="small mut">{e(cap)}{hpc_tag}</figcaption></figure>'
         )
     fig_html = "".join(fig_items)
     qs = "".join(f"<li>{e(q)}</li>" for q in card.get("questions") or [])
     ids_line = f'DOI <a href="{ids.doi_url(doi)}">{e(doi)}</a>' + (
         f' · PMID <a href="{ids.pubmed_url(card["pmid"])}">{e(card["pmid"])}</a>' if card.get("pmid") else "")
     data_rows = "".join(
-        f"<tr><td>{e(d.get('title') or d['id'])}</td><td>{e(d.get('tier', 'lite'))}</td>"
+        f"<tr><td>{e(d.get('title') or d['id'])}</td>"
         f"<td>{e('controlled' if d.get('access') == 'controlled' else fmt_bytes(d.get('size', 0)))}</td>"
         f"<td>{e(d.get('source', ''))}</td><td>{linkify(d.get('license', 'not recorded'))}</td></tr>"
         for d in card.get("data", [])
@@ -530,12 +588,12 @@ def paper_html(card, base, install, figs, results=None):
 <h2>Use it from your own AI agent</h2>
 <div class="tabs">{tabs}</div><p class="small mut" id="how">{e(next(iter(HOW.values())))}</p>
 <div class="prompt"><button class="copy" onclick="cp('{pid}',this)">Copy</button><span id="{pid}">{e(copy_prompt(card, base))}</span></div>
-<p class="small mut">{e(cost_text(card.get('resources')))} Your agent asks you once whether to run it on this computer or on your computing cluster (preferred when you have one). Data come from the paper's original repositories; nothing is sent to RunPapers. Or from a terminal: <code>{e(install)} get {e(doi)}{e(src_arg)}</code></p>
-<h2>Reproducible panels</h2><div class="tscroll"><table><tr><th>Recipe</th><th>Panel</th><th>What it shows</th><th>Tier</th></tr>{rec_rows}</table></div>
+<p class="small mut">{e(cost_text(res))} Your agent asks you once whether to run it on this computer or on your computing cluster (preferred when you have one). Data come from the paper's original repositories; nothing is sent to RunPapers. Or from a terminal: <code>{e(install)} get {e(doi)}{e(src_arg)}</code></p>
+<h2>Reproducible panels</h2><div class="tscroll"><table><tr><th>Recipe</th><th>Panel</th><th>What it shows</th><th>Data</th><th>Memory</th><th>Compute</th><th>Time</th></tr>{rec_rows}{tot_row}</table></div>
 {targets_html}
 {('<h2>Reproduced figures</h2><div class="figs">' + fig_html + '</div>') if fig_items else ''}
 {('<h2>Example questions</h2><ul>' + qs + '</ul>') if qs else ''}
-<h2>Data</h2>{terms_note}<div class="tscroll"><table><tr><th>File</th><th>Tier</th><th>Size</th><th>Source</th><th>Terms / license</th></tr>{data_rows}</table></div>
+<h2>Data</h2>{terms_note}<div class="tscroll"><table><tr><th>File</th><th>Size</th><th>Source</th><th>Terms / license</th></tr>{data_rows}</table></div>
 <h2>Cite</h2><p class="small">Cite the paper ({ids_line}), the original data source per its terms above, and this pack: {_pack_cite_html(card, base)}</p>
 <p class="small mut">Machine-readable: <a href="index.md">index.md</a> · <a href="AGENT.md">AGENT.md</a> · <a href="pack.json">pack.json</a></p>
 """
@@ -613,7 +671,7 @@ that your own AI agent (Claude Code, Codex, Antigravity, Gemini CLI, Cursor, ...
 published figures from the original data and then answer new scientific questions.</p>
 <div class="steps">
 <div class="step"><b>Bring your own agent</b>RunPapers hosts no model and sees none of your questions. Everything runs locally on your machine using open tools (<code>uv</code> and Python).</div>
-<div class="step"><b>Laptop-first ("lite" tier)</b>Every pack includes at least one main-figure recipe that runs on a standard laptop (aiming under 2 GB of public metadata or tables). Heavy expression or chromatin matrices belong to an optional "full" tier.</div>
+<div class="step"><b>One pack, every panel</b>Each pack covers every main-figure panel the open data support. Getting a pack downloads no data up front; running a recipe downloads only the files that panel uses, and each panel states the data size, memory, GPU and time it needs.</div>
 <div class="step"><b>Guardrails for biology</b>Each pack's <code>SKILL.md</code> spells out the biological replicate unit (donors or animals, never individual cells), dissection or batch confounders, renamed cell-type labels, and questions the dataset cannot support.</div>
 </div>
 <h2 id="badges">Verification badges</h2>
@@ -633,7 +691,7 @@ def about_md(install):
         "workspace that your own AI agent (Claude Code, Codex, Antigravity, Gemini CLI, Cursor, ...) runs on your computer "
         "to reproduce published figures from the original data and answer new scientific questions.", "",
         "- **Bring your own agent:** RunPapers hosts no model and sees none of your questions; code runs locally via `uv`.",
-        "- **Laptop-first (`lite` tier):** Every pack has at least one main-figure recipe that runs on a laptop (aiming under 2 GB); larger matrices live in an optional `full` tier.",
+        "- **One pack, every panel:** Each pack covers every reproducible main-figure panel in one place. Getting a pack downloads no data up front; each recipe downloads only the files it uses and states its data size, memory, GPU and runtime.",
         "- **Guardrails for biology:** `SKILL.md` records the true replicate unit (donors or animals, not cells), confounders, label changes, documented paper discrepancies, and unsupported questions.",
         f"- **MCP server & multi-paper meetings:** Run `{install} mcp` to expose paper search, metadata, and `SKILL.md` over MCP, or `{install} meeting \"<topic>\"` to build a multi-paper synthesis workspace.", "",
         "## Verification badges", "",
@@ -698,10 +756,12 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
                                                     "files": files}, indent=1))
         figs, panel_results = [], {}
         src = l1_dir / ids.doi_relpath(pk.doi)
-        if st["badges"]["runs"] == "pass" and src.is_dir():
+        if st["badges"]["runs"] == "pass":
+            l1 = record(pk, "l1") or {}
+            l1_recs = (l1.get("recipes") or {}) if l1.get("pack_hash") == pk.content_hash() else {}
             for r in pk.recipes:
                 rid = r["id"]
-                res = read_json(src / rid / "result.json")
+                res = (read_json(src / rid / "result.json") if src.is_dir() else None) or l1_recs.get(rid)
                 if res and res.get("checks"):
                     targets = pk.targets_for(rid)
                     panel_results[rid] = {
@@ -711,21 +771,24 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
                             for c in res["checks"]
                         ],
                     }
-            known_rids = {r["id"]: i for i, r in enumerate(pk.recipes)}
-            pngs = []
-            for f in sorted(src.glob("*/*.png")):
-                rid = f.parent.name
-                res = read_json(f.parent / "result.json")
-                if res is not None and not res.get("pass", False):
-                    continue
-                pngs.append((known_rids.get(rid, len(known_rids)), rid, f))
-            pngs.sort(key=lambda x: (x[0], x[1], x[2].name))
-            if pngs:
-                (pdir / "figures").mkdir()
-                for _, rid, f in pngs:
-                    name = f"{rid}-{f.name}"
-                    shutil.copy2(f, pdir / "figures" / name)
-                    figs.append((name, rid))
+            if src.is_dir():
+                known_rids = {r["id"]: i for i, r in enumerate(pk.recipes)}
+                pngs = []
+                for f in sorted(src.glob("*/*.png")):
+                    rid = f.parent.name
+                    if rid not in known_rids:
+                        continue
+                    res = read_json(f.parent / "result.json") or l1_recs.get(rid)
+                    if res is not None and not res.get("pass", False):
+                        continue
+                    pngs.append((known_rids[rid], rid, f))
+                pngs.sort(key=lambda x: (x[0], x[1], x[2].name))
+                if pngs:
+                    (pdir / "figures").mkdir()
+                    for _, rid, f in pngs:
+                        name = f"{rid}-{f.name}"
+                        shutil.copy2(f, pdir / "figures" / name)
+                        figs.append((name, rid))
         (pdir / "index.html").write_text(paper_html(card, base, install, figs, panel_results))
         (pdir / "index.md").write_text(paper_md(card, base, install, panel_results))
         (pdir / "AGENT.md").write_text(agent_md(card, base, install))
@@ -785,7 +848,7 @@ and scientific guardrails that keep new analyses honest. Every pack is verified 
     (out / "about.md").write_text(about_md(install))
     index = {"generated": now(), "rp_version": __version__, "base_url": base, "install": install,
              "papers": [{k: c[k] for k in ("doi", "pmid", "pmcid", "preprint_doi", "title", "first_author", "senior_author", "journal",
-                                            "year", "slug", "collections", "version", "summary", "profile", "recipes", "lite_bytes", "resources",
+                                            "year", "slug", "collections", "version", "summary", "profile", "recipes", "data_bytes", "resources",
                                             "questions", "stage", "badges")}
                         | {"data_terms": _data_terms(c), "release": c.get("release"), "url": f"{base}/{ids.page_path(c['doi'])}/",
                            "agent": f"{base}/{ids.page_path(c['doi'])}/AGENT.md"}

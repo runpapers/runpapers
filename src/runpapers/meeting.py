@@ -98,8 +98,8 @@ def _meeting_md(topic, selected, overlap, planned_matches, rp_cmd):
         "3. **Align cell-type taxonomies explicitly:** "
         "Different papers (or preprints vs published versions) may rename cell types or report different hierarchy levels. "
         "Write explicit label-mapping tables in `synthesis/` grounded in each pack's `SKILL.md` rather than matching strings blindly.",
-        "4. **Respect modality and tier boundaries:** "
-        "If a pack is `lite` metadata-only (composition/QC) while another includes expression or spatial tables, state plainly what each pack's data can and cannot test.",
+        "4. **Respect modality and data scope boundaries:** "
+        "If one pack covers cell-level metadata and composition while another includes expression or chromatin matrices, state plainly what each pack's files can and cannot test.",
     ]
 
     lines += ["", "## Data terms and citations", ""]
@@ -157,12 +157,12 @@ def build_meeting(
     genes=(),
     max_papers=5,
     min_stage="runs",
-    tier="lite",
-    fetch_data=True,
+    fetch_data=False,
     dest=None,
     source=None,
     rp_cmd="rp",
     quiet=False,
+    **_ignored,
 ):
     """Build a multi-paper meeting folder for `topic`. Returns `(target_path, manifest_dict)`."""
     if min_stage not in search.STAGE_RANK:
@@ -244,7 +244,6 @@ def build_meeting(
         _, ws_notes = workspace.get(
             e["doi"],
             dest=ws_dir,
-            tier=tier,
             source=cat.source_str,
             fetch_data=fetch_data,
             rp_cmd=rp_cmd,
@@ -280,7 +279,6 @@ def build_meeting(
         "rp_version": __version__,
         "workspace": str(target),
         "min_stage": min_stage,
-        "tier": tier,
         "packs": [
             {
                 "doi": e["doi"],

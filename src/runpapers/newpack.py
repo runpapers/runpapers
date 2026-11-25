@@ -91,7 +91,7 @@ TODO: for every file in pack.toml [[data]]: what one row/cell is, the key column
 how files join (keys), and known quirks (renamed labels, excluded samples). Files are in `data/` ($RP_DATA_DIR).
 
 ## Recipes
-TODO: one line per recipe: what it reproduces and how to run it (`rp run <id>`).
+TODO: one line per recipe: which panel it reproduces, what it needs (data files, memory, GPU, runtime), and how to run it (`rp run <id>`).
 
 ## Guardrails
 - Donors (or animals), not cells, are the replicates for any statistical claim.
@@ -146,10 +146,10 @@ cell_types = []
 key_genes = []
 
 # [[data]]
-# id = "cells"  title = ""  url = "https://..."  size = 0  md5 = ""  tier = "lite"  source = ""  license = ""  access = "open"
+# id = "cells"  title = ""  url = "https://..."  size = 0  md5 = ""  source = ""  license = ""  access = "open"
 
 # [[recipes]]
-# id = "fig1b"  title = ""  panel = "Figure 1B"  script = "recipes/fig1b.py"  tier = "lite"  data = ["cells"]  max_minutes = 20  max_mem_gb = 8
+# id = "fig1b"  title = ""  panel = "Figure 1B"  script = "recipes/fig1b.py"  data = ["cells"]  needs = {{ memory_gb = 8, gpu = false, minutes = 20 }}
 """
     (d / PACK_FILE).write_text(pack)
     (d / "targets.toml").write_text("# Numbers from the paper each recipe must reproduce.\n"

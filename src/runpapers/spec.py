@@ -1,17 +1,15 @@
-"""Level-0 checks (lint): the pack is well formed, licensed, complete, within the lite-tier budget, and has no
-instructions or code that a user's agent should not run. Every finding is (severity, code, message); any 'error'
-fails L0. Community packs are untrusted until they pass this and a human review."""
+"""Level-0 checks (lint): the pack is well formed, licensed, complete, and has no instructions or code that a
+user's agent should not run. Every finding is (severity, code, message); any 'error' fails L0. Community packs
+are untrusted until they pass this and a human review."""
 import re
 from pathlib import Path
 
 from . import ids
-from .registry import SPEC
+from .registry import LEGACY_SPECS, SPEC
 
-TIERS = ("lite", "full")
 ACCESS = ("open", "controlled")
 TOL_KEYS = {"exact", "abs", "rel", "range", "set"}
-LITE_WARN_BYTES = 2 * 1024**3     # a laptop and a free CI runner should handle the lite tier
-LITE_MAX_BYTES = 8 * 1024**3
+NEEDS_KEYS = {"memory_gb", "gpu", "minutes"}
 MIN_QUESTIONS = 3
 SKILL_SECTIONS = ("## What this paper", "## Data", "## Recipes", "## Guardrails", "## Answering new questions")
 
@@ -54,12 +52,18 @@ def scan_text(text, where):
     return out
 
 
+def _num(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
 def lint(pack, expected_dir=None):
     f = []
     m = pack.meta
     add = lambda sev, code, msg: f.append((sev, code, msg))
-    if m.get("spec") != SPEC:
-        add("error", "spec", f"spec must be {SPEC!r} (got {m.get('spec')!r})")
+    sp_ver = m.get("spec")
+    if sp_ver not in (SPEC, *LEGACY_SPECS):
+        add("error", "spec", f"spec must be {SPEC!r} (got {sp_ver!r})")
+    is_legacy = sp_ver in LEGACY_SPECS
     p = m.get("paper", {})
     try:
         doi = ids.normalize_doi(p.get("doi", ""))
@@ -90,31 +94,31 @@ def lint(pack, expected_dir=None):
         if did in seen:
             add("error", "data.id", f"duplicate data id {did}")
         seen.add(did)
+        if "tier" in d:
+            if is_legacy:
+                add("warn", "tier.ignored", f"{did}: tier is ignored (migrate to spec = {SPEC!r})")
+            else:
+                add("error", "data.tier", f"{did}: format 0.2 has no tier field; declare data and needs on each recipe instead")
         if not str(d.get("url", "")).startswith("https://"):
             add("error", "data.url", f"{did}: url must be https")
         if d.get("access", "open") not in ACCESS:
             add("error", "data.access", f"{did}: access must be one of {ACCESS}")
         if d.get("access") == "controlled":
-            if d.get("tier", "lite") == "lite":
-                add("error", "data.access", f"{did}: controlled-access data can't be in the lite tier")
+            if not d.get("source"):
+                add("error", "data.source", f"{did}: say where the file comes from (repository, release)")
+            if not d.get("access_note"):
+                add("warn", "data.access_note", f"{did}: controlled-access data should include access_note instructions")
             continue
         if not isinstance(d.get("size"), int) or d["size"] <= 0:
             add("error", "data.size", f"{did}: size (bytes, integer) is required")
         if not (d.get("md5") or d.get("sha256")):
             add("error", "data.checksum", f"{did}: md5 or sha256 is required")
-        if d.get("tier", "lite") not in TIERS:
-            add("error", "data.tier", f"{did}: tier must be lite or full")
         if not d.get("source"):
             add("error", "data.source", f"{did}: say where the file comes from (repository, release)")
         if not d.get("license"):
             add("warn", "data.license", f"{did}: data license not recorded")
     if not pack.data:
         add("error", "data", "no [[data]] entries")
-    lb = pack.lite_bytes()
-    if lb > LITE_MAX_BYTES:
-        add("error", "data.lite", f"lite tier is {lb / 1e9:.1f} GB; keep it under {LITE_MAX_BYTES / 1e9:.0f} GB (move files to tier 'full')")
-    elif lb > LITE_WARN_BYTES:
-        add("warn", "data.lite", f"lite tier is {lb / 1e9:.1f} GB; aim for under 2 GB so it runs on a laptop")
 
     # recipes
     rids = set()
@@ -125,16 +129,36 @@ def lint(pack, expected_dir=None):
         if rid in rids:
             add("error", "recipe.id", f"duplicate recipe {rid}")
         rids.add(rid)
+        if "tier" in r:
+            if is_legacy:
+                add("warn", "tier.ignored", f"{rid}: tier is ignored (migrate to spec = {SPEC!r})")
+            else:
+                add("error", "recipe.tier", f"{rid}: format 0.2 has no tier field; declare needs = {{ memory_gb = ..., gpu = ..., minutes = ... }}")
         sp = pack.dir / r.get("script", "")
         if not r.get("script") or not sp.is_file():
             add("error", "recipe.script", f"{rid}: script {r.get('script')!r} not found")
-        for did in r.get("data", []):
-            if did not in seen:
-                add("error", "recipe.data", f"{rid}: unknown data id {did}")
-            elif r.get("tier", "lite") == "lite":
-                d = pack.data_entry(did)
-                if d.get("tier", "lite") != "lite":
-                    add("error", "recipe.tier", f"{rid}: lite recipe uses full-tier data {did}")
+        if "data" not in r:
+            add("warn", "recipe.data", f"{rid}: recipe has no data = [...] list")
+        elif not isinstance(r["data"], list):
+            add("error", "recipe.data", f"{rid}: data must be a list of [[data]] ids")
+        else:
+            for did in r["data"]:
+                if did not in seen:
+                    add("error", "recipe.data", f"{rid}: unknown data id {did}")
+        if "needs" not in r:
+            if not is_legacy:
+                add("warn", "recipe.needs", f"{rid}: recipe has no needs = {{ memory_gb = ..., gpu = ..., minutes = ... }}")
+        else:
+            nd = r["needs"]
+            if not isinstance(nd, dict) or not set(nd) <= NEEDS_KEYS:
+                add("error", "recipe.needs", f"{rid}: needs must be a table with keys from {sorted(NEEDS_KEYS)}")
+            else:
+                if "memory_gb" in nd and (not _num(nd["memory_gb"]) or nd["memory_gb"] <= 0):
+                    add("error", "recipe.needs", f"{rid}: needs.memory_gb must be a positive number")
+                if "minutes" in nd and (not _num(nd["minutes"]) or nd["minutes"] <= 0):
+                    add("error", "recipe.needs", f"{rid}: needs.minutes must be a positive number")
+                if "gpu" in nd and not isinstance(nd["gpu"], bool):
+                    add("error", "recipe.needs", f"{rid}: needs.gpu must be true or false")
         if not r.get("panel"):
             add("warn", "recipe.panel", f"{rid}: say which published panel it reproduces (e.g. 'Figure 2F')")
         if not pack.targets_for(rid):
