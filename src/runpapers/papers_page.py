@@ -10,30 +10,25 @@ import json
 from . import ids, requests_log, search, vocab
 
 PAPERS_CSS = """
-:root{--rp-hematoxylin:#2A2C6B;--rp-eosin:#D9466F;--rp-eosin-ink:#C2335E;--rp-eosin-wash:#FCEEF2;
---rp-slide:#F7F7FB;--rp-coverslip:#E3E2EE;--rp-counterstain:#5D5A85;
---rp-font-sans:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
---rp-font-serif:"Source Serif 4",Georgia,serif}
-header .wrap{flex-wrap:wrap;height:auto;min-height:58px;padding-top:8px;padding-bottom:8px;gap:6px 18px}
-.papers-head{padding:24px 0 8px}
-.papers-head h1{color:var(--rp-hematoxylin);margin:8px 0 6px}
+.papers-head{padding:8px 0 8px}
+.papers-head h1{color:var(--rp-hematoxylin);margin:0 0 6px}
 .papers-sub{color:var(--rp-counterstain);font-size:16px;margin:0 0 16px;max-width:720px}
 .papers-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
-.papers-q{flex:1 1 260px;min-width:0;padding:10px 13px;border:1px solid var(--rp-coverslip);border-radius:9px;
-font:16px/1.3 var(--rp-font-sans);color:var(--rp-hematoxylin);background:#fff}
-.papers-q:focus,.papers-sort:focus{outline:2px solid var(--rp-eosin-ink);outline-offset:1px}
+.papers-q{flex:1 1 240px;min-width:0;padding:10px 13px;border:1px solid var(--rp-coverslip);border-radius:9px;
+font:16px/1.3 var(--rp-font-sans);color:var(--rp-hematoxylin);background:var(--rp-surface)}
+.papers-q:focus,.papers-sort:focus{outline:3px solid var(--rp-eosin);outline-offset:2px}
 .papers-sort-wrap{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--rp-counterstain)}
-.papers-sort{padding:9px 10px;border:1px solid var(--rp-coverslip);border-radius:9px;background:#fff;
+.papers-sort{padding:9px 10px;border:1px solid var(--rp-coverslip);border-radius:9px;background:var(--rp-surface);
 color:var(--rp-hematoxylin);font:14px/1.3 var(--rp-font-sans)}
-.papers-submit{padding:9px 14px;border:0;border-radius:9px;background:var(--rp-eosin-ink);color:#fff;
-font:600 14px/1.3 var(--rp-font-sans);cursor:pointer}
+.papers-submit{padding:9px 14px;border:0;border-radius:9px;background:var(--rp-btn-bg);color:var(--rp-btn-fg);
+font:700 14px/1.3 var(--rp-font-sans);cursor:pointer}
 .js-ready .papers-submit{display:none}
 .papers-meta-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;
 margin:0 0 14px;font-size:14px;color:var(--rp-counterstain)}
-.papers-clear{border:1px solid var(--rp-coverslip);background:#fff;color:var(--rp-eosin-ink);border-radius:7px;
+.papers-clear{border:1px solid var(--rp-coverslip);background:var(--rp-surface);color:var(--rp-eosin-ink);border-radius:7px;
 padding:4px 10px;font:600 13px/1.3 var(--rp-font-sans);cursor:pointer}
 .papers-layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:24px;align-items:start}
-.papers-filters{background:var(--rp-slide);border:1px solid var(--rp-coverslip);border-radius:12px;padding:14px}
+.papers-filters{background:var(--rp-surface);border:1px solid var(--rp-coverslip);border-radius:12px;padding:14px}
 .filter-group{border:0;margin:0 0 14px;padding:0;min-width:0}
 .filter-group:last-child{margin-bottom:0}
 .filter-legend{font-weight:700;font-size:13px;letter-spacing:.01em;color:var(--rp-hematoxylin);margin:0 0 6px;padding:0}
@@ -47,32 +42,32 @@ line-height:1.35;color:var(--rp-hematoxylin);cursor:pointer;padding:2px 0}
 .papers-main{min-width:0}
 .papers-section-title{font-size:15px;font-weight:700;color:var(--rp-counterstain);margin:24px 0 10px;
 padding-top:14px;border-top:1px solid var(--rp-coverslip)}
-.paper-row{border:1px solid var(--rp-coverslip);border-radius:12px;padding:15px 17px;margin:0 0 12px;background:#fff;
+.paper-row{border:1px solid var(--rp-coverslip);border-radius:12px;padding:16px 18px;margin:0 0 12px;background:var(--rp-surface);
 overflow-wrap:anywhere}
 .paper-row-requested{background:var(--rp-slide)}
 .paper-title-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin:0 0 4px}
-.paper-title{font:600 18.5px/1.32 var(--rp-font-serif);color:var(--rp-hematoxylin)}
+.paper-title{font:600 19px/1.32 var(--rp-font-serif);font-optical-sizing:auto;color:var(--rp-hematoxylin)}
 a.paper-title:hover{color:var(--rp-eosin-ink);text-decoration:underline}
 .flag-new{display:inline-block;font:700 11px/1.4 var(--rp-font-sans);padding:1px 7px;border-radius:10px;
 background:var(--rp-eosin-wash);color:var(--rp-hematoxylin);border:1px solid var(--rp-coverslip)}
-.paper-cite{font-size:13.5px;color:var(--rp-counterstain);margin:0 0 7px}
+.paper-cite{font-size:13.5px;color:var(--rp-counterstain);margin:0 0 7px;max-width:none}
 .paper-cite a{color:var(--rp-eosin-ink)}
-.paper-summary{font-size:14.5px;color:var(--rp-hematoxylin);margin:0 0 8px}
+.paper-summary{font-size:15px;color:var(--rp-hematoxylin);margin:0 0 8px}
 .paper-tags{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
 .tag-chip{display:inline-block;font-size:12px;line-height:1.35;padding:2px 8px;border-radius:999px;
 background:var(--rp-slide);border:1px solid var(--rp-coverslip);color:var(--rp-hematoxylin)}
-.paper-row-requested .tag-chip{background:#fff}
+.paper-row-requested .tag-chip{background:var(--rp-surface)}
 .paper-panels{font-size:13.5px;color:var(--rp-hematoxylin);margin:6px 0 0;font-weight:500}
 .paper-usage{font-size:12.5px;color:var(--rp-counterstain);margin:6px 0 0}
 .paper-req-line{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:6px 0 4px;font-size:13.5px}
 .req-status{display:inline-block;font-weight:600;padding:2px 9px;border-radius:999px;
 background:var(--rp-eosin-wash);color:var(--rp-hematoxylin)}
 .vote-link{font-weight:600;color:var(--rp-eosin-ink)}
-.zero-box{border:1px solid var(--rp-coverslip);background:var(--rp-slide);border-radius:12px;padding:22px 20px;margin:8px 0}
+.zero-box{border:1px solid var(--rp-coverslip);background:var(--rp-surface);border-radius:12px;padding:22px 20px;margin:8px 0}
 .zero-msg{margin:0 0 12px;color:var(--rp-hematoxylin);font-size:15px}
-.btn-request{display:inline-block;background:var(--rp-eosin-ink);color:#fff;font-weight:600;font-size:14px;
+.btn-request{display:inline-block;background:var(--rp-btn-bg);color:var(--rp-btn-fg);font-weight:700;font-size:14px;
 padding:8px 14px;border-radius:8px;text-decoration:none}
-.btn-request:hover{text-decoration:none;opacity:.92}
+.btn-request:hover{text-decoration:none;opacity:.92;color:var(--rp-btn-fg)}
 @media(max-width:820px){
   .papers-layout{grid-template-columns:1fr;gap:14px}
   .filter-list{max-height:170px}
@@ -700,7 +695,11 @@ SEARCH_JS = r"""/* Self-hosted five-group search, filter, sort, and URL sync for
       const hv = Number(entry.usage.human_views || 0).toLocaleString("en-US");
       const av = Number(entry.usage.agent_views || 0).toLocaleString("en-US");
       const dl = Number(entry.usage.downloads || 0).toLocaleString("en-US");
-      row.appendChild(el(doc, "div", "paper-usage", hv + " views by people, " + av + " by AI agents, " + dl + " downloads"));
+      const usageLine = el(doc, "div", "paper-usage", hv + " views by people, " + av + " by AI agents, " + dl + " downloads · ");
+      const howLink = el(doc, "a", null, "How we count");
+      howLink.setAttribute("href", "../about/#how-we-count");
+      usageLine.appendChild(howLink);
+      row.appendChild(usageLine);
     }
     return row;
   }
@@ -722,6 +721,12 @@ SEARCH_JS = r"""/* Self-hosted five-group search, filter, sort, and URL sync for
     let actionTxt = "Vote on GitHub";
     if (entry.status === "in_progress") {
       statusTxt = votes > 0 ? "In progress, " + voteWord : "In progress";
+      actionTxt = "Follow or vote on GitHub";
+    } else if (entry.status === "checking_data") {
+      statusTxt = votes > 0 ? "Checking the data, " + voteWord : "Checking the data";
+      actionTxt = "Follow or vote on GitHub";
+    } else if (entry.status === "checking") {
+      statusTxt = votes > 0 ? "Being checked, " + voteWord : "Being checked";
       actionTxt = "Follow or vote on GitHub";
     } else if (entry.status === "not_possible") {
       statusTxt = entry.status_reason ? "Not possible: " + entry.status_reason : "Not possible";
@@ -1000,7 +1005,7 @@ def _citation_html(entry):
     if entry.get("first_author"):
         bits.append(f"{_esc(entry['first_author'])} et al.")
     if entry.get("journal"):
-        jn = f"<i>{_esc(entry['journal'])}</i>" + (f" {_esc(entry['year'])}" if entry.get("year") else "")
+        jn = f"{_esc(entry['journal'])}" + (f" {_esc(entry['year'])}" if entry.get("year") else "")
         bits.append(jn)
     elif entry.get("year"):
         bits.append(_esc(entry["year"]))
@@ -1020,7 +1025,7 @@ def _tags_html(tags):
     return '<div class="paper-tags">' + "".join(f'<span class="tag-chip">{_esc(c)}</span>' for c in chips) + "</div>"
 
 
-def _available_row_html(entry):
+def _available_row_html(entry, href_prefix="./", about_prefix="../about/"):
     new_flag = '<span class="flag-new">New</span>' if _is_new(entry.get("published_at")) else ""
     summary_html = f'<p class="paper-summary">{_esc(entry["summary"])}</p>' if entry.get("summary") else ""
     panels_txt = _format_panels_sentence(entry.get("panels"))
@@ -1030,11 +1035,12 @@ def _available_row_html(entry):
         u = entry["usage"]
         usage_html = (
             f'<div class="paper-usage">{int(u.get("human_views", 0)):,} views by people, '
-            f'{int(u.get("agent_views", 0)):,} by AI agents, {int(u.get("downloads", 0)):,} downloads</div>'
+            f'{int(u.get("agent_views", 0)):,} by AI agents, {int(u.get("downloads", 0)):,} downloads · '
+            f'<a href="{_esc(about_prefix)}#how-we-count">How we count</a></div>'
         )
     return (
         f'<article class="paper-row" data-doi="{_esc(entry["doi"])}" data-status="available">'
-        f'<div class="paper-title-line"><a class="paper-title" href="./{_esc(entry["slug"])}/">{_esc(entry["title"])}</a>{new_flag}</div>'
+        f'<div class="paper-title-line"><a class="paper-title" href="{_esc(href_prefix)}{_esc(entry["slug"])}/">{_esc(entry["title"])}</a>{new_flag}</div>'
         f'{_citation_html(entry)}'
         f'{summary_html}'
         f'{_tags_html(entry.get("tags"))}'
@@ -1050,6 +1056,12 @@ def _requested_row_html(entry, repo):
     st = entry.get("status") or "requested"
     if st == "in_progress":
         status_txt = f"In progress, {vote_word}" if votes > 0 else "In progress"
+        action_txt = "Follow or vote on GitHub"
+    elif st == "checking_data":
+        status_txt = f"Checking the data, {vote_word}" if votes > 0 else "Checking the data"
+        action_txt = "Follow or vote on GitHub"
+    elif st == "checking":
+        status_txt = f"Being checked, {vote_word}" if votes > 0 else "Being checked"
         action_txt = "Follow or vote on GitHub"
     elif st == "not_possible":
         reason = entry.get("status_reason")

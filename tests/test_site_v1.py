@@ -1,7 +1,8 @@
 """Offline tests for public website routing, markdown twins, legacy redirects, available-only filtering,
-and zero public stage, badge, or tier tokens."""
+brand kit integration, external-link hygiene, <300 KB first-load budget, and zero public stage/badge/tier tokens."""
 import contextlib
 import hashlib
+import html.parser
 import io
 import json
 import os
@@ -12,6 +13,7 @@ import tempfile
 import textwrap
 import threading
 import unittest
+import urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -123,7 +125,7 @@ class SiteV1Tests(unittest.TestCase):
             f'size = {len(CSV)}\n'
             f'md5 = "{hashlib.md5(CSV).hexdigest()}"\n'
             f'source = "Public Archive"\n'
-            f'license = "CC0"\n'
+            f'license = "Allen Institute Terms of Use (https://alleninstitute.org/terms-of-use/)"\n'
             f'[[recipes]]\n'
             f'id = "fig1"\n'
             f'title = "Donor counts panel"\n'
@@ -181,6 +183,11 @@ class SiteV1Tests(unittest.TestCase):
                     "at": "2026-11-25T12:01:00Z",
                     "tag": f"pack/{pk.slug}/v0.1.0",
                     "url": f"https://github.com/runpapers/runpapers/releases/tag/pack/{pk.slug}/v0.1.0",
+                },
+                "huggingface": {
+                    "at": "2026-11-25T12:02:00Z",
+                    "repo": f"RunPapers/{pk.slug}",
+                    "url": f"https://huggingface.co/datasets/RunPapers/{pk.slug}",
                 },
             }
             write_json(d / "verify" / "release.json", rel_rec)
@@ -320,6 +327,8 @@ class SiteV1Tests(unittest.TestCase):
         home_html = (sdir / "index.html").read_text()
         self.assertIn("Released primate putamen multiomic atlas", home_html)
         self.assertNotIn(f"papers/{unrel_slug}/", home_html)
+        self.assertNotIn(self.DOI_UNRELEASED, home_html)
+        self.assertNotIn("Unreleased draft caudate study", home_html)
 
         llms_txt = (sdir / "llms.txt").read_text()
         self.assertIn(self.DOI_RELEASED, llms_txt)
@@ -351,7 +360,243 @@ class SiteV1Tests(unittest.TestCase):
         self.assertEqual(n_empty, 0)
         self.assertEqual(json.loads((empty_dir / "index.json").read_text())["papers"], [])
         self.assertIn("No packs available yet", (empty_dir / "llms.txt").read_text())
+        self.assertIn("No packs are available yet.", (empty_dir / "index.html").read_text())
         self.assertTrue((empty_dir / "papers" / "index.html").is_file())
+
+    # Every page loads assets only from runpapers.com (self-hosted fonts, CSS, JS, icons, logo, social card);
+    # external <a href> links carry rel="noopener" and point only to allowed scientific/code/archive/license hosts;
+    # IBM Plex woff2 files are unmodified, zero green appears in tokens/CSS/SVGs, and WCAG AA contrast holds.
+    def test_only_self_hosted_assets_and_allowed_external_links(self):
+        requests_log.vote(self.reg, self.DOI_PLANNED, by="biologist1")
+
+        sdir, n = site.build(self.reg, out=self.tmp / "site-ac5", base_url="https://runpapers.com")
+        self.assertEqual(n, 1)
+
+        allowed_external_hosts = {
+            "runpapers.com",
+            "doi.org",
+            "pubmed.ncbi.nlm.nih.gov",
+            "github.com",
+            "zenodo.org",
+            "huggingface.co",
+            "orcid.org",
+            "alleninstitute.org",
+            "creativecommons.org",
+        }
+
+        class _PageAudit(html.parser.HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.assets = []
+                self.links = []
+                self.ids = set()
+
+            def handle_starttag(self, tag, attrs):
+                ad = dict(attrs)
+                if ad.get("id"):
+                    self.ids.add(ad["id"])
+                if tag == "a" and "href" in ad:
+                    self.links.append((ad["href"], ad.get("rel", "")))
+                elif tag == "link" and "href" in ad:
+                    self.assets.append((tag, ad.get("rel", ""), ad["href"]))
+                elif tag in ("script", "img") and "src" in ad:
+                    self.assets.append((tag, "", ad["src"]))
+                elif tag == "source" and "srcset" in ad:
+                    for part in ad["srcset"].split(","):
+                        u = part.strip().split()[0]
+                        if u:
+                            self.assets.append((tag, "", u))
+                elif tag == "meta" and ad.get("property") == "og:image" and "content" in ad:
+                    self.assets.append(("meta:og:image", "", ad["content"]))
+
+        html_files = sorted(sdir.rglob("*.html"))
+        self.assertGreaterEqual(len(html_files), 10)
+        audits = {}
+        for hp in html_files:
+            parser = _PageAudit()
+            parser.feed(hp.read_text())
+            audits[hp] = parser
+
+        for hp, audit in audits.items():
+            rel_hp = hp.relative_to(sdir)
+            for tag, link_rel, url in audit.assets:
+                self.assertFalse(url.startswith("//"), f"protocol-relative asset {url} in {rel_hp}")
+                if url.startswith(("http://", "https://")):
+                    parsed = urllib.parse.urlparse(url)
+                    self.assertEqual(parsed.scheme, "https", f"non-HTTPS asset {url} in {rel_hp}")
+                    self.assertEqual(parsed.netloc, "runpapers.com", f"third-party asset {url} in {rel_hp}")
+                    local_target = sdir / parsed.path.lstrip("/")
+                    if local_target.is_dir():
+                        local_target = local_target / "index.html"
+                    self.assertTrue(local_target.is_file(), f"missing asset {local_target} for {url} in {rel_hp}")
+                else:
+                    clean = url.split("?")[0].split("#")[0]
+                    local_target = (hp.parent / clean).resolve()
+                    self.assertTrue(local_target.exists(), f"missing relative asset {url} ({tag}/{link_rel}) in {rel_hp}")
+
+            for href, rel_attr in audit.links:
+                self.assertFalse(href.startswith("//"), f"protocol-relative link {href} in {rel_hp}")
+                if href.startswith(("http://", "https://")):
+                    parsed = urllib.parse.urlparse(href)
+                    self.assertEqual(parsed.scheme, "https", f"non-HTTPS link {href} in {rel_hp}")
+                    self.assertIn(parsed.netloc, allowed_external_hosts, f"disallowed external link {href} in {rel_hp}")
+                    if parsed.netloc != "runpapers.com":
+                        rel_tokens = set(rel_attr.split())
+                        self.assertIn("noopener", rel_tokens, f"external link {href} missing rel=noopener in {rel_hp}")
+                elif not href.startswith("#"):
+                    path_part, _, frag = href.partition("#")
+                    path_part = path_part.split("?")[0]
+                    target = (hp.parent / path_part).resolve() if path_part else hp
+                    if target.is_dir():
+                        target = target / "index.html"
+                    self.assertTrue(target.is_file(), f"broken internal link {href} in {rel_hp}")
+                    if frag and target in audits:
+                        self.assertIn(frag, audits[target].ids, f"missing anchor #{frag} in {target.relative_to(sdir)} from {rel_hp}")
+
+        # Verify every CSS url(...) in style.css is relative and exists locally.
+        css_txt = (sdir / "style.css").read_text()
+        css_urls = re.findall(r'url\(["\']?([^)"\']+)["\']?\)', css_txt)
+        self.assertGreaterEqual(len(css_urls), 5)
+        for cu in css_urls:
+            self.assertFalse(cu.startswith(("http://", "https://", "//", "data:")), cu)
+            self.assertTrue((sdir / cu).is_file(), cu)
+
+        # IBM Plex Sans woff2 files must stay byte-for-byte identical to brand/fonts/ (IBM Reserved Font Name license).
+        for plex_name in (
+            "IBMPlexSans-Var-Roman-Latin1.woff2",
+            "IBMPlexSans-Var-Roman-Greek.woff2",
+            "IBMPlexSans-Var-Italic-Latin1.woff2",
+        ):
+            src_hash = hashlib.sha256((ROOT / "brand" / "fonts" / plex_name).read_bytes()).hexdigest()
+            dst_hash = hashlib.sha256((sdir / "assets" / "fonts" / plex_name).read_bytes()).hexdigest()
+            self.assertEqual(dst_hash, src_hash, plex_name)
+
+        # Palette & zero-green check + WCAG AA contrast >= 4.5:1 across light and dark foreground/background pairs.
+        self.assertIsNone(re.search(r"\b(green|lime|emerald|teal)\b|#(?:00ff00|0f0|22c55e|16a34a|10b981)", css_txt, re.I))
+        pal = json.loads((ROOT / "brand" / "color" / "palette.json").read_text())
+        light = {c["id"]: c["hex"] for c in pal["colors"]}
+        dark = pal["dark"]
+
+        def _rel_lum(hex_str):
+            rgb = [int(hex_str[i:i + 2], 16) / 255.0 for i in (1, 3, 5)]
+            lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+            return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+        def _contrast(fg, bg):
+            l1, l2 = sorted((_rel_lum(fg), _rel_lum(bg)), reverse=True)
+            return (l1 + 0.05) / (l2 + 0.05)
+
+        for label, fg, bg in [
+            ("light body on slide", light["hematoxylin"], light["slide"]),
+            ("light body on white", light["hematoxylin"], "#FFFFFF"),
+            ("light body on wash", light["hematoxylin"], light["eosin-wash"]),
+            ("light secondary on slide", light["counterstain"], light["slide"]),
+            ("light secondary on white", light["counterstain"], "#FFFFFF"),
+            ("light link on slide", light["eosin-ink"], light["slide"]),
+            ("light link on white", light["eosin-ink"], "#FFFFFF"),
+            ("light link on wash", light["eosin-ink"], light["eosin-wash"]),
+            ("light primary button", "#FFFFFF", light["eosin-ink"]),
+            ("dark body on slide", dark["hematoxylin"], dark["slide"]),
+            ("dark body on surface", dark["hematoxylin"], "#1B1D3C"),
+            ("dark body on wash", dark["hematoxylin"], dark["eosin-wash"]),
+            ("dark secondary on slide", dark["counterstain"], dark["slide"]),
+            ("dark secondary on surface", dark["counterstain"], "#1B1D3C"),
+            ("dark link on slide", dark["eosin-ink"], dark["slide"]),
+            ("dark link on surface", dark["eosin-ink"], "#1B1D3C"),
+            ("dark link on wash", dark["eosin-ink"], dark["eosin-wash"]),
+            ("dark primary button", dark["slide"], dark["eosin-ink"]),
+        ]:
+            self.assertGreaterEqual(_contrast(fg, bg), 4.5, f"{label}: {_contrast(fg, bg):.2f}:1")
+
+        # Biologist copy checks on /, /requests/, /guide/, and /about/#how-we-count.
+        home_txt = (sdir / "index.html").read_text()
+        self.assertIn("Reproduce the paper. Then ask your own question.", home_txt)
+        self.assertIn('<form class="home-search" action="papers/" method="get">', home_txt)
+        self.assertIn("Copy its prompt into your AI agent, in an empty folder.", home_txt)
+        self.assertIn("Request a paper", home_txt)
+        self.assertIn('id="how-we-count"', (sdir / "about" / "index.html").read_text())
+        req_txt = (sdir / "requests" / "index.html").read_text()
+        for st_word in ("Requested", "Checking the data", "Being built", "Being checked", "Available", "Not possible"):
+            self.assertIn(st_word, req_txt)
+
+    @staticmethod
+    def _first_load_bytes(sdir, html_path):
+        """Sum HTML + local CSS + local JS + local non-figure SVGs/icons + initial Latin-1 @font-face woff2 files."""
+        seen = set()
+        total = 0
+
+        def add_file(p):
+            nonlocal total
+            rp = p.resolve()
+            if rp not in seen and rp.is_file():
+                seen.add(rp)
+                total += rp.stat().st_size
+
+        add_file(html_path)
+        txt = html_path.read_text()
+
+        # Stylesheets and scripts loaded by the document.
+        for href in re.findall(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"', txt):
+            css_path = (html_path.parent / href.split("?")[0]).resolve()
+            add_file(css_path)
+            if css_path.is_file():
+                css_text = css_path.read_text()
+                for block in re.findall(r"@font-face\s*\{([^}]+)\}", css_text):
+                    m_url = re.search(r'url\(["\']?([^)"\']+)["\']?\)', block)
+                    if not m_url:
+                        continue
+                    m_range = re.search(r"unicode-range\s*:\s*([^;]+)", block)
+                    # Only fonts whose unicode-range covers basic ASCII/Latin-1 (or lacks unicode-range) load on Latin-1 pages.
+                    loads_latin1 = (m_range is None) or bool(re.search(r"U\+00[0-7][0-9A-Fa-f]", m_range.group(1)))
+                    is_italic = bool(re.search(r"font-style\s*:\s*italic", block))
+                    if loads_latin1 and not is_italic:
+                        add_file(css_path.parent / m_url.group(1))
+
+        for src in re.findall(r'<script[^>]+src="([^"]+)"', txt):
+            add_file(html_path.parent / src.split("?")[0])
+
+        # SVG favicon + visible brand SVG images (excluding reproduced paper figure PNGs per Spec 002 AC 9).
+        for icon_href in re.findall(r'<link[^>]+rel="icon"[^>]+type="image/svg\+xml"[^>]+href="([^"]+)"', txt):
+            add_file(html_path.parent / icon_href.split("?")[0])
+        for img_src in re.findall(r'<img[^>]+src="([^"]+)"', txt):
+            clean = img_src.split("?")[0]
+            if clean.startswith("figures/") or "/figures/" in clean:
+                continue
+            add_file(html_path.parent / clean)
+
+        return total, sorted(p.relative_to(sdir).as_posix() for p in seen)
+
+    # First load of `/` and a paper page stays well under 300 KB excluding figures.
+    def test_first_load_bytes_under_300kb(self):
+        sdir, n = site.build(self.reg, out=self.tmp / "site-ac9", base_url="https://runpapers.com")
+        self.assertEqual(n, 1)
+        rel_slug = ids.doi_slug(self.DOI_RELEASED)
+
+        home_bytes, home_files = self._first_load_bytes(sdir, sdir / "index.html")
+        paper_bytes, paper_files = self._first_load_bytes(sdir, sdir / "papers" / rel_slug / "index.html")
+
+        self.assertIn("assets/fonts/IBMPlexSans-Var-Roman-Latin1.woff2", home_files)
+        self.assertIn("assets/fonts/SourceSerif4-Var-Roman-Latin1.woff2", home_files)
+        self.assertNotIn("assets/fonts/SourceSerif4-Var-Roman-LatinExt.woff2", home_files)
+        self.assertNotIn("assets/fonts/IBMPlexSans-Var-Roman-Greek.woff2", home_files)
+        self.assertIn("assets/logo/runpapers-logo.svg", home_files)
+
+        self.assertLess(home_bytes, 300_000, f"home first load {home_bytes} B >= 300 KB: {home_files}")
+        self.assertLess(paper_bytes, 300_000, f"paper first load {paper_bytes} B >= 300 KB: {paper_files}")
+
+        # Even if italic Latin-1 woff2 were also fetched, total still stays under 300 KB.
+        italic_size = (sdir / "assets" / "fonts" / "IBMPlexSans-Var-Italic-Latin1.woff2").stat().st_size
+        self.assertLess(paper_bytes + italic_size, 300_000)
+
+        # Also verify against the real repository's 31-recipe pack (10.1016/j.cell.2026.10.012) in preview mode.
+        real_site, _ = site.build(Registry(ROOT), out=self.tmp / "real-ac9", base_url="https://runpapers.com", include_unreleased=True)
+        real_home_bytes, _ = self._first_load_bytes(real_site, real_site / "index.html")
+        real_paper_bytes, _ = self._first_load_bytes(
+            real_site,
+            real_site / "papers" / "10-1016-j-cell-2026-10-012" / "index.html",
+        )
+        self.assertLess(real_home_bytes, 300_000, real_home_bytes)
+        self.assertLess(real_paper_bytes, 300_000, real_paper_bytes)
 
 
 if __name__ == "__main__":

@@ -7,7 +7,8 @@
     uv run brand/tools/build_brand.py
 
 Writes: logo/*.svg (text as outlines, so they open the same everywhere), icons/*.svg|png, social/og-card.svg|png,
-color/tokens.css and color/runpapers.ase (Adobe swatches), fonts/SourceSerif4-Variable-latin.woff2.
+color/tokens.css and color/runpapers.ase (Adobe swatches), fonts/SourceSerif4-Var-Roman-Latin1.woff2 and
+fonts/SourceSerif4-Var-Roman-LatinExt.woff2.
 The SVGs are plain shapes with named ids: once you edit one in Illustrator, that file is the source; rerunning this
 script overwrites it, so keep your edited copies (or change the numbers here).
 """
@@ -123,18 +124,38 @@ def ase(colors, path):
     open(path, "wb").write(b"ASEF" + struct.pack(">HHI", 1, 0, len(colors)) + blocks)
 
 
-def woff2(src, out, **axes_keep):
+LATIN1_UNICODES = (
+    list(range(0x0020, 0x007F))
+    + list(range(0x00A0, 0x0100))
+    + [0x0131, 0x0152, 0x0153, 0x02C6, 0x02DA, 0x02DC]
+    + [0x2013, 0x2014, 0x2018, 0x2019, 0x201A, 0x201C, 0x201D, 0x201E,
+       0x2020, 0x2021, 0x2022, 0x2026, 0x2030, 0x2039, 0x203A, 0x2044,
+       0x20AC, 0x2122, 0x2212, 0xFB01, 0xFB02]
+)
+_LATIN1_SET = set(LATIN1_UNICODES)
+LATIN_EXT_UNICODES = (
+    [c for c in range(0x0100, 0x0250) if c not in _LATIN1_SET]
+    + list(range(0x0370, 0x0400))
+    + [c for c in range(0x2000, 0x2070) if c not in _LATIN1_SET]
+    + [0x2190, 0x2192, 0x2206, 0x221E, 0x2248, 0x2264, 0x2265, 0x2713]
+)
+
+
+def woff2(src, out, unicodes, **axes_keep):
     f = TTFont(src)
+    if axes_keep and "fvar" in f:
+        f = instancer.instantiateVariableFont(f, axes_keep)
+        buf = io.BytesIO()
+        f.save(buf)
+        buf.seek(0)
+        f = TTFont(buf)
     opts = subset.Options()
     opts.flavor = "woff2"
-    opts.layout_features = ["*"]
-    opts.name_IDs = ["*"]
+    opts.layout_features = ["kern", "liga", "clig", "calt", "locl", "mark", "mkmk"]
+    opts.name_IDs = [0, 1, 2, 3, 4, 5, 6, 13, 14]
     opts.notdef_outline = True
     sub = subset.Subsetter(opts)
-    # Latin, Latin-1, Latin Extended-A, Greek (gene and statistics symbols), punctuation, arrows, maths
-    uni = list(range(0x20, 0x7F)) + list(range(0xA0, 0x180)) + list(range(0x370, 0x400)) + \
-        list(range(0x2000, 0x2070)) + [0x2190, 0x2192, 0x2212, 0x2264, 0x2265, 0x00D7, 0x2248, 0x2206, 0x221E, 0x2713]
-    sub.populate(unicodes=uni)
+    sub.populate(unicodes=unicodes)
     sub.subset(f)
     f.flavor = "woff2"
     f.save(os.path.join(FONTS, out))
@@ -203,8 +224,13 @@ def main():
     write("color/tokens.css", "\n".join(css) + "\n")
 
     # web fonts. IBM Plex Sans: IBM's own split woff2 files are used as they are (its licence reserves the name
-    # "Plex" for unmodified fonts, so we don't subset it). Source Serif 4 has no reserved name: subset to Latin.
-    woff2(SERIF, "SourceSerif4-Variable-latin.woff2")
+    # "Plex" for unmodified fonts, so we don't subset it). Source Serif 4 (SIL OFL, no reserved name) is split into
+    # Latin-1 and Latin-Ext/Greek subsets so initial page loads stay well under 300 KB.
+    woff2(SERIF, "SourceSerif4-Var-Roman-Latin1.woff2", LATIN1_UNICODES, wght=(400, 600), opsz=(14, 40))
+    woff2(SERIF, "SourceSerif4-Var-Roman-LatinExt.woff2", LATIN_EXT_UNICODES, wght=(400, 600), opsz=(14, 40))
+    legacy_serif = os.path.join(FONTS, "SourceSerif4-Variable-latin.woff2")
+    if os.path.exists(legacy_serif):
+        os.remove(legacy_serif)
     print("brand files written to", HERE)
 
 

@@ -822,7 +822,7 @@ source = "Fig 6B interval"
         checked = 0
         for root in (sdir, mdir, scaf):
             for p in root.rglob("*"):
-                if p.is_file() and p.suffix not in (".png",):
+                if p.is_file() and p.suffix not in (".png", ".woff2", ".ico"):
                     txt = p.read_text(errors="ignore")
                     m = forbidden.search(txt)
                     self.assertIsNone(m, f"found forbidden tier word {m.group(0)!r} in {p.relative_to(self.tmp)}" if m else "")

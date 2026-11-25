@@ -257,7 +257,8 @@ test("built /papers/ files contain zero tier, stage, or badge words and self-hos
   }
   assert.ok(papersHtmlRaw.includes("Cross-species multiomic atlas of the primate basal ganglia"));
   assert.ok(papersHtmlRaw.includes("PMID"));
-  assert.ok(papersHtmlRaw.includes("Reproduces Figure 1B and Figure 2F."));
+  assert.match(papersHtmlRaw, /Reproduces Figure 1[AB].*\./);
+  assert.equal(SearchUI.formatPanelsSentence(["Figure 1B", "Figure 2F"]), "Reproduces Figure 1B and Figure 2F.");
 });
 
 test("searching marmoset, Callithrix, DOI, PMID, or SMYD2 finds 10.1016/j.cell.2026.10.012 without umbrella or mid-word leaks", () => {

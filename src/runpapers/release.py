@@ -48,6 +48,7 @@ def targets(reg):
 
 
 # --------------------------------------------------------------------------- pre-publication privacy scan
+_BINARY_NO_EMAIL_SCAN = (".woff2", ".ttf", ".otf", ".png", ".ico", ".ase")
 _NON_EMAIL_SUFFIXES = (
     "noreply@anthropic.com", ".md", ".py", ".txt", ".json", ".toml", ".csv", ".yml", ".yaml", ".html", ".png", ".svg",
 )
@@ -83,10 +84,11 @@ def prepublish_scan(reg, extra_words=()):
         for m in rx.finditer(text):
             found.append(("error", f, f"private text: {m.group(0)[:40]!r}"))
             break
-        for m in email_rx.finditer(text):
-            if _is_private_email(m.group(0)):
-                found.append(("warn", f, f"e-mail address: {m.group(0)}"))
-                break
+        if p.suffix.lower() not in _BINARY_NO_EMAIL_SCAN:
+            for m in email_rx.finditer(text):
+                if _is_private_email(m.group(0)):
+                    found.append(("warn", f, f"e-mail address: {m.group(0)}"))
+                    break
     hist = subprocess.run(["git", "-C", str(reg.root), "log", "--exclude=refs/heads/pre-public-*", "--all", "-p",
                            "--format=%an <%ae> %cn <%ce>"], capture_output=True, text=True).stdout
     # Commits are deposited from the PI's own GitHub account on purpose (2026-11-25): its public noreply address

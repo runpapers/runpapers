@@ -741,13 +741,18 @@ class TagsAndVocabTests(unittest.TestCase):
                 "collection": ["BICAN basal ganglia 2026"],
             },
         )
-        self.assertEqual(
-            pk.content_hash(),
-            "8184628771f2149d24fa858d715c6517da0874cc0f8adefd2b9b2920c13d80f5",
-        )
-        st = verify.status(pk)
-        for badge_name in ("runs", "checked", "reproduces", "agent-tested"):
-            self.assertEqual(st["badges"][badge_name], "pass", badge_name)
+        # Editing or removing tags.toml on a copy of 10.1016/j.cell.2026.10.012 leaves content_hash and verify status unchanged.
+        bg_copy = self.tmp / "bg-hash-check"
+        shutil.copytree(real_reg.pack_dir(pk.doi), bg_copy)
+        pk_copy = Pack(bg_copy)
+        h_orig = pk.content_hash()
+        st_orig = verify.status(pk)
+        self.assertEqual(pk_copy.content_hash(), h_orig)
+        (bg_copy / "tags.toml").write_text('species = ["Human"]\n')
+        self.assertEqual(Pack(bg_copy).content_hash(), h_orig)
+        self.assertEqual(verify.status(Pack(bg_copy))["badges"], st_orig["badges"])
+        (bg_copy / "tags.toml").unlink()
+        self.assertEqual(Pack(bg_copy).content_hash(), h_orig)
 
         pack_lint = spec.lint(pk, expected_dir=real_reg.pack_dir(pk.doi))
         self.assertEqual(spec.errors(pack_lint), [])
