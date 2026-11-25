@@ -296,6 +296,162 @@
    "seconds": 98,
    "error": null,
    "run_id": "usertest/10.1016_j.cell.2026.10.012/codex-20261124-224731"
+  },
+  {
+   "agent": "claude",
+   "family": "anthropic",
+   "model": "claude-sonnet-5-5",
+   "at": "2026-11-25T11:40:26-05:00",
+   "pack_hash": "8184628771f2149d24fa858d715c6517da0874cc0f8adefd2b9b2920c13d80f5",
+   "version": "0.1.0",
+   "recipe": "fig1b",
+   "recipe_pass": true,
+   "answers": {
+    "q1": {
+     "ok": true,
+     "answer": 3.49,
+     "detail": "|3.49 - 3.49| = 0 (allowed 0.05)"
+    },
+    "q2": {
+     "ok": true,
+     "answer": 313033.0,
+     "detail": "exact match"
+    },
+    "q3": {
+     "ok": true,
+     "answer": "Marmoset",
+     "detail": "contains expected text"
+    },
+    "q4": {
+     "ok": true,
+     "answer": 9.0,
+     "detail": "exact match"
+    },
+    "q5": {
+     "ok": true,
+     "answer": "NAC",
+     "detail": "contains expected text"
+    },
+    "q6": {
+     "ok": true,
+     "answer": 13.21,
+     "detail": "|13.21 - 13.21| = 0 (allowed 0.05)"
+    },
+    "q7": {
+     "ok": true,
+     "answer": "not available",
+     "detail": "contains expected text"
+    }
+   },
+   "score": "7/7",
+   "pass": true,
+   "seconds": 76,
+   "error": null,
+   "run_id": "usertest/10.1016_j.cell.2026.10.012/claude-20261125-113910"
+  },
+  {
+   "agent": "agy",
+   "family": "google",
+   "model": "default",
+   "at": "2026-11-25T11:44:30-05:00",
+   "pack_hash": "8184628771f2149d24fa858d715c6517da0874cc0f8adefd2b9b2920c13d80f5",
+   "version": "0.1.0",
+   "recipe": "fig1b",
+   "recipe_pass": true,
+   "answers": {
+    "q1": {
+     "ok": true,
+     "answer": 3.4907,
+     "detail": "|3.4907 - 3.49| = 0.0007 (allowed 0.05)"
+    },
+    "q2": {
+     "ok": true,
+     "answer": 313033.0,
+     "detail": "exact match"
+    },
+    "q3": {
+     "ok": true,
+     "answer": "Marmoset",
+     "detail": "contains expected text"
+    },
+    "q4": {
+     "ok": true,
+     "answer": 9.0,
+     "detail": "exact match"
+    },
+    "q5": {
+     "ok": true,
+     "answer": "NAC",
+     "detail": "contains expected text"
+    },
+    "q6": {
+     "ok": true,
+     "answer": 13.2085,
+     "detail": "|13.2085 - 13.21| = 0.0015 (allowed 0.05)"
+    },
+    "q7": {
+     "ok": true,
+     "answer": "not available",
+     "detail": "contains expected text"
+    }
+   },
+   "score": "7/7",
+   "pass": true,
+   "seconds": 244,
+   "error": null,
+   "run_id": "usertest/10.1016_j.cell.2026.10.012/agy-20261125-114026"
+  },
+  {
+   "agent": "codex",
+   "family": "openai",
+   "model": "default",
+   "at": "2026-11-25T11:46:10-05:00",
+   "pack_hash": "8184628771f2149d24fa858d715c6517da0874cc0f8adefd2b9b2920c13d80f5",
+   "version": "0.1.0",
+   "recipe": "fig1b",
+   "recipe_pass": true,
+   "answers": {
+    "q1": {
+     "ok": true,
+     "answer": 3.49,
+     "detail": "|3.49 - 3.49| = 0 (allowed 0.05)"
+    },
+    "q2": {
+     "ok": true,
+     "answer": 313033.0,
+     "detail": "exact match"
+    },
+    "q3": {
+     "ok": true,
+     "answer": "Marmoset",
+     "detail": "contains expected text"
+    },
+    "q4": {
+     "ok": true,
+     "answer": 9.0,
+     "detail": "exact match"
+    },
+    "q5": {
+     "ok": true,
+     "answer": "NAC",
+     "detail": "contains expected text"
+    },
+    "q6": {
+     "ok": true,
+     "answer": 13.21,
+     "detail": "|13.21 - 13.21| = 0 (allowed 0.05)"
+    },
+    "q7": {
+     "ok": true,
+     "answer": "not available",
+     "detail": "contains expected text"
+    }
+   },
+   "score": "7/7",
+   "pass": true,
+   "seconds": 100,
+   "error": null,
+   "run_id": "usertest/10.1016_j.cell.2026.10.012/codex-20261125-114430"
   }
  ]
 }
