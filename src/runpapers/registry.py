@@ -67,9 +67,9 @@ class Pack:
         return self.meta.get("pack", {}).get("version", "0.0.0")
 
     @property
-    def citekey(self):
-        p = self.paper
-        return p.get("citekey") or f"{(p.get('first_author') or 'paper').split()[-1].lower()}{p.get('year', '')}"
+    def slug(self):
+        """The DOI as a name (workspace folder, Hugging Face dataset, git tag, skill name): ids.doi_slug."""
+        return ids.doi_slug(self.doi)
 
     def aliases(self):
         p = self.paper
@@ -136,7 +136,7 @@ class Pack:
         return {
             "doi": self.doi, "pmid": p.get("pmid"), "pmcid": p.get("pmcid"), "preprint_doi": p.get("preprint_doi"),
             "title": self.title, "first_author": p.get("first_author"), "senior_author": p.get("senior_author"),
-            "journal": p.get("journal"), "year": p.get("year"), "citekey": self.citekey,
+            "journal": p.get("journal"), "year": p.get("year"), "slug": self.slug,
             "collections": p.get("collections", []), "version": self.version,
             "summary": self.meta.get("pack", {}).get("summary", ""),
             "profile": self.meta.get("profile", {}),

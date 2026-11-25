@@ -178,6 +178,11 @@ def lint(pack, expected_dir=None):
         fm = re.match(r"^---\n(.*?)\n---\n", text, re.S)
         if not fm or "name:" not in fm.group(1) or "description:" not in fm.group(1):
             add("error", "skill.frontmatter", "SKILL.md needs Agent Skills frontmatter (name, description)")
+        else:
+            nm = re.search(r"^name:\s*(\S+)", fm.group(1), re.M)
+            want = ids.skill_name(pack.doi)
+            if not nm or nm.group(1) != want:
+                add("error", "skill.name", f"SKILL.md name must be {want} (the DOI as a name), not {nm.group(1) if nm else 'missing'}")
         for s in SKILL_SECTIONS:
             if s not in text:
                 add("error", "skill.section", f"SKILL.md lacks section starting {s!r}")

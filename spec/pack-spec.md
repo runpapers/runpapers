@@ -11,6 +11,11 @@ not) analyse the data. It never contains the data, and never contains published 
 - Folder: `papers/<doi prefix>/<doi suffix>/`; characters outside `[a-z0-9._-]` in the suffix are percent-encoded
   (`rp resolve <id>` prints the path). URLs use the same path: `/doi/<prefix>/<encoded suffix>/`.
 
+Wherever a DOI can't be written as is (the user's workspace folder, the Hugging Face dataset, git tags, the skill
+name, the Zenodo file name), the DOI itself is turned into a name: lowercase, every run of other characters becomes
+one `-` (`10.1016/j.cell.2026.10.012` -> `10-1016-j-cell-2026-10-012`; `ids.doi_slug`). The skill in SKILL.md is
+named `runpapers-<that name>`. `rp lint` refuses two papers with the same name.
+
 ## Files
 ```
 pack.toml              metadata, data, recipes (required)
@@ -34,7 +39,6 @@ first_author = "..."
 senior_author = "..."
 journal = "Cell"
 year = 2026
-citekey = "johansen2026"                # names the user's workspace folder
 license = "CC-BY-NC-ND-4.0"             # the paper's license (decides whether published images may be shown)
 collections = ["bican-2026"]
 
@@ -105,7 +109,7 @@ public = true                            # may be shown as an example on the pap
 ```
 
 ## SKILL.md
-Agent Skills frontmatter (`name`, `description`) and these sections, in plain language:
+Agent Skills frontmatter (`name: runpapers-<DOI as a name>`, `description`) and these sections, in plain language:
 `## What this paper did and found`, `## Data` (every file: what a row is, key columns, joins, quirks),
 `## Recipes`, `## Guardrails` (replicate unit, confounders, renamed labels, known discrepancies, what the data can't
 answer), `## Answering new questions` (supported vs unsupported, a worked example that runs).

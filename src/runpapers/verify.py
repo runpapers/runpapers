@@ -153,7 +153,7 @@ def status(pack):
         "agent-tested": "release (version, changelog, archive DOI)",
         "released": "maintain: re-verify when sources change",
     }[stage]
-    return {"doi": pack.doi, "title": pack.title, "citekey": pack.citekey, "version": pack.version, "pack_hash": h[:12],
+    return {"doi": pack.doi, "title": pack.title, "slug": pack.slug, "version": pack.version, "pack_hash": h[:12],
             "stage": stage, "next": nxt, "badges": badges, "components": comp,
             "lint": {"errors": len(errs), "warnings": len(findings) - len(errs)},
             "l1": {"at": l1.get("at"), "pass": l1.get("pass"),

@@ -22,7 +22,7 @@ def board(reg):
         st["collections"] = pk.paper.get("collections", [])
         st["pmid"] = pk.paper.get("pmid")
         st["votes"] = reqs.get(doi, {}).get("votes", 0)
-        st["short"] = planned.get(doi, {}).get("short") or pk.citekey
+        st["short"] = planned.get(doi, {}).get("short") or pk.slug
         rows.append(st)
     for doi, p in planned.items():
         if doi in packs:

@@ -190,7 +190,7 @@ def build(reg, pack, version=None, force=False):
     if d.exists():
         shutil.rmtree(d)
     d.mkdir(parents=True)
-    name = f"runpapers-{pack.citekey}-v{version}"
+    name = f"runpapers-{pack.slug}-v{version}"
     zpath = d / f"{name}.zip"
     l1 = reg.root / "build" / "l1" / ids.doi_relpath(pack.doi)
     with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
@@ -268,7 +268,7 @@ def zenodo_metadata(reg, pack, version):
         rel_ids.append({"relation": "isSupplementTo", "identifier": f"https://github.com/{gh}", "scheme": "url"})
     meta = {
         "upload_type": "software",
-        "title": f"RunPapers pack: {pack.title} ({p.get('first_author', '').split()[-1] if p.get('first_author') else ''} et al., {p.get('journal', '')} {p.get('year', '')})",
+        "title": f"RunPapers pack {pack.doi}: {pack.title} ({p.get('first_author', '').split()[-1] if p.get('first_author') else ''} et al., {p.get('journal', '')} {p.get('year', '')})",
         "creators": [{"name": pub.get("creator", "RunPapers")}],
         "description": (f"<p>A verified, agent-ready pack for <a href='https://doi.org/{pack.doi}'>{pack.title}</a>. "
                         f"{pack.meta.get('pack', {}).get('summary', '')}</p><p>Any AI agent can use it to reproduce the "
@@ -279,7 +279,7 @@ def zenodo_metadata(reg, pack, version):
                         f"available under the MIT license at <a href='https://github.com/{gh}'>github.com/{gh}</a>.</p>"),
         "version": version,
         "license": license_for(pack),
-        "keywords": ["RunPapers", "reproducibility", "AI agents", "agent skills", *pack.meta.get("profile", {}).get("assays", [])[:3],
+        "keywords": ["RunPapers", pack.doi, "reproducibility", "AI agents", "agent skills", *pack.meta.get("profile", {}).get("assays", [])[:3],
                      *pack.meta.get("profile", {}).get("tissues", [])[:2]],
         "related_identifiers": rel_ids,
         "notes": "Data terms: " + "; ".join(sorted({d.get("license", "") for d in pack.data})),
@@ -405,7 +405,7 @@ def publish_hf(reg, pack, repo_id=None, private=False):
     if not tok:
         raise SystemExit("no Hugging Face token (~/.config/runpapers/hf_token)")
     org = reg.config.get("publish", {}).get("hf_org", "runpapers")
-    repo_id = repo_id or f"{org}/{pack.citekey}"
+    repo_id = repo_id or f"{org}/{pack.slug}"
     stage = release_dir(reg, pack, entry["version"]) / "hf"
     if stage.exists():
         shutil.rmtree(stage)
@@ -456,7 +456,7 @@ def publish_github(reg, pack):
     bad = [f for f in prepublish_scan(reg) if f[0] == "error"]
     if bad:
         raise SystemExit("pre-publication scan failed: " + "; ".join(f"{a}: {c}" for _, a, c in bad[:5]))
-    tag = f"pack/{pack.citekey}/v{entry['version']}"
+    tag = f"pack/{pack.slug}/v{entry['version']}"
     subprocess.run(["git", "-C", root, "add", "-A", "papers"], check=True)
     subprocess.run(["git", "-C", root, "commit", "-q", "-m", f"{pack.doi}: release v{entry['version']}"], capture_output=True)
     subprocess.run(["git", "-C", root, "tag", "-f", tag], check=True, capture_output=True)
@@ -465,7 +465,7 @@ def publish_github(reg, pack):
         raise SystemExit(f"git push failed: {p.stderr[-400:]}")
     zpath = release_dir(reg, pack, entry["version"]) / entry["zip"]
     notes = f"RunPapers pack for {pack.title} (DOI {pack.doi}), version {entry['version']}."
-    r = subprocess.run(["gh", "release", "create", tag, str(zpath), "--title", f"{pack.citekey} v{entry['version']}", "--notes", notes],
+    r = subprocess.run(["gh", "release", "create", tag, str(zpath), "--title", f"{pack.doi} v{entry['version']}: {pack.title}"[:250], "--notes", notes],
                        cwd=root, capture_output=True, text=True)
     if r.returncode != 0 and "already exists" not in r.stderr:
         raise SystemExit(f"gh release failed: {r.stderr[-400:]}")

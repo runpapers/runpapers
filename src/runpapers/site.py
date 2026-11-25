@@ -343,7 +343,7 @@ Follow these steps in order. Ask the user before anything not listed here.
    - Windows (PowerShell): `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
 2. Get the pack and its laptop-size ("lite") data, about {fmt_bytes(card['lite_bytes'])}, from the paper's original repositories:
    `{install} get {doi}{src_arg} --rp-cmd "{install}"`
-   This creates the folder `./{card['citekey']}/`. Work inside it from now on (`cd {card['citekey']}`).
+   This creates the folder `./{card['slug']}/`. Work inside it from now on (`cd {card['slug']}`).
 3. Read `SKILL.md` in that folder completely. It explains the data, the recipes and the guardrails. Follow the guardrails.
 4. Reproduce a published panel: `{install} run <recipe>`. Recipes:
 {chr(10).join(f"   - `{r['id']}`: {r['panel']}: {r['title']}" for r in card['recipes'])}
@@ -669,7 +669,7 @@ and scientific guardrails that keep new analyses honest. Every pack is verified 
     (out / "about.md").write_text(about_md(install))
     index = {"generated": now(), "rp_version": __version__, "base_url": base, "install": install,
              "papers": [{k: c[k] for k in ("doi", "pmid", "pmcid", "preprint_doi", "title", "first_author", "senior_author", "journal",
-                                            "year", "citekey", "collections", "version", "summary", "profile", "recipes", "lite_bytes",
+                                            "year", "slug", "collections", "version", "summary", "profile", "recipes", "lite_bytes",
                                             "questions", "stage", "badges")}
                         | {"data_terms": _data_terms(c), "release": c.get("release"), "url": f"{base}/doi/{ids.doi_relpath(c['doi'])}/",
                            "agent": f"{base}/doi/{ids.doi_relpath(c['doi'])}/AGENT.md"}

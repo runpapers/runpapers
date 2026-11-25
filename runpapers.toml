@@ -9,9 +9,9 @@ install_cmd = "uvx --from git+https://github.com/runpapers/runpapers runpapers"
 
 [publish]
 github_repo = "runpapers/runpapers"
-hf_org = "RunPapers-com"            # Hugging Face organization (datasets at huggingface.co/datasets/RunPapers-com/<citekey>)
+hf_org = "RunPapers"                # Hugging Face organization (datasets at huggingface.co/datasets/RunPapers/<DOI slug>)
 creator = "RunPapers"               # Zenodo creator and the name on sign-offs
-# zenodo_community = "runpapers"    # once the community exists on zenodo.org
+zenodo_community = "runpapers"      # zenodo.org/communities/runpapers (the PI owns it)
 
 [verify]
 min_agent_families = 2              # agent-tested needs passing naive-user runs from >= 2 companies

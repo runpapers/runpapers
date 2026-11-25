@@ -128,7 +128,7 @@ def score_entry(entry, query=""):
         *(prof.get("cell_types") or []),
     ]
     title = [entry.get("title") or ""]
-    authors = [entry.get("first_author") or "", entry.get("senior_author") or "", entry.get("citekey") or ""]
+    authors = [entry.get("first_author") or "", entry.get("senior_author") or "", entry.get("slug") or ""]
     summary = [entry.get("summary") or "", *(entry.get("collections") or []), entry.get("journal") or ""]
     rec_texts = [f"{r.get('id', '')} {r.get('panel', '')} {r.get('title', '')}" for r in (entry.get("recipes") or [])]
     id_texts = [entry.get("doi") or "", str(entry.get("pmid") or ""), str(entry.get("pmcid") or "")]

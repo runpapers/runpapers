@@ -103,7 +103,7 @@ def get(ident, dest=None, tier="lite", source=None, fetch_data=True, rp_cmd="rp"
         stage.mkdir(parents=True)
         _copy_from_site(src, doi, stage)
         pack = Pack(stage)
-        target = Path(dest).resolve() if dest else Path.cwd() / pack.citekey
+        target = Path(dest).resolve() if dest else Path.cwd() / pack.slug
         if target.exists() and any(p.name != ".rp-incoming" for p in target.iterdir()) and target != stage:
             if not (target / WS_FILE).is_file():
                 shutil.rmtree(stage)
@@ -118,7 +118,7 @@ def get(ident, dest=None, tier="lite", source=None, fetch_data=True, rp_cmd="rp"
     else:
         reg = Registry(src)
         pk = reg.pack(ident)
-        target = Path(dest).resolve() if dest else Path.cwd() / pk.citekey
+        target = Path(dest).resolve() if dest else Path.cwd() / pk.slug
         target.mkdir(parents=True, exist_ok=True)
         _copy_from_registry(pk, target)
     pack = Pack(target)
@@ -144,7 +144,7 @@ def get(ident, dest=None, tier="lite", source=None, fetch_data=True, rp_cmd="rp"
     (target / "GEMINI.md").write_text(text)
     skill = (target / "SKILL.md").read_text()
     for d in (".claude/skills", ".agents/skills", ".gemini/skills"):
-        sd = target / d / f"runpapers-{pack.citekey}"
+        sd = target / d / f"runpapers-{pack.slug}"
         sd.mkdir(parents=True, exist_ok=True)
         (sd / "SKILL.md").write_text(skill)
     (target / "analyses").mkdir(exist_ok=True)

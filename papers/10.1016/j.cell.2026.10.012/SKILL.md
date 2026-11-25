@@ -1,5 +1,5 @@
 ---
-name: runpapers-johansen2026
+name: runpapers-10-1016-j-cell-2026-10-012
 description: Reproduce figures from and answer new questions with the data of "Cross-species multiomic atlas of the primate basal ganglia" (Johansen et al., Cell 2026, DOI 10.1016/j.cell.2026.10.012). Use when the user asks about basal ganglia cell types, spiny projection neurons (SPNs), the STR D2 SMYD2-HTR7 SPN, cell-type composition by species, donor or region in this atlas.
 ---
 

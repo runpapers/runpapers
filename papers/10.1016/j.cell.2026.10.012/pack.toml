@@ -10,7 +10,6 @@ first_author = "Nelson J. Johansen"
 senior_author = "Trygve E. Bakken"
 journal = "Cell"
 year = 2026
-citekey = "johansen2026"
 license = "CC-BY-NC-ND-4.0"   # Crossref VoR license: published figure images are not redistributed; the paper's license (e.g. CC-BY-4.0): decides whether published figure images may be shown
 collections = ["bican-2026"]
 

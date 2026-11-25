@@ -66,7 +66,6 @@ def _make_pack(reg, cache_dir, *, doi, pmid, citekey, title, first_author, profi
         f'senior_author = "Senior Researcher"\n'
         f'journal = "Cell"\n'
         f'year = 2026\n'
-        f'citekey = "{citekey}"\n'
         f'license = "CC-BY-4.0"\n'
         f'collections = ["bican-2026"]\n'
         f'[pack]\n'
@@ -96,7 +95,7 @@ def _make_pack(reg, cache_dir, *, doi, pmid, citekey, title, first_author, profi
     )
     (d / "targets.toml").write_text(TARGETS_SRC)
     (d / "SKILL.md").write_text(
-        f"---\nname: runpapers-{citekey}\ndescription: Skill for {title}\n---\n"
+        f"---\nname: {ids.skill_name(doi)}\ndescription: Skill for {title}\n---\n"
         f"# {title}\n\n"
         f"## What this paper did and found\nProfiled nuclei.\n\n"
         f"## Data\ncounts.csv has donor and group counts.\n\n"
@@ -450,17 +449,17 @@ class McpAndMeetingTests(unittest.TestCase):
         self.assertIn("10x Multiome snRNA-seq", ov["shared"]["assays"])
         self.assertIn("D2 SPN", ov["shared"]["cell_types"])
         self.assertIn("DRD2", ov["shared"]["key_genes"])
-        self.assertIn("Callithrix jacchus", ov["by_paper"]["spn2026"]["species"])
-        self.assertIn("Patch-seq", ov["by_paper"]["patch2026"]["assays"])
+        self.assertIn("Callithrix jacchus", ov["by_paper"]["10-9999-bg-spn-2026"]["species"])
+        self.assertIn("Patch-seq", ov["by_paper"]["10-9999-bg-patch-2026"]["assays"])
         self.assertTrue(any("Allen Institute Terms of Use" in t for t in manifest["data_terms"]))
         self.assertIn("CC-BY-4.0", manifest["data_terms"])
 
         # Check workspace layout, mirrored skills, shared-donor guardrail, and zero leaked evals/
         for rel in (
             ".runpapers-meeting.json", "MEETING.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", "synthesis/README.md",
-            "papers/spn2026/SKILL.md", "papers/patch2026/SKILL.md",
-            ".agents/skills/runpapers-spn2026/SKILL.md", ".agents/skills/runpapers-patch2026/SKILL.md",
-            ".claude/skills/runpapers-spn2026/SKILL.md", ".gemini/skills/runpapers-patch2026/SKILL.md",
+            "papers/10-9999-bg-spn-2026/SKILL.md", "papers/10-9999-bg-patch-2026/SKILL.md",
+            ".agents/skills/runpapers-10-9999-bg-spn-2026/SKILL.md", ".agents/skills/runpapers-10-9999-bg-patch-2026/SKILL.md",
+            ".claude/skills/runpapers-10-9999-bg-spn-2026/SKILL.md", ".gemini/skills/runpapers-10-9999-bg-patch-2026/SKILL.md",
         ):
             self.assertTrue((mdir / rel).is_file(), rel)
         self.assertIn("overlapping human or animal donors", (mdir / "MEETING.md").read_text())

@@ -84,8 +84,6 @@ def _verification_warning(stage, badges):
 
 
 def _planned_entry(doi, p, votes=0):
-    last = (p.get("first_author") or "paper").split()[-1].lower()
-    citekey = p.get("citekey") or f"{''.join(c for c in last if c.isalnum())}{p.get('year', '')}"
     cols = p.get("collections") or ([p["collection"]] if p.get("collection") else [])
     return {
         "doi": doi,
@@ -98,7 +96,7 @@ def _planned_entry(doi, p, votes=0):
         "senior_author": p.get("senior_author") or "",
         "journal": p.get("journal") or "",
         "year": p.get("year"),
-        "citekey": citekey,
+        "slug": ids.doi_slug(doi),
         "collections": cols,
         "version": None,
         "pack_hash": None,
@@ -193,9 +191,9 @@ class _BaseCatalog:
             content = skill_raw
         return {
             "doi": doi,
-            "citekey": det["citekey"],
+            "slug": det["slug"],
             "title": det["title"],
-            "skill_name": fm["name"] or f"runpapers-{det['citekey']}",
+            "skill_name": fm["name"] or f"runpapers-{det['slug']}",
             "description": fm["description"] or det.get("summary", ""),
             "version": det["version"],
             "pack_hash": det["pack_hash"],
@@ -301,7 +299,7 @@ class LocalCatalog(_BaseCatalog):
             if include_targets:
                 item["targets"] = pk.targets_for(rid)
             rows.append(item)
-        return {"doi": pk.doi, "citekey": pk.citekey, "stage": st["stage"], "badges": st["badges"], "recipes": rows}
+        return {"doi": pk.doi, "slug": pk.slug, "stage": st["stage"], "badges": st["badges"], "recipes": rows}
 
     def read_pack_file(self, ident, relpath):
         norm = _safe_shipped_relpath(relpath)
@@ -470,7 +468,7 @@ class RemoteCatalog(_BaseCatalog):
             if include_targets:
                 item["targets"] = [t for t in targets_all if t.get("recipe") == rid]
             rows.append(item)
-        return {"doi": doi, "citekey": det["citekey"], "stage": det["stage"], "badges": det["badges"], "recipes": rows}
+        return {"doi": doi, "slug": det["slug"], "stage": det["stage"], "badges": det["badges"], "recipes": rows}
 
     def request_paper(self, ident, note="", by="local:mcp", resolve_online=False):
         doi = self.resolve_known(ident)

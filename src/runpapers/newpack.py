@@ -76,7 +76,7 @@ def _q(s):
 
 
 SKILL_TEMPLATE = """---
-name: runpapers-{citekey}
+name: {skill_name}
 description: Reproduce figures from and answer new questions with the data of "{title}" ({journal} {year}, DOI {doi}). Use when the user asks about this paper, its cell types, genes or data.
 ---
 
@@ -115,8 +115,6 @@ def scaffold(reg, ident, meta=None, collection=None):
         raise SystemExit(f"{doi}: pack already exists at {d}")
     (d / "recipes").mkdir(parents=True)
     (d / "evals").mkdir()
-    last = (m.get("first_author") or "paper").split()[-1].lower()
-    citekey = m.get("citekey") or f"{''.join(ch for ch in last if ch.isalnum())}{m.get('year', '')}"
     cols = [collection or m.get("collection")] if (collection or m.get("collection")) else []
     pack = f"""spec = "{SPEC}"
 
@@ -130,7 +128,6 @@ first_author = {_q(m.get('first_author'))}
 senior_author = {_q(m.get('senior_author'))}
 journal = {_q(m.get('journal'))}
 year = {int(m.get('year') or 0)}
-citekey = "{citekey}"
 license = ""            # the paper's license (e.g. CC-BY-4.0): decides whether published figure images may be shown
 collections = {json.dumps(cols)}
 
@@ -162,6 +159,6 @@ key_genes = []
     (d / "evals" / "questions.toml").write_text("# Held-out test questions with verified answers (never copied to users' workspaces).\n"
                                                 "# [[question]]\n# id = \"q1\"\n# ask = \"\"\n# answer = 0\n# tolerance = { abs = 0.1 }\n"
                                                 "# kind = \"number\"   # number | text\n# source = \"recipe fig1b metric ...\"\n# public = true   # may appear as an example on the paper's page\n")
-    (d / "SKILL.md").write_text(SKILL_TEMPLATE.format(citekey=citekey, title=m.get("title", ""), journal=m.get("journal", ""),
+    (d / "SKILL.md").write_text(SKILL_TEMPLATE.format(skill_name=ids.skill_name(doi), title=m.get("title", ""), journal=m.get("journal", ""),
                                                       year=m.get("year", ""), doi=doi))
     return d

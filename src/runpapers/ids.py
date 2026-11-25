@@ -4,6 +4,7 @@ Why DOI rather than PMID: every journal article and preprint has one at publicat
 PubMed-indexed papers and can arrive weeks later), it resolves to the publisher, and Crossref/DataCite use it
 to link datasets, code and packs back to the paper.
 """
+import hashlib
 import re
 import urllib.parse
 
@@ -64,6 +65,21 @@ def doi_relpath(doi):
 def relpath_doi(rel):
     prefix, enc = rel.strip("/").split("/", 1)
     return normalize_doi(f"{prefix}/{urllib.parse.unquote(enc)}")
+
+
+def doi_slug(doi):
+    """The DOI as a name where a DOI can't be used as is (folders, Hugging Face datasets, git tags, skill and agent
+    names): lowercase, every run of other characters -> one '-'. '10.1016/j.cell.2026.10.012' ->
+    '10-1016-j-cell-2026-10-012'. The registry refuses two packs with the same slug (`rp lint`)."""
+    s = re.sub(r"[^a-z0-9]+", "-", normalize_doi(doi)).strip("-")
+    if len(s) > 54:   # skill names are at most 64 characters, 'runpapers-' included
+        s = s[:45].rstrip("-") + "-" + hashlib.sha256(normalize_doi(doi).encode()).hexdigest()[:8]
+    return s
+
+
+def skill_name(doi):
+    """Agent Skills name of a paper's pack: lowercase letters, digits and single hyphens, at most 64 characters."""
+    return "runpapers-" + doi_slug(doi)
 
 
 def doi_url(doi):

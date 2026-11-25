@@ -124,8 +124,8 @@ def c_resolve(a):
     if not doi:
         kind, val = ids.parse_id(a.id)
         doi = val if kind == "doi" else None
-    out({"input": a.id, "doi": doi, "path": ids.doi_relpath(doi) if doi else None}, a.json,
-        doi or f"{a.id}: not in this registry; try --online")
+    out({"input": a.id, "doi": doi, "path": ids.doi_relpath(doi) if doi else None, "name": ids.doi_slug(doi) if doi else None},
+        a.json, f"{doi}  (as a name: {ids.doi_slug(doi)})" if doi else f"{a.id}: not in this registry; try --online")
 
 
 def c_list(a):
@@ -157,10 +157,10 @@ def c_search(a):
         include_planned=not a.no_planned,
         limit=a.limit,
     )
-    rows = [{"score": sc, **{k: e.get(k) for k in ("doi", "pmid", "title", "first_author", "journal", "year", "citekey",
+    rows = [{"score": sc, **{k: e.get(k) for k in ("doi", "pmid", "title", "first_author", "journal", "year", "slug",
                                                    "packed", "stage", "badges", "profile", "data_terms")}}
             for sc, e in hits]
-    txt = "\n".join(f"{r['stage']:13} {(r.get('citekey') or ''):16} {r['doi']:32} {(r.get('title') or '')[:60]}" for r in rows) or "no matches"
+    txt = "\n".join(f"{r['stage']:13} {(r.get('slug') or ''):16} {r['doi']:32} {(r.get('title') or '')[:60]}" for r in rows) or "no matches"
     out(rows, a.json, txt)
 
 
@@ -195,7 +195,7 @@ def c_meeting(a):
         rp_cmd=rp_cmd,
         quiet=a.json,
     )
-    txt = (f"Ready: {target} ({len(manifest['packs'])} pack(s): {', '.join(p['citekey'] for p in manifest['packs'])})\n"
+    txt = (f"Ready: {target} ({len(manifest['packs'])} pack(s): {', '.join(p['slug'] for p in manifest['packs'])})\n"
            f"Next: cd {target} and read MEETING.md")
     out(manifest, a.json, txt)
 
@@ -217,8 +217,14 @@ def _targets(a):
 def c_lint(a):
     reg, packs = _targets(a)
     res, bad = {}, 0
+    by_slug = {}
+    for d in [p.doi for p in reg.packs()] + list(reg.planned()):
+        by_slug.setdefault(ids.doi_slug(d), set()).add(d)
     for pk in packs:
         f = spec.lint(pk, expected_dir=reg.pack_dir(pk.doi))
+        twins = by_slug.get(pk.slug, set()) - {pk.doi}
+        if twins:
+            f.append(("error", "slug.collision", f"{pk.slug} is also the name of {', '.join(sorted(twins))}"))
         res[pk.doi] = [{"severity": s, "code": c, "message": m} for s, c, m in f]
         bad += len(spec.errors(f))
     out(res, a.json, "\n".join(f"{d}: " + ("ok" if not v else "\n  " + "\n  ".join(f"{x['severity']:5} {x['code']}: {x['message']}" for x in v)) for d, v in res.items()))

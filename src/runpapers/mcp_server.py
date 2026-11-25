@@ -212,7 +212,7 @@ def handle_tool_call(catalog, name, arguments):
                     "senior_author": e.get("senior_author"),
                     "journal": e.get("journal"),
                     "year": e.get("year"),
-                    "citekey": e.get("citekey"),
+                    "slug": e.get("slug"),
                     "packed": e.get("packed", False),
                     "stage": e["stage"],
                     "badges": e.get("badges", {}),
@@ -285,13 +285,13 @@ def list_resources(catalog):
         try:
             fm = parse_skill_frontmatter(catalog.read_pack_file(doi, "SKILL.md"))
         except Exception:
-            fm = {"name": f"runpapers-{e['citekey']}", "description": e.get("summary", "")}
+            fm = {"name": f"runpapers-{e['slug']}", "description": e.get("summary", "")}
         badges = ", ".join(k for k, v in (e.get("badges") or {}).items() if v == "pass") or "none"
         terms = "; ".join(e.get("data_terms") or []) or "see pack"
         desc = (fm["description"] or e.get("summary") or e["title"]).strip()
         resources.append({
             "uri": f"skill://runpapers/{ids.doi_relpath(doi)}/SKILL.md",
-            "name": fm["name"] or f"runpapers-{e['citekey']}",
+            "name": fm["name"] or f"runpapers-{e['slug']}",
             "title": e["title"],
             "description": f"{desc} [stage: {e['stage']}; badges: {badges}; data terms: {terms}]",
             "mimeType": "text/markdown",
@@ -344,7 +344,7 @@ def get_prompt(catalog, name, arguments):
     terms = "; ".join(det.get("data_terms") or []) or "see SKILL.md"
     prompt_txt = (
         f"Work with the verified RunPapers pack for \"{det['title']}\" (DOI {det['doi']}, version {det['version']}).\n\n"
-        f"1. Set up the local workspace: `{det['workspace_command']}` and `cd {det['citekey']}`.\n"
+        f"1. Set up the local workspace: `{det['workspace_command']}` and `cd {det['slug']}`.\n"
         f"2. Follow every guardrail in `SKILL.md` below.\n"
         f"3. Reproduce {panel} (`rp run {rid}`) and show the figure alongside the paper-vs-reproduced target numbers.\n"
         f"4. Answer this question using scripts in `analyses/`: {question}\n"

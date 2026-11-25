@@ -2,7 +2,7 @@
 
 Selects verified packs matching a topic or explicit paper IDs, computes shared vs paper-specific `[profile]`
 axes (`species`, `tissues`, `assays`, `cell_types`, `key_genes`) and combined `data_terms`, materializes
-isolated workspaces under `papers/<citekey>/`, mirrors each paper's `SKILL.md` for progressive disclosure,
+isolated workspaces under `papers/<doi slug>/`, mirrors each paper's `SKILL.md` for progressive disclosure,
 and writes cross-paper scientific guardrails (`MEETING.md`, `AGENTS.md`)."""
 import re
 import sys
@@ -23,13 +23,13 @@ def _slugify(text):
 
 def compute_overlap(entries):
     """Compare `[profile]` fields and `data_terms` across selected pack entries."""
-    # Map normalized term -> (canonical display string, set of citekeys containing it)
+    # Map normalized term -> (canonical display string, set of paper slugs containing it)
     shared = {}
-    by_paper = {e["citekey"]: {} for e in entries}
+    by_paper = {e["slug"]: {} for e in entries}
     for key in PROFILE_KEYS:
         occ = {}
         for e in entries:
-            ck = e["citekey"]
+            ck = e["slug"]
             for raw in (e.get("profile") or {}).get(key) or []:
                 val = str(raw).strip()
                 if not val:
@@ -41,12 +41,12 @@ def compute_overlap(entries):
         shared_terms = [disp for _, (disp, holders) in occ.items() if len(holders) >= 2]
         shared[key] = shared_terms
         for e in entries:
-            ck = e["citekey"]
+            ck = e["slug"]
             uniq = [disp for _, (disp, holders) in occ.items() if holders == [ck]]
             if uniq:
                 by_paper[ck][key] = uniq
     all_terms = sorted({t for e in entries for t in (e.get("data_terms") or []) if t})
-    terms_by_paper = {e["citekey"]: list(e.get("data_terms") or []) for e in entries}
+    terms_by_paper = {e["slug"]: list(e.get("data_terms") or []) for e in entries}
     return {
         "shared": shared,
         "by_paper": by_paper,
@@ -83,7 +83,7 @@ def _meeting_md(topic, selected, overlap, planned_matches, rp_cmd):
     if not any_shared:
         lines.append("- **Shared `[profile]` terms:** none recorded across >= 2 packs (compare via explicit metadata joins or orthogonal modalities).")
     for e in selected:
-        uniq = overlap["by_paper"].get(e["citekey"]) or {}
+        uniq = overlap["by_paper"].get(e["slug"]) or {}
         if uniq:
             parts = [f"{k}: {', '.join(v)}" for k, v in uniq.items()]
             lines.append(f"- **Unique to `{e['folder']}`:** " + "; ".join(parts))
@@ -232,7 +232,7 @@ def build_meeting(
     used_folders = set()
     notes = []
     for e in selected:
-        base_folder = e.get("citekey") or _slugify(e["doi"])
+        base_folder = e.get("slug") or _slugify(e["doi"])
         folder = base_folder
         idx = 2
         while folder in used_folders:
@@ -257,9 +257,9 @@ def build_meeting(
             sd.mkdir(parents=True, exist_ok=True)
             (sd / "SKILL.md").write_text(skill_txt, encoding="utf-8")
 
-    # Key overlap by folder name so multi-pack citekeys stay unambiguous.
+    # Key overlap by folder name so multi-pack slugs stay unambiguous.
     for e in selected:
-        e["citekey"] = e["folder"]
+        e["slug"] = e["folder"]
     overlap = compute_overlap(selected)
 
     (target / "MEETING.md").write_text(_meeting_md(topic, selected, overlap, planned_matches, rp_cmd), encoding="utf-8")
@@ -270,7 +270,7 @@ def build_meeting(
     (target / "synthesis" / "README.md").write_text(
         "# Synthesis workspace\n\n"
         "Place cross-paper scripts, donor-overlap checks, taxonomy alignment tables, and the synthesis report here.\n"
-        "Read `../MEETING.md` and each pack's `../papers/<citekey>/SKILL.md` before running comparisons.\n",
+        "Read `../MEETING.md` and each pack's `../papers/<doi slug>/SKILL.md` before running comparisons.\n",
         encoding="utf-8",
     )
 
@@ -286,7 +286,7 @@ def build_meeting(
                 "doi": e["doi"],
                 "pmid": e.get("pmid"),
                 "title": e["title"],
-                "citekey": e["folder"],
+                "slug": e["folder"],
                 "folder": f"papers/{e['folder']}",
                 "version": e.get("version"),
                 "pack_hash": e.get("pack_hash"),
