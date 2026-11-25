@@ -18,6 +18,7 @@ from .registry import read_json, write_json
 
 STAGES = ["planned", "building", "ready", "runs", "checked", "reproduces", "agent-tested", "released"]
 MIN_FAMILIES = 2
+PUBLIC_TARGETS = {"github", "zenodo", "huggingface"}
 
 
 def now():
@@ -138,7 +139,7 @@ def status(pack):
         stage = "checked"
     elif badges["agent-tested"] != "pass":
         stage = "reproduces"
-    elif not any(x.get("pack_hash") == h and set(x.get("published") or {}) & {"github", "zenodo", "huggingface"}
+    elif not any(x.get("pack_hash") == h and set(x.get("published") or {}) & PUBLIC_TARGETS
                  for x in (rel or {}).get("releases", [])):
         stage = "agent-tested"
     else:

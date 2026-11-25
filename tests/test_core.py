@@ -364,7 +364,8 @@ class FakeZenodo:
                 base = f"http://127.0.0.1:{self.server.server_address[1]}"
                 if self.path == "/api/deposit/depositions":
                     state["n"] += 1
-                    return self._send({"id": state["n"], "links": {"bucket": f"{base}/bucket/{state['n']}"}}, 201)
+                    return self._send({"id": state["n"], "links": {"bucket": f"{base}/bucket/{state['n']}"},
+                                       "metadata": {"prereserve_doi": {"doi": f"10.5072/zenodo.{state['n']}"}}}, 201)
                 if self.path.endswith("/actions/publish"):
                     i = int(self.path.split("/")[4])
                     return self._send({"id": i, "doi": f"10.5072/zenodo.{i}", "conceptdoi": "10.5072/zenodo.100",
@@ -378,7 +379,8 @@ class FakeZenodo:
                 calls.append(("GET", self.path, None))
                 i = int(self.path.rstrip("/").split("/")[-1])
                 base = f"http://127.0.0.1:{self.server.server_address[1]}"
-                self._send({"id": i, "links": {"bucket": f"{base}/bucket/{i}"}, "files": [{"id": "old"}]})
+                self._send({"id": i, "links": {"bucket": f"{base}/bucket/{i}"}, "files": [{"id": "old"}],
+                            "metadata": {"prereserve_doi": {"doi": f"10.5072/zenodo.{i}"}}})
 
             def do_PUT(self):
                 body = self._body()
@@ -483,6 +485,83 @@ class Release(Base):
         finally:
             fz.close()
             os.environ.pop("RUNPAPERS_ZENODO_TOKEN", None)
+
+    def test_rebuild_unpublished_preview_after_pack_edit(self):
+        from runpapers import release
+        pk = self.verified_pack()
+        h1 = pk.content_hash()
+        e1 = release.build(self.reg, pk)
+        self.assertEqual((e1["version"], e1["pack_hash"], e1["published"]), ("0.1.0", h1, {}))
+
+        # Rebuilding the same version after a pre-release edit succeeds when published is empty.
+        (self.dir / "SKILL.md").write_text(SKILL + "\npre-release note 1\n")
+        pk = self.verified_pack()
+        h2 = pk.content_hash()
+        self.assertNotEqual(h1, h2)
+        e2 = release.build(self.reg, pk)
+        self.assertEqual((e2["version"], e2["pack_hash"], e2["published"]), ("0.1.0", h2, {}))
+
+        # Record private preview/draft/sandbox uploads, edit pack again, and rebuild 0.1.0.
+        fz = FakeZenodo()
+        try:
+            os.environ["RUNPAPERS_ZENODO_TOKEN"] = "t"
+            d = release.publish_zenodo(self.reg, pk, publish=False, api=fz.url)
+            self.assertEqual((d["draft"], d["draft_id"], d["reserved_doi"]), (True, 1, "10.5072/zenodo.1"))
+            rel = verify.record(pk, "release")
+            rel["releases"][-1]["published"].update({
+                "zenodo-sandbox-draft": {"draft_id": 9, "draft": True},
+                "zenodo-sandbox": {"doi": "10.5072/zenodo.9", "draft": False},
+                "huggingface-preview": {"repo": "org/p", "private": True},
+            })
+            (self.dir / "verify" / "release.json").write_text(json.dumps(rel))
+
+            (self.dir / "SKILL.md").write_text(SKILL + "\npre-release note 2\n")
+            pk = self.verified_pack()
+            h3 = pk.content_hash()
+            self.assertNotEqual(h2, h3)
+
+            e3 = release.build(self.reg, pk)
+            self.assertEqual((e3["version"], e3["pack_hash"], e3["published"]), ("0.1.0", h3, {}))
+            rel_after = verify.record(pk, "release")
+            self.assertEqual([x["version"] for x in rel_after["releases"]], ["0.1.0"])
+            self.assertEqual(rel_after["releases"][0]["pack_hash"], h3)
+            self.assertEqual(rel_after["releases"][0]["published"], {})
+            self.assertEqual(rel_after["zenodo"]["zenodo"], {"draft_id": 1, "reserved_doi": "10.5072/zenodo.1"})
+            self.assertEqual(verify.status(pk)["stage"], "agent-tested")
+
+            # Subsequent publish_zenodo updates and publishes the preserved reserved draft deposition.
+            out = release.publish_zenodo(self.reg, pk, api=fz.url)
+            self.assertEqual(out["doi"], "10.5072/zenodo.1")
+            self.assertEqual(sum(c[1] == "/api/deposit/depositions" for c in fz.calls), 1)
+            self.assertEqual(verify.status(pk)["stage"], "released")
+        finally:
+            fz.close()
+            os.environ.pop("RUNPAPERS_ZENODO_TOKEN", None)
+
+    def test_public_release_version_immutable(self):
+        from runpapers import release
+        self.assertEqual(release.PUBLIC_TARGETS, {"github", "zenodo", "huggingface"})
+        self.assertEqual(verify.PUBLIC_TARGETS, release.PUBLIC_TARGETS)
+        pk = self.verified_pack()
+        h1 = pk.content_hash()
+        release.build(self.reg, pk)
+        base_rel = verify.record(pk, "release")
+
+        (self.dir / "SKILL.md").write_text(SKILL + "\npost-release edit\n")
+        pk_edited = self.verified_pack()
+        self.assertNotEqual(h1, pk_edited.content_hash())
+
+        for target in ("github", "zenodo", "huggingface"):
+            with self.subTest(target=target):
+                rel = json.loads(json.dumps(base_rel))
+                rel["releases"][0]["published"] = {
+                    target: {"url": f"https://example.org/{target}"},
+                    "zenodo-draft": {"draft_id": 1, "draft": True},
+                }
+                (self.dir / "verify" / "release.json").write_text(json.dumps(rel))
+                with self.assertRaises(SystemExit) as ctx:
+                    release.build(self.reg, pk_edited)
+                self.assertEqual(str(ctx.exception), "version 0.1.0 was already released with other content; bump [pack] version")
 
     def test_prepublish_user_name_only_off_ci(self):
         from runpapers import release

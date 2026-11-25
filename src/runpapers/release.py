@@ -17,7 +17,7 @@ from pathlib import Path
 
 from . import DEFAULT_BASE, __version__, ids
 from .registry import read_json, sha256_file, write_json
-from .verify import now, record, status, vdir
+from .verify import PUBLIC_TARGETS, now, record, status, vdir
 from .workspace import shipped
 
 CONFIG = Path(os.environ.get("RUNPAPERS_CONFIG", "~/.config/runpapers")).expanduser()
@@ -184,7 +184,7 @@ def build(reg, pack, version=None, force=False):
     h = pack.content_hash()
     rel = record(pack, "release") or {"releases": []}
     for x in rel.get("releases", []):
-        if x["version"] == version and x["pack_hash"] != h:
+        if x["version"] == version and x["pack_hash"] != h and set(x.get("published") or {}) & PUBLIC_TARGETS:
             raise SystemExit(f"version {version} was already released with other content; bump [pack] version")
     d = release_dir(reg, pack, version)
     if d.exists():
@@ -222,7 +222,7 @@ def published(pack):
     """{version, doi, concept_doi, zenodo, huggingface, github} for the release of the current content, or None."""
     e = current(pack)
     pub = (e or {}).get("published") or {}
-    if not any(k in pub for k in ("zenodo", "huggingface", "github")):
+    if not (set(pub) & PUBLIC_TARGETS):
         return None
     z, h, g = pub.get("zenodo") or {}, pub.get("huggingface") or {}, pub.get("github") or {}
     return {"version": e["version"], "doi": z.get("doi"), "concept_doi": z.get("concept_doi"), "zenodo": z.get("url"),
