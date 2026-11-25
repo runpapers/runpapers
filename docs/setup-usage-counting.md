@@ -32,7 +32,8 @@ Cloudflare's menus move sometimes; if a name below differs slightly, look for th
 2. Name it `runpapers-counter`, click **Deploy** (it deploys a "Hello World"; we replace it next).
 3. Click **Edit code**. Delete everything in the editor, open `deploy/cloudflare/worker.js` from this repository
    (on GitHub: github.com/runpapers/runpapers/blob/main/deploy/cloudflare/worker.js -> "Raw"), copy all of it, paste
-   it into the editor, then click **Deploy**.
+   it into the editor, then click **Deploy**. (Whenever `deploy/cloudflare/worker.js` is updated in the repository,
+   paste and **Deploy** the updated code to `runpapers-counter` the same way, then run `usage-selftest` in Part 4.)
 4. Go back to the Worker (**Workers & Pages -> runpapers-counter**) -> **Settings -> Bindings** -> **Add** ->
    **Analytics Engine**. Variable name: `HITS`. Dataset: `runpapers_hits`. **Save / Deploy**.
 5. Still in **Settings -> Variables and Secrets** -> **Add**: Type **Secret**, Name `SALT`, Value: a random string.

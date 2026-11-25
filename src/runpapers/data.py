@@ -21,7 +21,7 @@ _AGENTS_RE = re.compile(
 )
 _CRAWLERS_RE = re.compile(
     r"(bot\b|bot/|crawler|spider|crawl|slurp|GPTBot|ClaudeBot|Claude-SearchBot|anthropic-ai|"
-    r"CCBot|Google-Extended|OAI-SearchBot|PerplexityBot|Bytespider|Amazonbot|Applebot|"
+    r"CCBot|Google-Extended|GoogleOther|OAI-SearchBot|PerplexityBot|Bytespider|Amazonbot|Applebot|"
     r"facebookexternalhit|Meta-External|bingpreview|Diffbot|ImagesiftBot|Timpibot)",
     re.IGNORECASE,
 )
@@ -89,7 +89,7 @@ def verified(path, entry):
         return False
     st = path.stat()
     ok = path.with_name(path.name + ".ok")
-    algo, want = ("sha256", entry["sha256"]) if entry.get("sha256") else ("md5", entry["md5"])
+    algo, want = ("sha256", entry["sha256"]) if entry.get("sha256") else ("md5", entry.get("md5"))
     try:
         rec = json.loads(ok.read_text())
         if rec.get("mtime") == st.st_mtime and rec.get("size") == st.st_size and rec.get(algo) == want:

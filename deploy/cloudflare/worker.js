@@ -8,7 +8,7 @@
 // lives only in the edge cache for that hour. If anything here fails, the page is still served.
 
 const AGENTS = /(Claude-User|Claude-Code|ChatGPT-User|Perplexity-User|Google-Agent|Gemini-CLI|MistralAI-User|DuckAssistBot|codex|antigravity|cursor|runpapers)/i;
-const CRAWLERS = /(bot\b|bot\/|crawler|spider|crawl|slurp|GPTBot|ClaudeBot|Claude-SearchBot|anthropic-ai|CCBot|Google-Extended|OAI-SearchBot|PerplexityBot|Bytespider|Amazonbot|Applebot|facebookexternalhit|Meta-External|bingpreview|Diffbot|ImagesiftBot|Timpibot)/i;
+const CRAWLERS = /(bot\b|bot\/|crawler|spider|crawl|slurp|GPTBot|ClaudeBot|Claude-SearchBot|anthropic-ai|CCBot|Google-Extended|GoogleOther|OAI-SearchBot|PerplexityBot|Bytespider|Amazonbot|Applebot|facebookexternalhit|Meta-External|bingpreview|Diffbot|ImagesiftBot|Timpibot)/i;
 const SCRIPTS = /^(curl|wget|python-requests|python-urllib|python-httpx|aiohttp|httpx|go-http-client|node-fetch|undici|node\b|axios|okhttp|java\/|libwww)/i;
 
 export function kindOf(ua) {
@@ -21,6 +21,9 @@ export function kindOf(ua) {
 }
 
 export function pageOf(path) {
+  if (path.startsWith("/doi/") || /^\/(guide|requests|about)\.html$/.test(path)) {
+    return { paper: "", type: "" };   // legacy meta-refresh redirect stubs: counted at canonical target
+  }
   const m = path.match(/^\/papers\/([a-z0-9-]+)\/(.*)$/);
   const paper = m ? m[1] : "";
   const rest = m ? m[2] : path;
@@ -46,7 +49,8 @@ async function digest(text) {
 }
 
 async function record(request, response, env) {
-  if (!env || !env.HITS || !["GET", "HEAD"].includes(request.method) || response.status >= 400) return;
+  if (!env || !env.HITS || !["GET", "HEAD"].includes(request.method)) return;
+  if (response.status !== 200 && response.status !== 304) return;
   if (shouldSkip(request.headers)) return;
   const url = new URL(request.url);
   const { paper, type } = pageOf(url.pathname);
@@ -56,7 +60,8 @@ async function record(request, response, env) {
   const action = (request.headers.get("X-RunPapers-Action") || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 16);
   const day = new Date().toISOString().slice(0, 10);
   const visitor = await digest(`${env.SALT || ""}|${day}|${request.headers.get("CF-Connecting-IP") || ""}|${ua}`);
-  const key = new Request(`https://${url.hostname}/__seen/${await digest(`${visitor}|${url.pathname}|${action}`)}`);
+  const host = url.hostname.replace(/^www\./i, "");
+  const key = new Request(`https://${host}/__seen/${await digest(`${visitor}|${url.pathname}|${action}`)}`);
   const cache = caches.default;
   if (await cache.match(key)) return;   // same visitor, same page, within the hour
   await cache.put(key, new Response("1", { headers: { "Cache-Control": "max-age=3600" } }));

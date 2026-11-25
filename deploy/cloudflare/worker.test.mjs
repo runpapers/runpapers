@@ -22,6 +22,7 @@ export const REAL_USER_AGENTS = [
   ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)", "crawler"],
   ["Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "crawler"],
   ["Mozilla/5.0 (compatible; Google-Extended)", "crawler"],
+  ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GoogleOther)", "crawler"],
   ["CCBot/2.0 (https://commoncrawl.org/faq/)", "crawler"],
   ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "crawler"],
   ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/600.2.5 (KHTML, like Gecko) Version/8.0.2 Safari/600.2.5 (Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot)", "crawler"],
@@ -61,6 +62,11 @@ test("pages map to papers and pack files are excluded", () => {
   assert.deepEqual(pageOf("/"), { paper: "", type: "html" });
   assert.deepEqual(pageOf("/papers/"), { paper: "", type: "html" });
   assert.deepEqual(pageOf("/papers/index.md"), { paper: "", type: "md" });
+  assert.deepEqual(pageOf("/doi/10.1016/j.cell.2026.10.012/"), { paper: "", type: "" });
+  assert.deepEqual(pageOf("/doi/10.1016/j.cell.2026.10.012/index.html"), { paper: "", type: "" });
+  assert.deepEqual(pageOf("/guide.html"), { paper: "", type: "" });
+  assert.deepEqual(pageOf("/requests.html"), { paper: "", type: "" });
+  assert.deepEqual(pageOf("/about.html"), { paper: "", type: "" });
   assert.equal(pageOf("/style.css").type, "");
   assert.equal(pageOf("/index.json").type, "");
 });
@@ -178,14 +184,35 @@ test("fails open when Analytics Engine or cache is missing or throws, and ignore
   assert.equal(r5.status, 200);
   await Promise.all(waits);
 
-  // 5. 404 responses are served unchanged and never counted
-  const points = [], store = new Set(), waits404 = [];
-  globalThis.fetch = async () => new Response("not found", { status: 404 });
+  // 5. 404, 301/302 redirects (including www.runpapers.com -> runpapers.com in selftest), and 206 partial chunks are never counted; 304 is counted once
+  const points = [], store = new Set(), waitsStatus = [];
+  globalThis.fetch = async (req) => {
+    const u = new URL(req.url);
+    if (u.hostname === "www.runpapers.com") {
+      return new Response("", { status: 301, headers: { Location: "https://runpapers.com/" } });
+    }
+    if (u.pathname.endsWith("/missing.html")) return new Response("not found", { status: 404 });
+    if (u.pathname.endsWith("/partial.html")) return new Response("chunk", { status: 206 });
+    if (u.pathname === "/about/") return new Response(null, { status: 304 });
+    return new Response("<html>home</html>", { status: 200 });
+  };
   const e = makeEnv(points, store);
-  const r404 = await worker.fetch(new Request("https://runpapers.com/papers/10-1016-j-cell-2026-10-012/missing.html", {
-    headers: { "User-Agent": "Mozilla/5.0 Chrome/131.0" },
-  }), e, { waitUntil: (p) => waits404.push(p) });
-  await Promise.all(waits404);
+  const stHeaders = { "User-Agent": "Mozilla/5.0 Chrome/131.0", "X-RunPapers-Action": "st-1234abcd", "CF-Connecting-IP": "198.51.100.9" };
+  await worker.fetch(new Request("https://runpapers.com/", { headers: stHeaders }), e, { waitUntil: (p) => waitsStatus.push(p) });
+  await worker.fetch(new Request("https://runpapers.com/", { headers: stHeaders }), e, { waitUntil: (p) => waitsStatus.push(p) });
+  const r301 = await worker.fetch(new Request("https://www.runpapers.com/", { headers: stHeaders }), e, { waitUntil: (p) => waitsStatus.push(p) });
+  const r206 = await worker.fetch(new Request("https://runpapers.com/papers/10-1016-j-cell-2026-10-012/partial.html", { headers: stHeaders }), e, { waitUntil: (p) => waitsStatus.push(p) });
+  const r404 = await worker.fetch(new Request("https://runpapers.com/papers/10-1016-j-cell-2026-10-012/missing.html", { headers: stHeaders }), e, { waitUntil: (p) => waitsStatus.push(p) });
+  await Promise.all(waitsStatus);
+  assert.equal(r301.status, 301);
+  assert.equal(r206.status, 206);
   assert.equal(r404.status, 404);
-  assert.equal(points.length, 0);
+  assert.equal(points.length, 1, "www 301, 206, and 404 must write zero extra data points");
+  assert.deepEqual(points[0].blobs, ["person", "html", "", "st-1234abcd", "/"]);
+
+  const waits304 = [];
+  const r304 = await worker.fetch(new Request("https://runpapers.com/about/", { headers: stHeaders }), e, { waitUntil: (p) => waits304.push(p) });
+  await Promise.all(waits304);
+  assert.equal(r304.status, 304);
+  assert.equal(points.length, 2);
 });

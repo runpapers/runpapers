@@ -37,6 +37,7 @@ REAL_USER_AGENTS = [
     ("Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)", "crawler"),
     ("Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "crawler"),
     ("Mozilla/5.0 (compatible; Google-Extended)", "crawler"),
+    ("Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GoogleOther)", "crawler"),
     ("CCBot/2.0 (https://commoncrawl.org/faq/)", "crawler"),
     ("Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; https://zhanzhang.toutiao.com/)", "crawler"),
     ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/600.2.5 (KHTML, like Gecko) Version/8.0.2 Safari/600.2.5 (Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot)", "crawler"),
@@ -185,6 +186,7 @@ class UsageCounterAndHeadersTests(unittest.TestCase):
                 with mock.patch.dict(os.environ, {"CI": "true", "DO_NOT_TRACK": "1"}, clear=False):
                     data._download("https://example.org/sample.bin", dest, 5, quiet=True)
             self.assertEqual(dest.read_bytes(), b"hello")
+            self.assertFalse(data.verified(dest, {"size": 5}))
             self.assertEqual(seen[0].get("x-runpapers-internal"), "1")
             self.assertEqual(seen[0].get("x-runpapers-nocount"), "1")
             self.assertTrue(seen[0].get("user-agent", "").startswith("runpapers/"))
