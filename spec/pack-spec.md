@@ -24,6 +24,7 @@ pack.toml              metadata, data, recipes (required)
 targets.toml           the paper's numbers each recipe must reproduce (required)
 SKILL.md               instructions for agents, Agent Skills format (required)
 evals/questions.toml   held-out test questions with verified answers (required, >= 3; never shipped to users)
+tags.toml              five-group tags from vocab/*.toml (outside the content hash, like verify/)
 recipes/*.py           one script per panel (+ shared helpers)
 references/            optional longer docs the SKILL.md links to (loaded on demand)
 verify/*.json          verification records, written by tools only (l1, review, signoff, usertest, endorsement, release)
@@ -121,6 +122,24 @@ Agent Skills frontmatter (`name: runpapers-<DOI as a name>`, `description`) and 
 `## What this paper did and found`, `## Data` (every file: what a row is, key columns, joins, quirks),
 `## Recipes`, `## Guardrails` (replicate unit, confounders, renamed labels, known discrepancies, what the data can't
 answer), `## Answering new questions` (supported vs unsupported, a worked example that runs).
+
+## tags.toml and `vocab/*.toml` (outside the content hash)
+Every pack carries `tags.toml` with the five controlled tag groups only:
+```toml
+species = ["Human", "Macaque", "Marmoset"]
+tissue_cell = ["Caudate nucleus", "Putamen", "Nucleus accumbens", "Globus pallidus", "Subthalamic nucleus", "Substantia nigra"]
+data_type = ["Single-nucleus multiome", "Spatial transcriptomics", "Patch-seq"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
+```
+- Allowed labels live in `vocab/{species,tissue_cell,data_type,disease,collection}.toml` at the repository root (each
+  `[[terms]]` entry defines a unique `slug` and plain `label`, plus optional `scientific_name` on `species` and search
+  `synonyms`; no ontology IDs or region roll-up hierarchies). Add new labels to `vocab/` in the same commit that uses them.
+- `tags.toml` is excluded from `Pack.files()` and `Pack.content_hash()` (just like `verify/`), so adding or correcting
+  tags never invalidates verification badges or forces a verified pack back through review.
+- Planned papers in `collections/*.toml` may include an optional `[paper.tags]` table using the same five keys.
+- `rp lint` validates `vocab/*.toml`, `tags.toml`, and (under `rp lint --all`) collection tags (`tags.group`,
+  `tags.unknown`, `tags.missing`).
 
 ## Verification (badges)
 Every record in `verify/` carries the pack's content hash (sha256 over all files except `verify/`); a record whose

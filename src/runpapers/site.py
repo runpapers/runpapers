@@ -848,12 +848,12 @@ and scientific guardrails that keep new analyses honest. Every pack is verified 
     (out / "about.md").write_text(about_md(install))
     index = {"generated": now(), "rp_version": __version__, "base_url": base, "install": install,
              "papers": [{k: c[k] for k in ("doi", "pmid", "pmcid", "preprint_doi", "title", "first_author", "senior_author", "journal",
-                                            "year", "slug", "collections", "version", "summary", "profile", "recipes", "data_bytes", "resources",
+                                            "year", "slug", "collections", "version", "summary", "tags", "profile", "recipes", "data_bytes", "resources",
                                             "questions", "stage", "badges")}
                         | {"data_terms": _data_terms(c), "release": c.get("release"), "url": f"{base}/{ids.page_path(c['doi'])}/",
                            "agent": f"{base}/{ids.page_path(c['doi'])}/AGENT.md"}
                         for c in cards],
-             "planned": [{"doi": d, **{k: p.get(k) for k in ("title", "pmid", "first_author", "journal", "year", "collection")}}
+             "planned": [{"doi": d, **{k: p.get(k) for k in ("title", "pmid", "first_author", "journal", "year", "collection", "tags")}}
                          for d, p in planned.items()],
              "requests": reqs}
     (out / "index.json").write_text(json.dumps(index, indent=1))

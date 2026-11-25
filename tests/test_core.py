@@ -129,6 +129,10 @@ class Base(unittest.TestCase):
         (d / "SKILL.md").write_text(SKILL)
         (d / "evals" / "questions.toml").write_text(QS)
         (d / "recipes" / "fig1.py").write_text(RECIPE)
+        (d / "tags.toml").write_text(
+            'species = ["Human"]\ntissue_cell = ["Putamen"]\ndata_type = ["Single-nucleus multiome"]\n'
+            'disease = ["None (healthy donors)"]\ncollection = ["BICAN basal ganglia 2026"]\n'
+        )
         cache = Path(os.environ["RUNPAPERS_CACHE"]) / "data" / ids.doi_relpath(DOI)
         cache.mkdir(parents=True)
         (cache / "counts.csv").write_bytes(CSV)

@@ -1,0 +1,86 @@
+# Controlled vocabulary: Tissue/cell (tissue, brain region or cell line; flat labels, no ontology IDs or parent roll-ups).
+
+[[terms]]
+slug = "caudate-nucleus"
+label = "Caudate nucleus"
+synonyms = ["caudate", "anterior caudate", "STRd", "dorsal striatum"]
+
+[[terms]]
+slug = "putamen"
+label = "Putamen"
+synonyms = ["STRd", "dorsal striatum"]
+
+[[terms]]
+slug = "nucleus-accumbens"
+label = "Nucleus accumbens"
+synonyms = ["NAc", "NAC", "STRv", "ventral striatum"]
+
+[[terms]]
+slug = "globus-pallidus"
+label = "Globus pallidus"
+synonyms = ["GP", "GPe", "GPi", "external globus pallidus", "internal globus pallidus", "pallidum"]
+
+[[terms]]
+slug = "subthalamic-nucleus"
+label = "Subthalamic nucleus"
+synonyms = ["STN", "subthalamus"]
+
+[[terms]]
+slug = "substantia-nigra"
+label = "Substantia nigra"
+synonyms = ["SN", "SNc", "SNr", "substantia nigra pars compacta", "substantia nigra pars reticulata"]
+
+[[terms]]
+slug = "striatum"
+label = "Striatum"
+synonyms = ["striatal"]
+
+[[terms]]
+slug = "basal-ganglia"
+label = "Basal ganglia"
+synonyms = ["BG", "subcortex"]
+
+[[terms]]
+slug = "ventral-tegmental-area"
+label = "Ventral tegmental area"
+synonyms = ["VTA"]
+
+[[terms]]
+slug = "cerebral-cortex"
+label = "Cerebral cortex"
+synonyms = ["neocortex", "cortex", "cortical"]
+
+[[terms]]
+slug = "thalamus"
+label = "Thalamus"
+synonyms = ["thalamic"]
+
+[[terms]]
+slug = "hippocampus"
+label = "Hippocampus"
+synonyms = ["hippocampal"]
+
+[[terms]]
+slug = "cerebellum"
+label = "Cerebellum"
+synonyms = ["cerebellar"]
+
+[[terms]]
+slug = "spinal-cord"
+label = "Spinal cord"
+synonyms = ["dorsal horn", "ventral horn"]
+
+[[terms]]
+slug = "whole-brain"
+label = "Whole brain"
+synonyms = ["brain"]
+
+[[terms]]
+slug = "hek293"
+label = "HEK293"
+synonyms = ["HEK293T", "HEK-293"]
+
+[[terms]]
+slug = "ipsc-derived-neurons"
+label = "iPSC-derived neurons"
+synonyms = ["hPSC-derived neurons", "iPSC", "hESC"]

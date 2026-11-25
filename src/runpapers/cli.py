@@ -256,6 +256,12 @@ def c_lint(a):
             f.append(("error", "slug.collision", f"{pk.slug} is also the name of {', '.join(sorted(twins))}"))
         res[pk.doi] = [{"severity": s, "code": c, "message": m} for s, c, m in f]
         bad += len(spec.errors(f))
+    if a.all:
+        for k, cf in spec.lint_collections(reg).items():
+            if k == "vocab" and packs:
+                continue   # already reported on each pack above
+            res[k] = [{"severity": s, "code": c, "message": m} for s, c, m in cf]
+            bad += len(spec.errors(cf))
     out(res, a.json, "\n".join(f"{d}: " + ("ok" if not v else "\n  " + "\n  ".join(f"{x['severity']:5} {x['code']}: {x['message']}" for x in v)) for d, v in res.items()))
     sys.exit(1 if bad else 0)
 

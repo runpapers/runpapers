@@ -4,9 +4,9 @@ import json
 import urllib.parse
 import urllib.request
 
-from . import ids
+from . import ids, vocab
 from .data import UA
-from .registry import PACK_FILE, SPEC
+from .registry import PACK_FILE, SPEC, TAGS_FILE
 
 
 def _get_json(url):
@@ -161,4 +161,10 @@ key_genes = []
                                                 "# kind = \"number\"   # number | text\n# source = \"recipe fig1b metric ...\"\n# public = true   # may appear as an example on the paper's page\n")
     (d / "SKILL.md").write_text(SKILL_TEMPLATE.format(skill_name=ids.skill_name(doi), title=m.get("title", ""), journal=m.get("journal", ""),
                                                       year=m.get("year", ""), doi=doi))
+    voc = vocab.load(root=reg.root)
+    col_labels = [voc.by_slug["collection"][c]["label"] for c in cols if c in voc.by_slug.get("collection", {})]
+    (d / TAGS_FILE).write_text(
+        "# Five-group tags from vocab/*.toml (outside the pack content hash).\n"
+        f"species = []\ntissue_cell = []\ndata_type = []\ndisease = []\ncollection = {json.dumps(col_labels)}\n"
+    )
     return d

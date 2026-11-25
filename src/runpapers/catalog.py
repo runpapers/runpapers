@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from . import DEFAULT_BASE, data, ids, newpack, requests_log, verify, workspace
+from . import DEFAULT_BASE, data, ids, newpack, requests_log, verify, vocab, workspace
 from .registry import Registry, find_root, read_json, recipe_needs_from_meta, sha256_file, write_json
 
 INDEX_TTL_SECONDS = 3600
@@ -101,6 +101,7 @@ def _planned_entry(doi, p, votes=0):
         "version": None,
         "pack_hash": None,
         "summary": "",
+        "tags": vocab.normalize_tags(p.get("tags")),
         "profile": {},
         "recipes": [],
         "data_bytes": 0,

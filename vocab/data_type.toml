@@ -1,0 +1,61 @@
+# Controlled vocabulary: Data type (experimental assay or computational resource).
+
+[[terms]]
+slug = "single-nucleus-multiome"
+label = "Single-nucleus multiome"
+synonyms = ["10x Multiome", "snMultiome", "multiome", "snRNA+snATAC", "10x Multiome snRNA-seq", "10x Multiome snATAC-seq"]
+
+[[terms]]
+slug = "spatial-transcriptomics"
+label = "Spatial transcriptomics"
+synonyms = ["MERFISH", "MERSCOPE", "Xenium", "Visium", "Slide-seq", "STARmap", "COSMx", "spatial"]
+
+[[terms]]
+slug = "patch-seq"
+label = "Patch-seq"
+synonyms = ["patch clamp", "morphoelectric", "electrophysiology"]
+
+[[terms]]
+slug = "single-cell-rna-seq"
+label = "Single-cell RNA-seq"
+synonyms = ["scRNA-seq", "scRNA", "Smart-seq", "SMART-Seq v4"]
+
+[[terms]]
+slug = "single-nucleus-rna-seq"
+label = "Single-nucleus RNA-seq"
+synonyms = ["snRNA-seq", "snRNA"]
+
+[[terms]]
+slug = "single-nucleus-atac-seq"
+label = "Single-nucleus ATAC-seq"
+synonyms = ["snATAC-seq", "snATAC", "scATAC-seq", "ATAC-seq", "chromatin accessibility"]
+
+[[terms]]
+slug = "single-cell-dna-methylome"
+label = "Single-cell DNA methylome"
+synonyms = ["snmC-seq", "snm3C-seq", "DNA methylation", "methylome"]
+
+[[terms]]
+slug = "3d-genome-conformation"
+label = "3D genome conformation"
+synonyms = ["snm3C-seq", "Hi-C", "single-cell Hi-C", "chromatin conformation"]
+
+[[terms]]
+slug = "histone-modification-profiling"
+label = "Histone modification profiling"
+synonyms = ["Paired-Tag", "CUT&Tag", "ChIP-seq"]
+
+[[terms]]
+slug = "gwas-and-genetic-association"
+label = "GWAS and genetic association"
+synonyms = ["GWAS", "MAGMA", "LDSC", "s-LDSC", "eQTL"]
+
+[[terms]]
+slug = "3d-anatomical-reference-atlas"
+label = "3D anatomical reference atlas"
+synonyms = ["CCF", "common coordinate framework", "MRI", "histology"]
+
+[[terms]]
+slug = "computational-method"
+label = "Computational method"
+synonyms = ["software", "algorithm", "integration method", "taxonomy mapping"]

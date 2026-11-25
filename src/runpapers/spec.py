@@ -4,7 +4,7 @@ are untrusted until they pass this and a human review."""
 import re
 from pathlib import Path
 
-from . import ids
+from . import ids, vocab
 from .registry import LEGACY_SPECS, SPEC
 
 ACCESS = ("open", "controlled")
@@ -56,7 +56,57 @@ def _num(x):
     return isinstance(x, (int, float)) and not isinstance(x, bool)
 
 
-def lint(pack, expected_dir=None):
+def validate_tags_table(raw_tags, voc, add, where="tags.toml"):
+    """Validate a five-group tags table (`tags.toml` or `[paper.tags]`) against `voc`."""
+    if not isinstance(raw_tags, dict):
+        add("error", "tags.format", f"{where}: tags must be a TOML table")
+        return
+    for k, vals in raw_tags.items():
+        if k not in vocab.GROUPS:
+            add("error", "tags.group", f"{where}: unknown tag group {k!r} (allowed: {', '.join(vocab.GROUPS)})")
+            continue
+        if not isinstance(vals, list) or any(not isinstance(v, str) for v in vals):
+            add("error", "tags.format", f"{where}: {k} must be a list of label strings")
+            continue
+        seen_vals = set()
+        for val in vals:
+            if val in seen_vals:
+                add("warn", "tags.duplicate", f"{where}: duplicate label {val!r} in {k}")
+            seen_vals.add(val)
+            if not voc.has_label(k, val):
+                hint = voc.suggest(k, val)
+                sug = f"; did you mean {hint!r}?" if hint else f" (see vocab/{k}.toml)"
+                add("error", "tags.unknown", f"{where}: unknown {k} label {val!r}{sug}")
+
+
+def lint_collections(reg, voc=None):
+    """Validate `vocab/*.toml` and any optional `[paper.tags]` entries across `collections/*.toml`."""
+    if voc is None:
+        voc, v_findings = vocab.load_for_root(root=reg.root)
+    else:
+        v_findings = []
+    out = {}
+    if v_findings:
+        out["vocab"] = list(v_findings)
+    for slug, c in reg.collections().items():
+        if "tags" in c:
+            cf_top = []
+            top_label = f"collections/{slug}.toml"
+            validate_tags_table(c["tags"], voc, lambda sev, code, msg: cf_top.append((sev, code, msg)), where=top_label)
+            if cf_top:
+                out[top_label] = cf_top
+        for p in c.get("paper", []):
+            if "tags" not in p:
+                continue
+            cf = []
+            label = f"collections/{slug}.toml:{p.get('doi', '?')}"
+            validate_tags_table(p["tags"], voc, lambda sev, code, msg: cf.append((sev, code, msg)), where=label)
+            if cf:
+                out[label] = cf
+    return out
+
+
+def lint(pack, expected_dir=None, vocab_dir=None):
     f = []
     m = pack.meta
     add = lambda sev, code, msg: f.append((sev, code, msg))
@@ -215,6 +265,18 @@ def lint(pack, expected_dir=None):
         f.extend(scan_text(text, "SKILL.md"))
         if len(text) > 30000:
             add("warn", "skill.size", "SKILL.md is long; move detail into references/ so agents load it on demand")
+
+    # five-group tags (outside content_hash) & controlled vocabulary
+    reg_root = pack.dir.parents[2] if len(pack.dir.parents) >= 3 and (pack.dir.parents[2] / "runpapers.toml").is_file() else None
+    voc, v_findings = vocab.load_for_root(root=reg_root, vocab_dir=vocab_dir)
+    f.extend(v_findings)
+    if getattr(pack, "tags_parse_error", None):
+        add("error", "tags.format", f"tags.toml: invalid TOML ({pack.tags_parse_error})")
+    elif not getattr(pack, "has_tags_file", False):
+        add("warn", "tags.missing", "tags.toml missing: add five-group tags from vocab/*.toml")
+    else:
+        validate_tags_table(pack.raw_tags, voc, add, where="tags.toml")
+        f.extend(scan_text((pack.dir / "tags.toml").read_text(errors="replace"), "tags.toml"))
     return f
 
 

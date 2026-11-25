@@ -1,0 +1,31 @@
+# Controlled vocabulary: Species (common name shown; scientific_name and synonyms used for search).
+
+[[terms]]
+slug = "human"
+label = "Human"
+scientific_name = "Homo sapiens"
+synonyms = ["humans"]
+
+[[terms]]
+slug = "macaque"
+label = "Macaque"
+scientific_name = "Macaca mulatta"
+synonyms = ["macaques", "rhesus macaque", "pig-tailed macaque", "Macaca nemestrina", "rhesus", "Macaca", "nonhuman primate", "NHP"]
+
+[[terms]]
+slug = "marmoset"
+label = "Marmoset"
+scientific_name = "Callithrix jacchus"
+synonyms = ["marmosets", "common marmoset", "Callithrix", "nonhuman primate", "NHP"]
+
+[[terms]]
+slug = "mouse"
+label = "Mouse"
+scientific_name = "Mus musculus"
+synonyms = ["mice", "murine"]
+
+[[terms]]
+slug = "rat"
+label = "Rat"
+scientific_name = "Rattus norvegicus"
+synonyms = ["rats"]

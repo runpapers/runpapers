@@ -1,0 +1,61 @@
+# Controlled vocabulary: Disease ("None (healthy donors)" when no disease cohort or model is studied).
+
+[[terms]]
+slug = "none"
+label = "None (healthy donors)"
+synonyms = ["healthy", "neurotypical", "control", "non-diseased", "normal"]
+
+[[terms]]
+slug = "parkinsons-disease"
+label = "Parkinson's disease"
+synonyms = ["Parkinson", "Parkinsons", "PD", "dyskinesia"]
+
+[[terms]]
+slug = "alzheimers-disease"
+label = "Alzheimer's disease"
+synonyms = ["Alzheimer", "Alzheimers", "AD", "amyloid", "tau"]
+
+[[terms]]
+slug = "autism-spectrum-disorder"
+label = "Autism spectrum disorder"
+synonyms = ["autism", "ASD"]
+
+[[terms]]
+slug = "huntingtons-disease"
+label = "Huntington's disease"
+synonyms = ["Huntington", "Huntingtons", "HD"]
+
+[[terms]]
+slug = "amyotrophic-lateral-sclerosis"
+label = "Amyotrophic lateral sclerosis"
+synonyms = ["ALS", "motor neuron disease"]
+
+[[terms]]
+slug = "schizophrenia"
+label = "Schizophrenia"
+synonyms = ["SCZ", "psychosis"]
+
+[[terms]]
+slug = "major-depressive-disorder"
+label = "Major depressive disorder"
+synonyms = ["depression", "MDD"]
+
+[[terms]]
+slug = "bipolar-disorder"
+label = "Bipolar disorder"
+synonyms = ["BD", "bipolar"]
+
+[[terms]]
+slug = "epilepsy"
+label = "Epilepsy"
+synonyms = ["seizure"]
+
+[[terms]]
+slug = "chronic-pain"
+label = "Chronic pain"
+synonyms = ["neuropathic pain", "nociception"]
+
+[[terms]]
+slug = "substance-use-disorder"
+label = "Substance use disorder"
+synonyms = ["addiction", "opioid use disorder"]

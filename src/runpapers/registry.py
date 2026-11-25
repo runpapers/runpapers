@@ -5,13 +5,14 @@ import os
 import tomllib
 from pathlib import Path
 
-from . import ids
+from . import ids, vocab
 
 SPEC = "runpapers/0.2"
 LEGACY_SPECS = ("runpapers/0.1",)
 PACK_FILE = "pack.toml"
+TAGS_FILE = "tags.toml"
 SKIP_DIRS = {"verify", "out", "__pycache__", ".cache", "data", "analyses", ".git"}
-SKIP_FILES = {".DS_Store"}
+SKIP_FILES = {".DS_Store", TAGS_FILE}
 
 
 def find_root(start=None):
@@ -73,6 +74,18 @@ class Pack:
         self.targets = load_toml(tp).get("target", []) if tp.is_file() else []
         ep = self.dir / "evals" / "questions.toml"
         self.evals = load_toml(ep).get("question", []) if ep.is_file() else []
+        tgp = self.dir / TAGS_FILE
+        self.has_tags_file = tgp.is_file()
+        self.tags_parse_error = None
+        if self.has_tags_file:
+            try:
+                self.raw_tags = load_toml(tgp)
+            except (OSError, tomllib.TOMLDecodeError) as exc:
+                self.raw_tags = {}
+                self.tags_parse_error = str(exc)
+        else:
+            self.raw_tags = {}
+        self.tags = vocab.normalize_tags(self.raw_tags)
 
     # -- identity
     @property
@@ -175,6 +188,7 @@ class Pack:
             "journal": p.get("journal"), "year": p.get("year"), "slug": self.slug,
             "collections": p.get("collections", []), "version": self.version,
             "summary": self.meta.get("pack", {}).get("summary", ""),
+            "tags": self.tags,
             "profile": self.meta.get("profile", {}),
             "recipes": [{"id": r["id"], "title": r.get("title", ""), "panel": r.get("panel", ""), **self.recipe_needs(r)}
                         for r in self.recipes],
@@ -213,12 +227,21 @@ class Registry:
         return out
 
     def planned(self):
-        """Papers listed in a collection, keyed by DOI, with their collection slug."""
+        """Papers listed in a collection, keyed by DOI, with their collection slug and normalized five-group tags."""
+        voc = vocab.load(root=self.root)
         out = {}
         for slug, c in self.collections().items():
+            col_term = voc.by_slug.get("collection", {}).get(slug)
+            col_defaults = vocab.normalize_tags(c.get("tags"))
             for p in c.get("paper", []):
                 d = ids.normalize_doi(p["doi"])
-                out[d] = {**p, "doi": d, "collection": slug}
+                tags = vocab.normalize_tags(p.get("tags"))
+                for g in vocab.GROUPS:
+                    if not tags[g] and col_defaults[g]:
+                        tags[g] = list(col_defaults[g])
+                if not tags["collection"] and col_term:
+                    tags["collection"] = [col_term["label"]]
+                out[d] = {**p, "doi": d, "collection": slug, "tags": tags}
         return out
 
     def resolve(self, ident):
