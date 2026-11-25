@@ -15,7 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Hide the account id in the log
-        run: echo "::add-mask::${{ vars.CLOUDFLARE_ACCOUNT_ID }}"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::add-mask::$CLOUDFLARE_ACCOUNT_ID"
+          fi
       - name: Requests through Cloudflare, counts read back, certificates
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

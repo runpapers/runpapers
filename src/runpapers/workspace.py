@@ -38,8 +38,8 @@ def load_workspace(start=None):
     return ws, Pack(ws), meta
 
 
-def _fetch_bytes(url):
-    req = urllib.request.Request(url, headers={"User-Agent": data.UA})
+def _fetch_bytes(url, action=None):
+    req = urllib.request.Request(url, headers=data.request_headers(action=action))
     with urllib.request.urlopen(req, timeout=60) as r:
         return r.read()
 
@@ -53,7 +53,7 @@ def _copy_from_registry(pack, dest):
 
 def _copy_from_site(base, doi, dest):
     root = f"{base.rstrip('/')}/{ids.page_path(doi)}"
-    listing = json.loads(_fetch_bytes(f"{root}/pack.json"))
+    listing = json.loads(_fetch_bytes(f"{root}/pack.json", action="get"))
     for f in listing["files"]:
         rel = f["path"]
         if ".." in Path(rel).parts or rel.startswith("/"):

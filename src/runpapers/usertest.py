@@ -60,6 +60,14 @@ def _find_result(root, rid):
     return read_json(hits[-1]) if hits else None
 
 
+def agent_env(base_env=None):
+    """Sanitized environment for naive-user agent sessions, marked internal so runs never inflate public counts."""
+    src = os.environ if base_env is None else base_env
+    env = {k: v for k, v in src.items() if not k.startswith(("LAB_", "RUNPAPERS_HOME"))}
+    env["RUNPAPERS_INTERNAL"] = "1"
+    return env
+
+
 def run(reg, pack, agents, models=None, timeout_min=45, record=True, quiet=False, keep=True):
     """Run each agent once; returns the list of run records (also appended to verify/usertest.json)."""
     models = models or {}
@@ -91,7 +99,7 @@ def run(reg, pack, agents, models=None, timeout_min=45, record=True, quiet=False
             if not quiet:
                 print(f"[usertest] {agent}: running in {box} (timeout {timeout_min} min)")
             t0 = time.time()
-            env = {k: v for k, v in os.environ.items() if not k.startswith(("LAB_", "RUNPAPERS_HOME"))}
+            env = agent_env()
             err = None
             with open(box / "transcript.txt", "w") as tf:
                 try:

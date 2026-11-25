@@ -3,6 +3,7 @@ Controlled-access data is never fetched automatically; the user gets the access 
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 import urllib.request
@@ -11,6 +12,58 @@ from pathlib import Path
 from . import DEFAULT_BASE, ids
 
 UA = f"runpapers/0.2 (+{DEFAULT_BASE})"
+
+# Keep user-agent classification in exact parity with deploy/cloudflare/worker.js (kindOf).
+_AGENTS_RE = re.compile(
+    r"(Claude-User|Claude-Code|ChatGPT-User|Perplexity-User|Google-Agent|Gemini-CLI|"
+    r"MistralAI-User|DuckAssistBot|codex|antigravity|cursor|runpapers)",
+    re.IGNORECASE,
+)
+_CRAWLERS_RE = re.compile(
+    r"(bot\b|bot/|crawler|spider|crawl|slurp|GPTBot|ClaudeBot|Claude-SearchBot|anthropic-ai|"
+    r"CCBot|Google-Extended|OAI-SearchBot|PerplexityBot|Bytespider|Amazonbot|Applebot|"
+    r"facebookexternalhit|Meta-External|bingpreview|Diffbot|ImagesiftBot|Timpibot)",
+    re.IGNORECASE,
+)
+_SCRIPTS_RE = re.compile(
+    r"^(curl|wget|python-requests|python-urllib|python-httpx|aiohttp|httpx|"
+    r"go-http-client|node-fetch|undici|node\b|axios|okhttp|java/|libwww)",
+    re.IGNORECASE,
+)
+
+
+def classify_ua(ua):
+    """Classify an HTTP User-Agent string as 'agent', 'crawler', 'script', or 'person'."""
+    if not ua:
+        return "script"
+    if _AGENTS_RE.search(ua):
+        return "agent"
+    if _CRAWLERS_RE.search(ua):
+        return "crawler"
+    if _SCRIPTS_RE.search(ua):
+        return "script"
+    if "Mozilla/5.0" in ua:
+        return "person"
+    return "script"
+
+
+def _env_truthy(val):
+    return bool(val and str(val).strip().lower() not in ("0", "false", "no", "off"))
+
+
+def request_headers(action=None, extra=None, env=None):
+    """Build HTTP headers for RunPapers requests: generic User-Agent plus non-identifying counting flags."""
+    e = os.environ if env is None else env
+    headers = {"User-Agent": UA}
+    if action:
+        headers["X-RunPapers-Action"] = str(action)
+    if _env_truthy(e.get("CI")) or _env_truthy(e.get("RUNPAPERS_INTERNAL")):
+        headers["X-RunPapers-Internal"] = "1"
+    if _env_truthy(e.get("DO_NOT_TRACK")):
+        headers["X-RunPapers-NoCount"] = "1"
+    if extra:
+        headers.update(extra)
+    return headers
 
 
 def cache_root():
@@ -36,7 +89,7 @@ def verified(path, entry):
         return False
     st = path.stat()
     ok = path.with_name(path.name + ".ok")
-    algo, want = ("sha256", entry["sha256"]) if entry.get("sha256") else ("md5", entry.get("md5"))
+    algo, want = ("sha256", entry["sha256"]) if entry.get("sha256") else ("md5", entry["md5"])
     try:
         rec = json.loads(ok.read_text())
         if rec.get("mtime") == st.st_mtime and rec.get("size") == st.st_size and rec.get(algo) == want:
@@ -56,7 +109,8 @@ def filename(entry):
 def _download(url, dest, size, quiet=False):
     part = dest.with_name(dest.name + ".part")
     have = part.stat().st_size if part.exists() else 0
-    req = urllib.request.Request(url, headers={"User-Agent": UA, **({"Range": f"bytes={have}-"} if have else {})})
+    extra = {"Range": f"bytes={have}-"} if have else None
+    req = urllib.request.Request(url, headers=request_headers(extra=extra))
     with urllib.request.urlopen(req, timeout=60) as r:
         if have and r.status != 206:  # server ignored the range: start over
             have = 0
