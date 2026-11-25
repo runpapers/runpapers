@@ -7,3 +7,4 @@ __pycache__/
 .cache/
 # private reference images (published figure crops) never go into the public repo
 refs/
+requests/github.json

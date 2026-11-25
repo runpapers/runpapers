@@ -76,18 +76,39 @@ def c_fetch(a):
     out({"files": paths, "notes": notes}, a.json, "\n".join([f"{k}: {v}" for k, v in paths.items()] + notes))
 
 
+def _public_request(a):
+    """Outside the registry (a scientist's computer): give the GitHub link that files the request or votes on it."""
+    from . import catalog
+    res = catalog.open_catalog(getattr(a, "source", None)).request_paper(a.id, note=getattr(a, "note", "") or "", resolve_online=True)
+    how = "add a thumbs-up to the existing request" if res.get("existing_issue") else "send the request (it takes a free GitHub account)"
+    out(res, a.json, f"{res['doi']}: open this link to {how}:\n{res['issue_url']}")
+
+
 def c_request(a):
     from . import requests_log
-    out(requests_log.request(reg_(), a.id, note=a.note or "", by=a.by), a.json)
+    from .registry import find_root
+    if find_root() is None:
+        return _public_request(a)
+    reg = reg_()
+    res = requests_log.request(reg, a.id, note=a.note or "", by=a.by)
+    res["issue_url"] = requests_log.issue_url(reg.config.get("publish", {}).get("github_repo", "runpapers/runpapers"), res["doi"], a.note or "")
+    out(res, a.json)
 
 
 def c_vote(a):
     from . import requests_log
+    from .registry import find_root
+    if find_root() is None:
+        return _public_request(a)
     out(requests_log.vote(reg_(), a.id, by=a.by), a.json)
 
 
 def c_requests(a):
     from . import requests_log
+    if a.sync:
+        n = len(requests_log.sync_github(reg_()))
+        if not a.json:
+            print(f"synced {n} request issue(s) from GitHub")
     rows = requests_log.summary(reg_())
     out(rows, a.json, "\n".join(f"{r['votes']:3}  {r['status']:22} {r['doi']}  {r['title'] or ''}" for r in rows) or "no requests")
 
@@ -352,16 +373,17 @@ def main(argv=None):
     s = cmd("get", c_get, "Create a working folder for a paper (pack + data link + agent instructions).")
     s.add_argument("id", help="DOI, PMID, PMCID or doi.org/PubMed URL")
     s.add_argument("--dir"); s.add_argument("--tier", default="lite", choices=["lite", "full"])
-    s.add_argument("--source", help="registry folder or site URL (default: local registry, else https://runpapers.org)")
+    s.add_argument("--source", help="registry folder or site URL (default: local registry, else https://runpapers.com)")
     s.add_argument("--no-data", action="store_true"); s.add_argument("--rp-cmd", help="how the workspace should call rp")
     s = cmd("recipes", c_recipes, "List a pack's recipes (inside a workspace, or give an id)."); s.add_argument("id", nargs="?")
     s = cmd("run", c_run, "Run a recipe and compare with the paper's numbers: `rp run fig2f` in a workspace, or `rp run <id> <recipe>`.")
     s.add_argument("args", nargs="*"); s.add_argument("--all", action="store_true"); s.add_argument("--ci", action="store_true", help="run under CI memory/CPU limits")
     s.add_argument("--tier", default="lite", choices=["lite", "full"])
     s = cmd("fetch", c_fetch, "Download and verify a pack's data into the cache."); s.add_argument("id", nargs="?"); s.add_argument("--tier", default="lite", choices=["lite", "full"])
-    s = cmd("request", c_request, "Ask for a paper to be packed (or add your vote)."); s.add_argument("id"); s.add_argument("--note"); s.add_argument("--by")
-    s = cmd("vote", c_vote, "Vote for a requested paper."); s.add_argument("id"); s.add_argument("--by")
-    cmd("requests", c_requests, "Requested papers by votes.")
+    s = cmd("request", c_request, "Ask for a paper to be packed (or add your vote): prints the GitHub link that does it.")
+    s.add_argument("id"); s.add_argument("--note"); s.add_argument("--by"); s.add_argument("--source", help="site URL (default https://runpapers.com)")
+    s = cmd("vote", c_vote, "Vote for a requested paper."); s.add_argument("id"); s.add_argument("--by"); s.add_argument("--source")
+    s = cmd("requests", c_requests, "Requested papers by votes."); s.add_argument("--sync", action="store_true", help="first take a fresh snapshot of the request issues on GitHub")
     s = cmd("resolve", c_resolve, "Turn a PMID/PMCID/URL/DOI into the canonical DOI."); s.add_argument("id"); s.add_argument("--online", action="store_true")
     cmd("list", c_list, "Every paper in the registry and collections with its pipeline stage.")
     s = cmd("show", c_show, "A pack's card and status."); s.add_argument("id")

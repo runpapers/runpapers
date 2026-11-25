@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How to use RunPapers (step-by-step guide)
+    url: https://runpapers.com/guide.html
+    about: Using a paper with Claude Code, Codex, Antigravity or another agent.

@@ -2,13 +2,14 @@
 name = "RunPapers"
 
 [site]
-# GitHub Pages until a domain is bought; the install command switches to "uvx runpapers" once the package is on PyPI
-base_url = "https://runpapers.github.io/runpapers"
+# The website (GitHub Pages with the custom domain runpapers.com, DNS at Cloudflare). The install command switches to
+# "uvx runpapers" once the package is on PyPI.
+base_url = "https://runpapers.com"
 install_cmd = "uvx --from git+https://github.com/runpapers/runpapers runpapers"
 
 [publish]
 github_repo = "runpapers/runpapers"
-hf_org = "runpapers"
+hf_org = "RunPapers-com"            # Hugging Face organization (datasets at huggingface.co/datasets/RunPapers-com/<citekey>)
 creator = "RunPapers"               # Zenodo creator and the name on sign-offs
 # zenodo_community = "runpapers"    # once the community exists on zenodo.org
 

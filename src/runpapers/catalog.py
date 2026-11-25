@@ -12,7 +12,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from . import data, ids, newpack, requests_log, verify, workspace
+from . import DEFAULT_BASE, data, ids, newpack, requests_log, verify, workspace
 from .registry import Registry, find_root, read_json, sha256_file, write_json
 
 INDEX_TTL_SECONDS = 3600
@@ -115,7 +115,7 @@ def _planned_entry(doi, p, votes=0):
     }
 
 
-def _standalone_request(doi, note="", by="local:mcp", title=None, github_repo="runpapers/runpapers"):
+def _standalone_request(doi, note="", by="local:mcp", title=None, github_repo="runpapers/runpapers", existing_issue=None):
     log_file = _config_dir() / "requests.jsonl"
     log_file.parent.mkdir(parents=True, exist_ok=True)
     evs = [json.loads(ln) for ln in log_file.read_text().splitlines() if ln.strip()] if log_file.is_file() else []
@@ -134,15 +134,14 @@ def _standalone_request(doi, note="", by="local:mcp", title=None, github_repo="r
         evs.append(ev)
         new = True
     votes = len({e.get("by") for e in evs if e.get("doi") == doi})
-    issue_title = urllib.parse.quote(f"Paper request: {doi}")
-    issue_body = urllib.parse.quote((f"{note}\n\n" if note else "") + f"Requested DOI: https://doi.org/{doi}")
     return {
         "doi": doi,
         "new": new,
         "votes": votes,
         "mode": "standalone",
         "log_path": str(log_file),
-        "issue_url": f"https://github.com/{github_repo}/issues/new?title={issue_title}&body={issue_body}",
+        "issue_url": existing_issue or requests_log.issue_url(github_repo, doi, note),
+        "existing_issue": bool(existing_issue),
     }
 
 
@@ -328,13 +327,14 @@ class LocalCatalog(_BaseCatalog):
                 raise ValueError(f"{ident!r} is not in the local catalog; pass a DOI or set resolve_online=true")
         res = requests_log.request(self.reg, doi, note=note, by=by, title=title)
         votes = next((r["votes"] for r in requests_log.summary(self.reg) if r["doi"] == doi), 1)
-        issue_title = urllib.parse.quote(f"Paper request: {doi}")
+        issue = next((r.get("issue") for r in requests_log.summary(self.reg) if r["doi"] == doi and r.get("issue")), None)
         return {
             **res,
             "votes": votes,
             "mode": "registry",
             "log_path": str(requests_log.log_path(self.reg)),
-            "issue_url": f"https://github.com/{self.github_repo}/issues/new?title={issue_title}",
+            "issue_url": issue or requests_log.issue_url(self.github_repo, doi, note),
+            "existing_issue": bool(issue),
         }
 
 
@@ -429,7 +429,7 @@ class RemoteCatalog(_BaseCatalog):
         terms = sorted({d.get("license", "").strip() for d in data_list if d.get("license", "").strip()})
         refs = [f["path"] for f in listing.get("files", [])
                 if f.get("path", "").startswith("references/") and workspace.shipped(f["path"])]
-        src_arg = f" --source {self.base_url}" if self.base_url != "https://runpapers.org" else ""
+        src_arg = f" --source {self.base_url}" if self.base_url != DEFAULT_BASE else ""
         return {
             **entry,
             "pack_hash": listing.get("pack_hash", "")[:12],
@@ -488,7 +488,8 @@ class RemoteCatalog(_BaseCatalog):
                 raise ValueError(f"{ident!r} is not in the catalog; pass a DOI or set resolve_online=true")
         else:
             title = next((e.get("title") for e in self.entries(include_planned=True) if e["doi"] == doi), None)
-        return _standalone_request(doi, note=note, by=by, title=title, github_repo=self.github_repo)
+        issue = next((r.get("issue") for r in (self.index().get("requests") or []) if r.get("doi") == doi and r.get("issue")), None)
+        return _standalone_request(doi, note=note, by=by, title=title, github_repo=self.github_repo, existing_issue=issue)
 
 
 def open_catalog(source=None):
@@ -501,4 +502,4 @@ def open_catalog(source=None):
     root = find_root()
     if root is not None:
         return LocalCatalog(Registry(root))
-    return RemoteCatalog(os.environ.get("RUNPAPERS_BASE", "https://runpapers.org"))
+    return RemoteCatalog(os.environ.get("RUNPAPERS_BASE", DEFAULT_BASE))

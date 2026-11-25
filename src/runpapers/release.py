@@ -15,7 +15,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-from . import __version__, ids
+from . import DEFAULT_BASE, __version__, ids
 from .registry import read_json, sha256_file, write_json
 from .verify import now, record, status, vdir
 from .workspace import shipped
@@ -64,10 +64,11 @@ def prepublish_scan(reg, extra_words=()):
     user = os.path.basename(home)
     # Keep internal marker literals split in source so release.py (and its git diff) never self-matches this scan.
     internal_markers = ("@" + "lab.local", "LAB_" + "AGENT")
-    words = [home, f"/home/{user}", *([user] if len(user) > 3 else []), *internal_markers, *extra_words]
+    ci = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
+    words = [home, f"/home/{user}", *([user] if len(user) > 3 and not ci else []), *internal_markers, *extra_words]
     rx = re.compile("|".join(re.escape(w) for w in words if w) +
                     r"|\b(hf_[A-Za-z0-9]{30,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,})\b|-----BEGIN [A-Z ]*PRIVATE KEY-----")
-    email_rx = re.compile(r"\b[A-Za-z0-9._%+-]+@(?!runpapers\.org\b|anthropic\.com\b|example\.org\b|users\.noreply\.github\.com\b)[A-Za-z0-9.-]+\.[a-z]{2,}\b")
+    email_rx = re.compile(r"\b[A-Za-z0-9._%+-]+@(?!runpapers\.(?:org|com)\b|anthropic\.com\b|example\.org\b|users\.noreply\.github\.com\b)[A-Za-z0-9.-]+\.[a-z]{2,}\b")
     found = []
     files = subprocess.run(["git", "-C", str(reg.root), "ls-files"], capture_output=True, text=True).stdout.split("\n")
     for f in filter(None, files):
@@ -131,7 +132,19 @@ def release_dir(reg, pack, version):
     return reg.root / "build" / "release" / ids.doi_relpath(pack.doi) / version
 
 
-def readme(pack, version, st):
+def _install(reg):
+    return reg.config.get("site", {}).get("install_cmd") or "uvx runpapers"
+
+
+def _terms_link(pack):
+    for d in pack.data:
+        m = re.search(r"https?://[^\s)]+", d.get("license", ""))
+        if m:
+            return m.group(0).rstrip(".,;")
+    return None
+
+
+def readme(pack, version, st, install="uvx runpapers"):
     p = pack.paper
     terms = sorted({d.get("license", "") for d in pack.data})
     return f"""# RunPapers pack: {pack.title}
@@ -145,7 +158,7 @@ Pack version {version}. Verified: {", ".join(k for k, v in st["badges"].items() 
 
 ## Use it with your AI agent
 Ask your agent (Claude Code, Codex, Antigravity, ...): "Use RunPapers to work with the data of DOI {pack.doi}:
-reproduce a figure, then answer my question." Or run `uvx runpapers get {pack.doi}` yourself.
+reproduce a figure, then answer my question." Or run `{install} get {pack.doi}` yourself.
 
 ## Contents
 - `pack/`: the pack (instructions for agents in SKILL.md, recipes, the paper's numbers in targets.toml)
@@ -181,7 +194,7 @@ def build(reg, pack, version=None, force=False):
     zpath = d / f"{name}.zip"
     l1 = reg.root / "build" / "l1" / ids.doi_relpath(pack.doi)
     with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr(f"{name}/README.md", readme(pack, version, r["status"]))
+        z.writestr(f"{name}/README.md", readme(pack, version, r["status"], _install(reg)))
         for f in pack.files():
             if shipped(f):
                 z.write(pack.dir / f, f"{name}/pack/{f}")
@@ -205,6 +218,17 @@ def current(pack):
     return next((x for x in reversed(rel.get("releases", [])) if x["pack_hash"] == pack.content_hash()), None)
 
 
+def published(pack):
+    """{version, doi, concept_doi, zenodo, huggingface, github} for the release of the current content, or None."""
+    e = current(pack)
+    pub = (e or {}).get("published") or {}
+    if not any(k in pub for k in ("zenodo", "huggingface", "github")):
+        return None
+    z, h, g = pub.get("zenodo") or {}, pub.get("huggingface") or {}, pub.get("github") or {}
+    return {"version": e["version"], "doi": z.get("doi"), "concept_doi": z.get("concept_doi"), "zenodo": z.get("url"),
+            "huggingface": h.get("url"), "github": g.get("url")}
+
+
 def _mark(pack, version, target, info):
     rel = record(pack, "release")
     for x in rel["releases"]:
@@ -217,7 +241,7 @@ def _mark(pack, version, target, info):
 def zenodo_metadata(reg, pack, version):
     p = pack.paper
     pub = reg.config.get("publish", {})
-    base = reg.config.get("site", {}).get("base_url", "https://runpapers.org").rstrip("/")
+    base = reg.config.get("site", {}).get("base_url", DEFAULT_BASE).rstrip("/")
     rel_ids = [{"relation": "isSupplementTo", "identifier": pack.doi, "scheme": "doi", "resource_type": "publication-article"},
                {"relation": "isDocumentedBy", "identifier": f"{base}/doi/{ids.doi_relpath(pack.doi)}/", "scheme": "url"}]
     if p.get("preprint_doi"):
@@ -270,24 +294,39 @@ def publish_zenodo(reg, pack, sandbox=False, publish=True, api=None):
         raise SystemExit(f"no {kind} token (~/.config/runpapers/{'zenodo_sandbox' if sandbox else 'zenodo'}_token)")
     api = (api or ZENODO[kind]).rstrip("/")
     rel = record(pack, "release")
-    concept = (rel.get("zenodo") or {}).get(kind, {}).get("deposition_id")
-    if concept:
-        dep = _http("POST", f"{api}/api/deposit/depositions/{concept}/actions/newversion", tok)
+    z = (rel.get("zenodo") or {}).get(kind, {})
+    dep = None
+    if z.get("draft_id"):   # the private draft made by a preview: publish that one (its DOI is already reserved)
+        dep = _http("GET", f"{api}/api/deposit/depositions/{z['draft_id']}", tok)
+        if dep.get("submitted"):   # published by hand on zenodo.org meanwhile
+            return _zenodo_done(pack, entry, kind, dep, sandbox)
+    elif z.get("deposition_id"):   # already published once: a new version of the same record (same concept DOI)
+        dep = _http("POST", f"{api}/api/deposit/depositions/{z['deposition_id']}/actions/newversion", tok)
         dep = _http("GET", dep["links"]["latest_draft"], tok)
-        for f in dep.get("files", []):
-            _http("DELETE", f"{api}/api/deposit/depositions/{dep['id']}/files/{f['id']}", tok)
     else:
         dep = _http("POST", f"{api}/api/deposit/depositions", tok, {})
+    for f in dep.get("files", []):
+        _http("DELETE", f"{api}/api/deposit/depositions/{dep['id']}/files/{f['id']}", tok)
     d = release_dir(reg, pack, entry["version"])
     zpath = d / entry["zip"]
     _http("PUT", f"{dep['links']['bucket']}/{zpath.name}", tok, raw=zpath.read_bytes(), ctype="application/octet-stream")
     meta = json.loads((d / "zenodo.json").read_text())
-    _http("PUT", f"{api}/api/deposit/depositions/{dep['id']}", tok, {"metadata": meta})
-    out = {"deposition_id": dep["id"], "draft": True}
-    if publish:
-        res = _http("POST", f"{api}/api/deposit/depositions/{dep['id']}/actions/publish", tok)
-        out = {"deposition_id": res["id"], "doi": res.get("doi"), "concept_doi": res.get("conceptdoi"),
-               "url": res.get("links", {}).get("record_html") or res.get("links", {}).get("html"), "draft": False}
+    dep = _http("PUT", f"{api}/api/deposit/depositions/{dep['id']}", tok, {"metadata": meta}) or dep
+    if not publish:
+        reserved = ((dep.get("metadata") or {}).get("prereserve_doi") or {}).get("doi")
+        out = {"draft_id": dep["id"], "reserved_doi": reserved, "url": (dep.get("links") or {}).get("html"), "draft": True}
+        rel = record(pack, "release")
+        rel.setdefault("zenodo", {}).setdefault(kind, {}).update({"draft_id": dep["id"], "reserved_doi": reserved})
+        write_json(vdir(pack) / "release.json", rel)
+        _mark(pack, entry["version"], ("zenodo-sandbox" if sandbox else "zenodo") + "-draft", out)
+        return out
+    res = _http("POST", f"{api}/api/deposit/depositions/{dep['id']}/actions/publish", tok)
+    return _zenodo_done(pack, entry, kind, res, sandbox)
+
+
+def _zenodo_done(pack, entry, kind, res, sandbox):
+    out = {"deposition_id": res["id"], "doi": res.get("doi"), "concept_doi": res.get("conceptdoi"),
+           "url": (res.get("links") or {}).get("record_html") or (res.get("links") or {}).get("html"), "draft": False}
     rel = record(pack, "release")
     rel.setdefault("zenodo", {})[kind] = {"deposition_id": out["deposition_id"], "concept_doi": out.get("concept_doi")}
     write_json(vdir(pack) / "release.json", rel)
@@ -298,14 +337,20 @@ def publish_zenodo(reg, pack, sandbox=False, publish=True, api=None):
 # --------------------------------------------------------------------------- Hugging Face
 def hf_card(reg, pack, version, repo_id):
     p = pack.paper
-    tables = sorted({f.name for f in (reg.root / "build" / "l1" / ids.doi_relpath(pack.doi)).glob("*/*.csv")})
-    configs = "\n".join(f"- config_name: {Path(t).stem}\n  data_files: \"reproduced/*/{t}\"" for t in tables)
+    l1 = reg.root / "build" / "l1" / ids.doi_relpath(pack.doi)
+    tables = sorted({(f.parent.name, f.name) for f in l1.glob("*/*.csv")})
+    configs = "\n".join(f"- config_name: {Path(t).stem}\n  data_files: \"reproduced/{r}/{t}\"" for r, t in tables)
+    terms = sorted({d.get("license", "").strip() for d in pack.data if d.get("license", "").strip()})
+    link = _terms_link(pack)
+    lic = (f"license: other\nlicense_name: source-data-terms\nlicense_link: {link}" if link else "license: other")
+    prof = pack.meta.get("profile", {})
+    tags = ["runpapers", "agent-ready", "reproducibility", "biology",
+            *[str(x).lower().replace(" ", "-") for x in (prof.get("tissues", []) + prof.get("assays", []))[:4]]]
+    table_lines = "\n".join(f"- `reproduced/{r}/{t}`" for r, t in tables)
     return f"""---
-license: other
-license_name: allen-institute-terms-of-use
-license_link: https://alleninstitute.org/terms-of-use/
+{lic}
 pretty_name: "RunPapers: {pack.title}"
-tags: [runpapers, agent-ready, reproducibility, biology, neuroscience, single-cell]
+tags: [{", ".join(dict.fromkeys(tags))}]
 configs:
 {configs}
 ---
@@ -320,19 +365,21 @@ pack: the instructions any AI agent can follow (`pack/SKILL.md`), the recipes th
 original data, and the tables and figures those recipes produced (`reproduced/`), with the paper's numbers next to ours
 (`reproduced/*/result.json`).
 
-- `reproduced/fig1b/composition.csv`: nuclei per species, donor, dissected region and cell type (Neighborhood, Class,
-  Subclass, Group, cluster). Most questions about cell-type composition can be answered from this table alone.
-- The raw files are not re-hosted; `pack/pack.toml` lists their original locations and checksums.
+Tables (`pack/SKILL.md` explains each one):
+{table_lines or "- none"}
 
-**Use it from an agent:** "Use RunPapers to work with the data of DOI {pack.doi}" or `uvx runpapers get {pack.doi}`.
+The raw files are not re-hosted; `pack/pack.toml` lists their original locations and checksums.
 
-**Terms:** derived from the Allen Brain Cell Atlas, used under the Allen Institute Terms of Use (noncommercial
-research use; cite the paper and the Allen Brain Cell Atlas following the Allen Institute Citation Policy). RunPapers'
-own instructions and recipes are CC BY 4.0 / MIT.
+**Use it from an agent:** "Use RunPapers to work with the data of DOI {pack.doi}" or `{_install(reg)} get {pack.doi}`.
+Website: {reg.config.get("site", {}).get("base_url", DEFAULT_BASE).rstrip("/")}/doi/{ids.doi_relpath(pack.doi)}/
+
+**Terms:** the reproduced tables are derived from the original data, which stay under their source terms:
+{"; ".join(terms) or "see pack/pack.toml"}. Cite the paper and the data source as those terms require.
+RunPapers' own instructions and recipes are CC BY 4.0 / MIT.
 """
 
 
-def publish_hf(reg, pack, repo_id=None):
+def publish_hf(reg, pack, repo_id=None, private=False):
     entry = current(pack)
     if not entry:
         raise SystemExit("build the release first (`rp release build`)")
@@ -348,22 +395,35 @@ def publish_hf(reg, pack, repo_id=None):
         z.extractall(stage)
     root = next(stage.iterdir())
     (root / "README.md").write_text(hf_card(reg, pack, entry["version"], repo_id))
-    script = ("import sys\nfrom huggingface_hub import HfApi\napi=HfApi(token=open(sys.argv[3]).read().strip())\n"
-              "api.create_repo(sys.argv[1], repo_type='dataset', exist_ok=True)\n"
-              "c=api.upload_folder(repo_id=sys.argv[1], repo_type='dataset', folder_path=sys.argv[2], "
-              "commit_message='RunPapers pack v'+sys.argv[4], delete_patterns=['*'])\nprint(c.commit_url)\n")
+    script = (
+        "import sys\nfrom huggingface_hub import HfApi\napi=HfApi(token=open(sys.argv[3]).read().strip())\n"
+        "rid, folder, ver, private = sys.argv[1], sys.argv[2], sys.argv[4], sys.argv[5] == '1'\n"
+        "if private and api.repo_exists(rid, repo_type='dataset') and not api.dataset_info(rid).private:\n"
+        "    print('SKIP already public; a preview would change the public dataset'); sys.exit(0)\n"
+        "api.create_repo(rid, repo_type='dataset', exist_ok=True, private=private)\n"
+        "c=api.upload_folder(repo_id=rid, repo_type='dataset', folder_path=folder, "
+        "commit_message='RunPapers pack v'+ver, delete_patterns=['*'])\n"
+        "if not private:\n"
+        "    api.update_repo_settings(rid, private=False, repo_type='dataset')\n"
+        "    api.create_tag(rid, tag='v'+ver, repo_type='dataset', exist_ok=True)\n"
+        "print(c.commit_url)\n")
     tf = stage / ".tok"
     tf.write_text(tok)
     os.chmod(tf, 0o600)
     try:
         r = subprocess.run(["uv", "run", "--quiet", "--no-project", "--with", "huggingface_hub>=0.30", "python", "-c", script,
-                            repo_id, str(root), str(tf), entry["version"]], capture_output=True, text=True, timeout=900)
+                            repo_id, str(root), str(tf), entry["version"], "1" if private else "0"],
+                           capture_output=True, text=True, timeout=900)
     finally:
         tf.unlink(missing_ok=True)
     if r.returncode != 0:
         raise SystemExit(f"Hugging Face upload failed: {(r.stderr or r.stdout)[-600:]}")
-    out = {"repo": repo_id, "url": f"https://huggingface.co/datasets/{repo_id}", "commit": r.stdout.strip().splitlines()[-1]}
-    _mark(pack, entry["version"], "huggingface", out)
+    last = (r.stdout.strip().splitlines() or [""])[-1]
+    out = {"repo": repo_id, "url": f"https://huggingface.co/datasets/{repo_id}", "private": private}
+    if last.startswith("SKIP"):
+        return {**out, "skipped": last[5:]}
+    out["commit"] = last
+    _mark(pack, entry["version"], "huggingface-preview" if private else "huggingface", out)
     return out
 
 

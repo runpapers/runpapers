@@ -1,0 +1,35 @@
+name: Report a problem with a pack
+description: A recipe failed, a number disagrees with the paper, or a pack's instructions misled your AI agent.
+title: "Problem: "
+labels: ["pack-problem"]
+body:
+  - type: input
+    id: doi
+    attributes:
+      label: Paper DOI
+      placeholder: "10.1016/j.cell.2026.10.012"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong?
+      options:
+        - A recipe or the setup failed
+        - A number or figure disagrees with the paper
+        - The instructions (SKILL.md / AGENT.md) misled my agent
+        - Data terms, citation or something else
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: Which AI agent and operating system?
+      placeholder: "Claude Code on macOS, Codex on Windows, Antigravity on Linux, ..."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Paste what your agent said or the error (its last few messages are enough). Please remove anything private.
+    validations:
+      required: true

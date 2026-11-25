@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "To cite work done with a RunPapers pack, cite the paper, its data source as the source's terms require, and the pack version (each released pack has its own archive DOI on its page at runpapers.com). To cite the RunPapers tool itself, use this entry."
+title: "RunPapers: verified, agent-ready packs for published papers"
+type: software
+authors:
+  - name: RunPapers
+license: MIT
+repository-code: "https://github.com/runpapers/runpapers"
+url: "https://runpapers.com"
+version: 0.1.0
+keywords: [reproducibility, AI agents, agent skills, MCP, open science, single-cell]

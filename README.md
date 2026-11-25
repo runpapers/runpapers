@@ -11,6 +11,9 @@ cannot answer).
 
 RunPapers hosts no AI model and sees none of your prompts or analyses: everything runs locally on your machine.
 
+Website: **[runpapers.com](https://runpapers.com)** · Step-by-step guide: [runpapers.com/guide.html](https://runpapers.com/guide.html)
+· Request a paper: [Requests](https://runpapers.com/requests.html)
+
 ## For scientists
 
 On a paper's page, click **Copy** on the prompt and paste it into your agent in an empty folder:
@@ -18,7 +21,7 @@ On a paper's page, click **Copy** on the prompt and paste it into your agent in 
 ```text
 I want to work with the data from this paper using RunPapers:
   "Cross-species multiomic atlas of the primate basal ganglia" (Johansen et al., Cell 2026), DOI 10.1016/j.cell.2026.10.012
-Setup for you, the AI agent: fetch https://runpapers.github.io/runpapers/doi/10.1016/j.cell.2026.10.012/AGENT.md (or `curl -sL` it) and follow it exactly.
+Setup for you, the AI agent: fetch https://runpapers.com/doi/10.1016/j.cell.2026.10.012/AGENT.md (or `curl -sL` it) and follow it exactly.
 Then:
 1) Reproduce Figure 1B and show it to me, with a table of the paper's numbers next to yours.
 2) Answer my question using the paper's data: <write your question here>
@@ -31,9 +34,9 @@ match, and then writes transparent Python scripts in `analyses/` for your own qu
 Or run it directly from a terminal:
 
 ```bash
-# Once published on PyPI (before PyPI release, replace `uvx runpapers` with `uvx --from git+https://github.com/runpapers/runpapers runpapers`):
-uvx runpapers get 10.1016/j.cell.2026.10.012     # or by PMID: uvx runpapers get 43020019
-cd johansen2026 && uvx runpapers run fig1b
+RP="uvx --from git+https://github.com/runpapers/runpapers runpapers"   # "uvx runpapers" once it is on PyPI
+$RP get 10.1016/j.cell.2026.10.012     # or by PMID: $RP get 43020019
+cd johansen2026 && $RP run fig1b
 ```
 
 ### Local MCP server & multi-paper meetings
@@ -45,7 +48,7 @@ Connect any MCP-capable agent directly to RunPapers over `stdio` (stdlib-only, i
   "mcpServers": {
     "runpapers": {
       "command": "uvx",
-      "args": ["runpapers", "mcp"]
+      "args": ["--from", "git+https://github.com/runpapers/runpapers", "runpapers", "mcp"]
     }
   }
 }
@@ -56,7 +59,7 @@ Connect any MCP-capable agent directly to RunPapers over `stdio` (stdlib-only, i
 shared-donor and taxonomy-alignment guardrails):
 
 ```bash
-uvx runpapers meeting "striatal D2 SPN subtypes across primates"
+uvx --from git+https://github.com/runpapers/runpapers runpapers meeting "striatal D2 SPN subtypes across primates"
 ```
 
 ## Verification badges

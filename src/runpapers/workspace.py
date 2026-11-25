@@ -9,11 +9,11 @@ import sys
 import urllib.request
 from pathlib import Path
 
-from . import data, ids
+from . import DEFAULT_BASE as _SITE, data, ids
 from .registry import PACK_FILE, Pack, Registry, find_root, read_json, write_json
 
 WS_FILE = ".runpapers.json"
-DEFAULT_BASE = os.environ.get("RUNPAPERS_BASE", "https://runpapers.org")
+DEFAULT_BASE = os.environ.get("RUNPAPERS_BASE", _SITE)
 # The test questions are the held-out exam for naive-user tests: never copied into a user's workspace.
 NOT_SHIPPED = ("evals/",)
 

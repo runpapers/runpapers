@@ -8,8 +8,9 @@ import shutil
 from functools import partial
 from pathlib import Path
 
-from . import __version__, ids
+from . import DEFAULT_BASE, __version__, ids
 from .registry import sha256_file
+from .requests_log import issue_url as requests_issue_url
 from .requests_log import summary as requests_summary
 from .verify import now, status
 from .workspace import shipped
@@ -64,6 +65,190 @@ HOW = {
     "Antigravity": "Open an empty folder in Antigravity (or run agy) and paste the prompt into the agent panel.",
     "Other agents": "Any AI agent that can fetch a web page and run terminal commands works: Gemini CLI, Cursor, Windsurf, goose, OpenCode.",
 }
+
+GUIDE = r'''# How to use RunPapers
+
+RunPapers lets you reproduce a published paper's figures and then ask the paper's data your own questions, with the AI
+agent you already use. You don't need to know Python: your agent sets everything up, downloads the data from the
+paper's original repository and runs it on your own computer.
+
+## What you need {#need}
+
+- **An AI agent that can run terminal commands**: Claude Code, Codex, Antigravity, Gemini CLI, Cursor or similar. A
+  chat-only assistant in a web browser can't run the recipes.
+- **A computer** (macOS, Linux or Windows) with an internet connection and some free disk space. Each paper's page
+  says how much it downloads.
+- **A few minutes.** In our tests a fresh agent needed about 2 to 5 minutes from pasting the prompt to showing the
+  reproduced figure, plus the download time on your connection. Nothing has to be installed beforehand: if `uv` (a small, widely used Python
+  tool manager) is missing, your agent installs it with the official installer after asking you.
+
+## Use a paper in five steps {#steps}
+
+1. **Find the paper.** On the [Papers](index.html) page, type in the search box: words from the title, an author, a
+   gene, a cell type, a brain region, a DOI or a PMID. Click the paper.
+2. **Read the badges** at the top of its page. They say how thoroughly the pack was checked ([what they mean](#badges)).
+   The page also lists the panels that can be reproduced and example questions.
+3. **Copy the prompt.** Choose your agent's tab, then press **Copy** on the dark box. Replace
+   `<write your question here>` with your question, or leave it and ask later.
+4. **Start your agent in an empty folder and paste the prompt.** For Claude Code: open a terminal, run
+   `mkdir my-paper`, then `cd my-paper`, then `claude`, and paste. For Codex, the same with `codex`. For Antigravity,
+   open an empty folder and paste into the agent panel. Approve the commands your agent asks to run.
+5. **Look at the result.** Your agent shows you the reproduced figure and a table with the paper's numbers next to its
+   own, then answers your question.
+
+Behind the scenes, your agent runs `{install} get <DOI>`. This makes a folder named after the paper (for example
+`johansen2026/`), downloads the data from the original repository and checks every file against its checksum. Then it
+reads the pack's instructions (`SKILL.md`) and runs a recipe.
+
+What you'll find in the folder:
+
+- `SKILL.md`: what the data are, how the files join, and the guardrails for this paper. Your agent reads it first,
+  and it's worth a skim for you too.
+- `data/`: the original files. It links to a shared download folder, so the same data are never downloaded twice.
+- `recipes/`: the scripts that reproduce the paper's panels.
+- `out/<recipe>/`: the reproduced figure, its tables, and `result.json` (the paper's numbers next to ours).
+- `analyses/`: where your agent saves the scripts it writes for your questions, so you can re-run or share them.
+- `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`: so that any agent you open in this folder later knows where things are.
+
+## Check the reproduction {#check}
+
+- Compare the reproduced figure with the published panel. The numbers should match; colours and layout may differ.
+- `out/<recipe>/result.json` lists every number taken from the paper, ours, the tolerance allowed, and where the
+  paper states it (main text, figure or supplementary table).
+- When a paper disagrees with itself (for example, a number in the text that differs from its own table), the pack
+  says so openly instead of hiding it, and your agent should tell you.
+
+## Ask good questions {#questions}
+
+Each paper's page lists example questions its data can answer. Some tips:
+
+- Ask for values per donor (or per animal), not only pooled numbers. Donors, not cells, are the replicates.
+- Ask your agent to show the code it ran and to save it in `analyses/`.
+- Ask "What can't this dataset tell me?" Each pack lists the questions its data can't support, for example gene
+  expression when the pack only covers cell metadata.
+- If an answer surprises you, ask your agent to check it another way.
+- To continue on another day, open your agent in the same folder. It reads `AGENTS.md` and carries on.
+
+## What the badges mean {#badges}
+
+- **Runs**: the recipes re-ran from the original data under laptop limits and matched the paper's numbers. This is
+  checked automatically on every change and every website update.
+- **Checked**: an independent reviewer, never the pack's builder, compared every reproduced panel with the published
+  figure and checked the numbers and instructions.
+- **Reproduces**: a named scientist signed off the reproduction after the independent review.
+- **Agent-tested**: fresh AI agents from at least two companies, given only the copy-prompt in an empty folder,
+  reproduced the figure and correctly answered questions they had never seen.
+- **Author-endorsed**: an author of the paper approved the pack.
+
+Badges belong to one exact version of a pack. If anything in the pack changes, its badges show "re-checking" until
+the checks pass again. More detail: [How it works](about.html#badges).
+
+## Data terms and citing {#cite}
+
+- RunPapers never re-hosts data. Your agent downloads every file from the original repository, under that
+  repository's terms, which each paper's page shows. For example, data from the Allen Brain Cell Atlas are for
+  noncommercial research, and you cite them as the Allen Institute Citation Policy describes.
+- If you publish something made with a pack, cite three things: the paper, the data source as its terms require, and
+  the pack version. Once a pack is released, its paper page shows a permanent archive DOI to cite.
+- Privacy: RunPapers has no server that runs analyses and never sees your questions. Your prompts go only to your
+  agent's provider, under your agreement with them.
+
+## Request a paper or vote {#request}
+
+- Requests and votes are public issues on [GitHub](https://github.com/{repo}/issues?q=label%3Arequest), so anyone can
+  see what comes next. You need a free GitHub account.
+- **Request:** on the [Requests](requests.html) page, press **Request a paper**, enter the DOI or PMID, and say what
+  you'd like to do with the data. One request per paper.
+- **Vote:** open the paper's request and add a thumbs-up. The papers with the most votes are packed first. Planned
+  papers have a "request or vote" link too.
+- **From your agent:** ask it to "request DOI ... on RunPapers". It runs `{install} request <DOI or PMID>`, which
+  prints the right link.
+
+## Report a problem {#problem}
+
+If a recipe fails, a number disagrees with the paper, or a pack misled your agent, open an issue with the
+[Report a problem with a pack](https://github.com/{repo}/issues/new?template=pack-problem.yml) form. Include the DOI,
+which agent you used, and what it said (its last few messages are enough).
+
+## For power users and agents {#power}
+
+- **Terminal:** `{install} get <DOI>`, then `cd` into the folder and run `{install} run <recipe>`.
+  `{install} --help` lists every command.
+- **MCP:** connect RunPapers as an MCP server so any MCP-capable agent can search packs and read their instructions:
+  `{install} mcp`. For Claude Code: `claude mcp add runpapers -- {install} mcp`. Other agents take the same command
+  in their MCP settings.
+- **Several papers at once:** `{install} meeting "<topic>"` builds one workspace with every matching pack.
+- **Machine-readable site:** [llms.txt](llms.txt), and [index.json](index.json), which lists every paper with its
+  `agent` URL. Every page also has a plain-text `.md` twin.
+
+## Troubleshooting {#trouble}
+
+- **"uv: command not found" right after installing it:** open a new terminal (the installer updates your PATH), or
+  ask your agent to use the full path that the installer printed.
+- **Windows:** use PowerShell. If Windows refuses to create the `data` link, the pack still works, because the data
+  location is written in `AGENTS.md`.
+- **The download stopped:** paste the same prompt again in the same folder. Downloads resume, and files that already
+  passed their checksum are not downloaded again.
+- **Your agent wants to install Python packages:** each recipe declares its own packages, and `uv` installs them in
+  a separate environment. Your system Python is not touched.
+- **Your agent ignored the pack's instructions:** tell it "Read SKILL.md and follow its guardrails", or start again
+  in a new empty folder.
+'''
+
+_ANCHOR_RX = re.compile(r"\s*\{#([a-z0-9-]+)\}\s*$")
+
+
+def _inline(s):
+    s = html.escape(s, quote=False)
+    s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
+    s = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", s)
+    return re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", lambda m: f'<a href="{html.escape(m.group(2))}">{m.group(1)}</a>', s)
+
+
+def md_html(md):
+    """Enough Markdown for the guide: headings with {#anchors}, paragraphs, '-' and '1.' lists, inline code/bold/links."""
+    out, para, items, kind = [], [], [], None
+
+    def flush():
+        nonlocal para, items, kind
+        if para:
+            out.append(f"<p>{_inline(' '.join(para))}</p>")
+        if items:
+            out.append(f"<{kind}>" + "".join(f"<li>{_inline(' '.join(i))}</li>" for i in items) + f"</{kind}>")
+        para, items, kind = [], [], None
+
+    for line in md.splitlines():
+        s = line.strip()
+        m = re.match(r"(#{1,3}) (.*)", s)
+        if not s:
+            flush()
+        elif m:
+            flush()
+            a = _ANCHOR_RX.search(m.group(2))
+            title = _ANCHOR_RX.sub("", m.group(2))
+            lvl = len(m.group(1))
+            out.append(f'<h{lvl}{f" id={chr(34)}{a.group(1)}{chr(34)}" if a else ""}>{_inline(title)}</h{lvl}>')
+        elif re.match(r"(- |\d+\. )", s):
+            k = "ul" if s.startswith("- ") else "ol"
+            if para or (kind and kind != k):
+                flush()
+            kind = k
+            items.append([re.sub(r"^(- |\d+\. )", "", s)])
+        elif items and line.startswith(" "):
+            items[-1].append(s)
+        else:
+            para.append(s)
+    flush()
+    return "\n".join(out)
+
+
+def guide_text(install, repo):
+    return GUIDE.replace("{install}", install).replace("{repo}", repo)
+
+
+def guide_md(install, repo):
+    return "\n".join(_ANCHOR_RX.sub("", l) for l in guide_text(install, repo).splitlines()) + "\n"
+
 
 _URL_RX = re.compile(r"https?://[^\s<>()]+")
 
@@ -121,7 +306,7 @@ def page(title, body, depth=0, desc="", md_twin=None):
 <title>{e(title)}</title><meta name="description" content="{e(desc)}">{alt}
 <link rel="stylesheet" href="{up}style.css"></head><body>
 <header><div class="wrap"><a class="logo" href="{up}index.html">Run<span>Papers</span></a>
-<nav><a href="{up}index.html">Papers</a><a href="{up}requests.html">Requests</a><a href="{up}about.html">How it works</a><a href="{up}llms.txt">For agents</a></nav></div></header>
+<nav><a href="{up}index.html">Papers</a><a href="{up}guide.html">Guide</a><a href="{up}requests.html">Requests</a><a href="{up}about.html">How it works</a><a href="{up}llms.txt">For agents</a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer class="wrap">RunPapers v{__version__} · open source · every page has a plain-text twin for AI agents (<a href="{up}llms.txt">llms.txt</a>, <a href="{up}index.json">index.json</a>{twin_note}).</footer>
 <script>{COPY_JS}</script></body></html>"""
@@ -146,7 +331,7 @@ def _data_terms(card):
 
 def agent_md(card, base, install):
     doi = card["doi"]
-    src_arg = f" --source {base}" if base != "https://runpapers.org" else ""
+    src_arg = f" --source {base}" if base != DEFAULT_BASE else ""
     terms = "; ".join(_data_terms(card)) or "see the paper page and original repository"
     return f"""# RunPapers: agent setup for "{card['title']}"
 
@@ -166,7 +351,7 @@ Follow these steps in order. Ask the user before anything not listed here.
    Show the user the figure and report plainly which numbers matched.
 5. For the user's own questions, write scripts in `analyses/` that read `data/`, as SKILL.md describes. State what you
    computed, the replicate unit, and how confident you are. Never present a guess as a result.
-6. Cite the paper (https://doi.org/{doi}) and the pack (RunPapers {doi} v{card['version']}, {base}/doi/{ids.doi_relpath(doi)}/).
+6. Cite the paper (https://doi.org/{doi}) and the pack ({_pack_cite(card, base)}).
 7. Data terms: {terms}. Tell the user before they publish or use the data commercially.
 
 Verification of this pack: {", ".join(k for k, v in card['badges'].items() if v == 'pass') or "not yet verified"}.
@@ -175,14 +360,15 @@ Verification of this pack: {", ".join(k for k, v in card['badges'].items() if v 
 
 def paper_md(card, base, install="uvx runpapers"):
     doi = card["doi"]
-    src_arg = f" --source {base}" if base != "https://runpapers.org" else ""
+    src_arg = f" --source {base}" if base != DEFAULT_BASE else ""
     terms = "; ".join(_data_terms(card)) or "see the original repository"
     lines = [
         f"# {card['title']}", "",
         f"{card.get('first_author', '')} et al. *{card.get('journal', '')}* {card.get('year', '')}. DOI {doi}"
         + (f" · PMID {card['pmid']}" if card.get("pmid") else ""), "",
         f"RunPapers pack v{card['version']} · stage: {card['stage']} · badges: "
-        + (", ".join(k for k, v in card["badges"].items() if v == "pass") or "none yet"), "",
+        + (", ".join(k for k, v in card["badges"].items() if v == "pass") or "none yet")
+        + (f" · archived: https://doi.org/{card['release']['doi']}" if (card.get("release") or {}).get("doi") else ""), "",
         card.get("summary", ""), "",
         "## Use it from your AI agent", "",
         "```", copy_prompt(card, base), "```", "",
@@ -199,7 +385,7 @@ def paper_md(card, base, install="uvx runpapers"):
             sz = "controlled access" if d.get("access") == "controlled" else fmt_bytes(d.get("size", 0))
             lines.append(f"- **{d.get('title') or d['id']}** (`{d.get('tier', 'lite')}`, {sz}) — {d.get('source', '')}")
     lines += ["", "## Cite", "",
-              f"Cite the paper (https://doi.org/{doi}) and the pack: RunPapers pack for {doi}, version {card['version']}, {base}/doi/{ids.doi_relpath(doi)}/"]
+              f"Cite the paper (https://doi.org/{doi}) and the pack: {_pack_cite(card, base)}"]
     return "\n".join(lines) + "\n"
 
 
@@ -208,7 +394,7 @@ def paper_html(card, base, install, figs):
     depth = len(ids.doi_relpath(doi).split("/")) + 1
     up = "../" * depth
     pid = "p0"
-    src_arg = f" --source {base}" if base != "https://runpapers.org" else ""
+    src_arg = f" --source {base}" if base != DEFAULT_BASE else ""
     tabs = "".join(
         f'<button class="{"on" if i == 0 else ""}" data-how="{e(v)}" onclick="tab(this)">{e(k)}</button>'
         for i, (k, v) in enumerate(HOW.items())
@@ -247,7 +433,8 @@ def paper_html(card, base, install, figs):
 <h1>{e(card['title'])}</h1>
 <div class="mut">{e(card.get('first_author', ''))} et al. · <i>{e(card.get('journal', ''))}</i> {e(card.get('year', ''))} · {ids_line}</div>
 <div style="margin:10px 0">{''.join(badge_html(b, card['badges'].get(b, 'none')) for b, _, _ in BADGES)}
-<span class="small mut">pack v{e(card['version'])} · <a href="{up}about.html#badges">what these badges mean</a></span></div>
+<span class="small mut">pack v{e(card['version'])} · <a href="{up}guide.html#badges">what these badges mean</a></span></div>
+{_release_html(card)}
 <p>{e(card.get('summary', ''))}</p>
 <h2>Use it from your own AI agent</h2>
 <div class="tabs">{tabs}</div><p class="small mut" id="how">{e(next(iter(HOW.values())))}</p>
@@ -257,10 +444,30 @@ def paper_html(card, base, install, figs):
 {('<h2>Reproduced figures</h2><div class="figs">' + fig_html + '</div>') if fig_items else ''}
 {('<h2>Example questions</h2><ul>' + qs + '</ul>') if qs else ''}
 <h2>Data</h2>{terms_note}<table><tr><th>File</th><th>Tier</th><th>Size</th><th>Source</th><th>Terms / license</th></tr>{data_rows}</table>
-<h2>Cite</h2><p class="small">Cite the paper ({ids_line}), the original data source per its terms above, and this pack: RunPapers pack for {e(doi)}, version {e(card['version'])}, {e(base)}/doi/{e(ids.doi_relpath(doi))}/</p>
+<h2>Cite</h2><p class="small">Cite the paper ({ids_line}), the original data source per its terms above, and this pack: {_pack_cite_html(card, base)}</p>
 <p class="small mut">Machine-readable: <a href="index.md">index.md</a> · <a href="AGENT.md">AGENT.md</a> · <a href="pack.json">pack.json</a></p>
 """
     return page(f"{card['title']} · RunPapers", body, depth=depth, desc=card.get("summary", ""), md_twin="index.md")
+
+
+def _pack_cite(card, base):
+    r = card.get("release") or {}
+    where = f"https://doi.org/{r['doi']}" if r.get("doi") else f"{base}/doi/{ids.doi_relpath(card['doi'])}/"
+    return f"RunPapers pack for {card['doi']}, version {r.get('version') or card['version']}, {where}"
+
+
+def _pack_cite_html(card, base):
+    return linkify(_pack_cite(card, base))
+
+
+def _release_html(card):
+    r = card.get("release")
+    if not r:
+        return ""
+    links = [f'archived on Zenodo: <a href="https://doi.org/{e(r["doi"])}">doi:{e(r["doi"])}</a>' if r.get("doi") else "",
+             f'<a href="{e(r["huggingface"])}">Hugging Face dataset</a>' if r.get("huggingface") else "",
+             f'<a href="{e(r["github"])}">GitHub release</a>' if r.get("github") else ""]
+    return f'<div class="small" style="margin:0 0 8px">Released v{e(r["version"])}: {" · ".join(x for x in links if x)}</div>'
 
 
 def _search_blob(card):
@@ -274,7 +481,12 @@ def _search_blob(card):
     return " ".join(str(x).lower() for x in parts if x)
 
 
-def index_md(cards, planned, base, install):
+def _req_link(repo, doi, reqs):
+    issue = next((r.get("issue") for r in reqs if r["doi"] == doi and r.get("issue")), None)
+    return issue or requests_issue_url(repo, doi)
+
+
+def index_md(cards, planned, base, install, repo="runpapers/runpapers", reqs=()):
     lines = [
         "# RunPapers", "",
         "Ask a published paper's data your own questions, with your own AI agent.", "",
@@ -292,12 +504,12 @@ def index_md(cards, planned, base, install):
         lines.append("- No packs published yet.")
     if planned:
         lines += ["", f"## Coming next ({len(planned)} planned)", "",
-                  f"Request or vote for a paper with `{install} request <DOI or PMID>` or `{install} vote <DOI>`.", ""]
+                  f"Request a paper or vote for one: {base}/requests.md (or `{install} request <DOI or PMID>`, which prints the link).", ""]
         for d, p in list(planned.items())[:40]:
             au = f"{p['first_author']} et al., " if p.get("first_author") else ""
             jn = f"*{p['journal']}* {p.get('year', '')} · " if p.get("journal") else ""
             pm = f" · PMID {p['pmid']}" if p.get("pmid") else ""
-            lines.append(f"- {p.get('title', d)} — {au}{jn}DOI {d}{pm}")
+            lines.append(f"- {p.get('title', d)} — {au}{jn}DOI {d}{pm} · request or vote: {_req_link(repo, d, reqs)}")
     return "\n".join(lines) + "\n"
 
 
@@ -319,7 +531,7 @@ published figures from the original data and then answer new scientific question
 <p>Packs never contain or re-host raw data files, and never redistribute copyrighted figure images unless the paper's license permits it. Instead, each pack points to the original public repository (such as the Allen Brain Cell Atlas, NCBI GEO, CELLxGENE, NeMO, or Zenodo) with exact byte sizes and MD5/SHA-256 checksums.</p>
 <p>Data remain under the original repository's license or terms of use — never assumed to be CC BY. For example, datasets from the <b>Allen Brain Cell Atlas</b> are governed by the <a href="https://alleninstitute.org/terms-of-use/">Allen Institute Terms of Use</a> (noncommercial research use, citing both the paper and the Atlas per the Allen Institute Citation Policy). Controlled-access human datasets (such as dbGaP, EGA, or restricted NeMO files) are never downloaded automatically; packs provide access instructions instead.</p>
 <h2>Request, contribute or cite</h2>
-<p>Ask for a paper or vote one up in the queue from your terminal or agent: <code>{e(install)} request &lt;DOI or PMID&gt;</code> and <code>{e(install)} vote &lt;DOI&gt;</code>. You can also connect any MCP-capable agent directly to RunPapers via <code>{e(install)} mcp</code> (Skills over MCP) or assemble a multi-paper comparison workspace with <code>{e(install)} meeting "&lt;topic&gt;"</code>. To build or review a pack, see <code>CONTRIBUTING.md</code> and <code>skills/runpapers-builder</code> in the repository. When publishing work that uses a pack, cite the original paper, the data repository per its terms, and the archived RunPapers pack version.</p>"""
+<p>Ask for a paper or vote one up on the <a href="requests.html">Requests</a> page (requests are public GitHub issues; a vote is a thumbs-up), or from your agent with <code>{e(install)} request &lt;DOI or PMID&gt;</code>. Step-by-step help is in the <a href="guide.html">Guide</a>. You can also connect any MCP-capable agent directly to RunPapers via <code>{e(install)} mcp</code> (Skills over MCP) or assemble a multi-paper comparison workspace with <code>{e(install)} meeting "&lt;topic&gt;"</code>. To build or review a pack, see <code>CONTRIBUTING.md</code> and <code>skills/runpapers-builder</code> in the repository. When publishing work that uses a pack, cite the original paper, the data repository per its terms, and the archived RunPapers pack version.</p>"""
 
 
 def about_md(install):
@@ -342,29 +554,33 @@ def about_md(install):
         "and each dataset keeps its source terms (for example, the Allen Brain Cell Atlas is under the Allen Institute Terms of Use: noncommercial research use "
         "with citation required, https://alleninstitute.org/terms-of-use/, not CC BY). Controlled-access datasets are never downloaded automatically.", "",
         "## Request, contribute or cite", "",
-        f"Request or vote for a paper: `{install} request <DOI or PMID>` / `{install} vote <DOI>`. "
+        f"Request or vote for a paper on the Requests page (public GitHub issues; a vote is a thumbs-up) or with `{install} request <DOI or PMID>`. "
         "Cite the original paper, the data repository per its terms, and the RunPapers pack version.",
     ]
     return "\n".join(lines) + "\n"
 
 
-def requests_md(reqs, install):
+def requests_md(reqs, install, repo="runpapers/runpapers"):
     lines = [
         "# Requested papers", "",
-        f"Ask for a paper or vote for one from your agent or terminal: `{install} request <DOI or PMID>` and `{install} vote <DOI>`.", "",
+        f"Each request is a public GitHub issue and a vote is a thumbs-up on it. New request: {requests_issue_url(repo)} "
+        f"(or `{install} request <DOI or PMID>`, which prints the link).", "",
     ]
     if not reqs:
         lines.append("No paper requests logged yet.")
     else:
         for r in reqs:
-            lines.append(f"- **{r['votes']} vote(s)** · `{r['status']}` · DOI {r['doi']} — {r.get('title') or ''}")
+            lines.append(f"- **{r['votes']} vote(s)** · `{r['status']}` · DOI {r['doi']} — {r.get('title') or ''}"
+                         + (f" · vote: {r['issue']}" if r.get("issue") else ""))
     return "\n".join(lines) + "\n"
 
 
 def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
     cfg = reg.config.get("site", {})
-    base = (base_url or cfg.get("base_url") or "https://runpapers.org").rstrip("/")
+    base = (base_url or cfg.get("base_url") or DEFAULT_BASE).rstrip("/")
     install = install_cmd or cfg.get("install_cmd") or "uvx runpapers"
+    repo = reg.config.get("publish", {}).get("github_repo", "runpapers/runpapers")
+    from .release import published
     out = Path(out or reg.root / "build" / "site")
     if out.exists():
         shutil.rmtree(out)
@@ -374,7 +590,7 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
     cards = []
     for pk in reg.packs():
         st = status(pk)
-        card = {**pk.card(), **{k: st[k] for k in ("stage", "badges")}, "data": pk.data}
+        card = {**pk.card(), **{k: st[k] for k in ("stage", "badges")}, "data": pk.data, "release": published(pk)}
         cards.append(card)
         pdir = out / "doi" / ids.doi_relpath(pk.doi)
         (pdir / "pack").mkdir(parents=True)
@@ -400,6 +616,7 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
         (pdir / "AGENT.md").write_text(agent_md(card, base, install))
     planned = {d: p for d, p in reg.planned().items() if d not in {c["doi"] for c in cards}}
     reqs = requests_summary(reg)
+    new_req = requests_issue_url(repo)
     # index
     rows = []
     for c in sorted(cards, key=lambda c: (c.get("year") or 0, c["title"]), reverse=True):
@@ -415,30 +632,38 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
         au = f"{e(p['first_author'])} et al. · " if p.get("first_author") else ""
         jn = f"<i>{e(p['journal'])}</i> {e(p.get('year', ''))} · " if p.get("journal") else ""
         pm = f' · PMID <a href="{ids.pubmed_url(p["pmid"])}">{e(p["pmid"])}</a>' if p.get("pmid") else ""
-        planned_items.append(f'<li data-s="{e(ps)}"><b>{e(p.get("title"))}</b><br><span class="mut">{au}{jn}DOI <a href="{ids.doi_url(d)}">{e(d)}</a>{pm}</span></li>')
+        planned_items.append(f'<li data-s="{e(ps)}"><b>{e(p.get("title"))}</b><br><span class="mut">{au}{jn}DOI <a href="{ids.doi_url(d)}">{e(d)}</a>{pm}'
+                             f' · <a href="{e(_req_link(repo, d, reqs))}">request or vote</a></span></li>')
     body = f"""<div class="hero"><h1>Ask a published paper's data your own questions, with your own AI agent.</h1>
 <p>Each RunPapers pack turns one paper into something any AI agent can use on your computer: the original public data, recipes that reproduce its figures,
 and scientific guardrails that keep new analyses honest. Every pack is verified before it carries a <a href="about.html#badges">badge</a>.</p></div>
 <div class="steps"><div class="step"><b>1. Find the paper</b>Search by title, author, gene, cell type, tissue, DOI or PMID — or request one.</div>
 <div class="step"><b>2. Copy one prompt</b>Paste it into Claude Code, Codex, Antigravity or any agent that can run commands.</div>
 <div class="step"><b>3. Reproduce, then ask</b>Your agent reproduces a published panel first, then answers your questions locally.</div></div>
+<p class="small mut">New here? The <a href="guide.html">Guide</a> walks through it step by step.</p>
 <input class="search" placeholder="Search by title, author, gene, cell type, brain region, DOI or PMID" oninput="filt(this.value)">
 {''.join(rows) or '<p class="mut">No packs published yet.</p>'}
-<h2>Coming next</h2><p class="small mut">Planned papers ({len(planned)}). Request a paper or vote on the <a href="requests.html">requests page</a> to move one up.</p>
+<h2>Coming next</h2><p class="small mut">Planned papers ({len(planned)}). Vote to move one up, or <a href="{e(new_req)}">request another paper</a> (see the <a href="requests.html">requests</a>).</p>
 <ul class="small" style="line-height:1.65">{''.join(planned_items)}</ul>"""
     (out / "index.html").write_text(page("RunPapers: verified, agent-ready papers", body,
                                          desc="Reproduce figures and ask new questions of published papers' data with your own AI agent.",
                                          md_twin="index.md"))
-    (out / "index.md").write_text(index_md(cards, planned, base, install))
+    (out / "index.md").write_text(index_md(cards, planned, base, install, repo, reqs))
     req_rows = ("".join(f"<tr><td>{e(r['title'] or '—')}</td><td><a href=\"{ids.doi_url(r['doi'])}\">{e(r['doi'])}</a></td>"
-                        f"<td>{r['votes']}</td><td>{e(r['status'])}</td></tr>" for r in reqs)
-                or '<tr><td colspan="4" class="mut">No paper requests logged yet. Use the command above to request any published paper by DOI or PMID.</td></tr>')
+                        f"<td>{r['votes']}</td><td>{e(r['status'])}</td>"
+                        f"<td><a href=\"{e(r.get('issue') or requests_issue_url(repo, r['doi']))}\">vote</a></td></tr>" for r in reqs)
+                or '<tr><td colspan="5" class="mut">No requests yet. Be the first: press the button above.</td></tr>')
     (out / "requests.html").write_text(page("Requests · RunPapers", f"""<h1>Requested papers</h1>
-<p class="mut">Ask for a paper to be packed or vote for one in the queue. From your agent or terminal:
-<code>{e(install)} request &lt;DOI or PMID&gt;</code> and <code>{e(install)} vote &lt;DOI&gt;</code>.</p>
-<table><tr><th>Paper</th><th>DOI</th><th>Votes</th><th>Status</th></tr>{req_rows}</table>""",
+<p class="mut">Which paper should be packed next? Each request is a public issue on GitHub, and a vote is a thumbs-up on it
+(it takes a free GitHub account). The most-voted papers are packed first.</p>
+<p><a class="copy" style="position:static;display:inline-block;text-decoration:none" href="{e(new_req)}">Request a paper</a></p>
+<p class="small mut">From your agent or terminal: <code>{e(install)} request &lt;DOI or PMID&gt;</code> prints the link. Planned papers are listed on the <a href="index.html">Papers</a> page, each with a "request or vote" link.</p>
+<table><tr><th>Paper</th><th>DOI</th><th>Votes</th><th>Status</th><th></th></tr>{req_rows}</table>""",
                                             desc="Requested papers and votes", md_twin="requests.md"))
-    (out / "requests.md").write_text(requests_md(reqs, install))
+    (out / "requests.md").write_text(requests_md(reqs, install, repo))
+    (out / "guide.html").write_text(page("Guide · RunPapers", md_html(guide_text(install, repo)),
+                                         desc="How to use RunPapers with your AI agent, step by step", md_twin="guide.md"))
+    (out / "guide.md").write_text(guide_md(install, repo))
     (out / "about.html").write_text(page("How RunPapers works", about_html(install),
                                          desc="How RunPapers verifies packs and handles original data terms", md_twin="about.md"))
     (out / "about.md").write_text(about_md(install))
@@ -446,7 +671,7 @@ and scientific guardrails that keep new analyses honest. Every pack is verified 
              "papers": [{k: c[k] for k in ("doi", "pmid", "pmcid", "preprint_doi", "title", "first_author", "senior_author", "journal",
                                             "year", "citekey", "collections", "version", "summary", "profile", "recipes", "lite_bytes",
                                             "questions", "stage", "badges")}
-                        | {"data_terms": _data_terms(c), "url": f"{base}/doi/{ids.doi_relpath(c['doi'])}/",
+                        | {"data_terms": _data_terms(c), "release": c.get("release"), "url": f"{base}/doi/{ids.doi_relpath(c['doi'])}/",
                            "agent": f"{base}/doi/{ids.doi_relpath(c['doi'])}/AGENT.md"}
                         for c in cards],
              "planned": [{"doi": d, **{k: p.get(k) for k in ("title", "pmid", "first_author", "journal", "year", "collection")}}
@@ -459,7 +684,7 @@ and scientific guardrails that keep new analyses honest. Every pack is verified 
         "> Verified, agent-ready packs for published papers: original data, figure-reproducing recipes, paper target numbers and agent guardrails.",
         "", f"To use a paper: fetch `{base}/doi/<doi-prefix>/<doi-suffix>/AGENT.md` (exact `agent` URL in `{base}/index.json`) and follow it.",
         f"CLI: `{install}` · Local MCP server (stdio, zero extra deps): `{install} mcp` · Multi-paper workspace: `{install} meeting \"<topic>\"`.",
-        f"Machine-readable catalog: {base}/index.json · How verification & data terms work: {base}/about.md · Requests: {base}/requests.md",
+        f"Machine-readable catalog: {base}/index.json · Guide for people: {base}/guide.md · How verification & data terms work: {base}/about.md · Requests: {base}/requests.md",
         "", "## Papers", ""] +
         [f"- [{c['title']}]({base}/doi/{ids.doi_relpath(c['doi'])}/index.md): DOI {c['doi']}" + (f", PMID {c['pmid']}" if c.get("pmid") else "")
          + f"; badges: {', '.join(k for k, v in c['badges'].items() if v == 'pass') or 'none'}" for c in cards]) + "\n")
@@ -468,7 +693,7 @@ and scientific guardrails that keep new analyses honest. Every pack is verified 
         f"1. Search `{base}/index.json` (or run `{install} search \"<query>\" --json` / connect `{install} mcp`) by DOI, PMID, PMCID, title, author, species, tissue, assay, cell type or gene.\n"
         f"2. Fetch the paper's `agent` URL (`{base}/doi/<doi-prefix>/<doi-suffix>/AGENT.md`) and follow its steps in order (or compare several papers with `{install} meeting \"<topic>\"`).\n"
         f"3. Respect every guardrail in the pack's `SKILL.md` (replicate unit, confounders, unsupported questions) and inform the user of the source's `data_terms` before commercial use or publication.\n"
-        f"4. Request or vote for a missing paper: `{install} request <DOI|PMID>` / `{install} vote <DOI>`.\n"
+        f"4. Request or vote for a missing paper: `{install} request <DOI|PMID>` prints the GitHub link that files the request or adds the user's vote.\n"
     )
     return out, len(cards)
 

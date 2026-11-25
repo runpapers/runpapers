@@ -1,0 +1,22 @@
+name: Request a paper
+description: Ask RunPapers to make a published paper's data usable by any AI agent. One request per paper.
+title: "Paper request: "
+labels: ["request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you! If the paper is already requested (see https://runpapers.com/requests.html), add a 👍 to that issue instead: the most-voted papers are packed first.
+  - type: input
+    id: doi
+    attributes:
+      label: DOI or PMID
+      description: The published paper's DOI (preferred) or PubMed ID.
+      placeholder: "10.1016/j.cell.2026.10.012 or 41234567"
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What would you like to do with its data?
+      description: Optional. Figures you want reproduced or questions you'd ask. It helps us decide what goes in the laptop-size pack.

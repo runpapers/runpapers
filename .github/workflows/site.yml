@@ -4,9 +4,14 @@ name: site
 on:
   push:
     branches: [main]
+  issues:
+    types: [opened, edited, closed, reopened, labeled]
+  schedule:
+    - cron: "17 7 * * *"          # daily: refresh vote counts (thumbs-ups don't trigger workflows)
   workflow_dispatch:
 permissions:
   contents: read
+  issues: read
   pages: write
   id-token: write
 concurrency:
@@ -25,6 +30,10 @@ jobs:
           restore-keys: rp-data-
       - name: Re-run every pack's lite recipes from the original data
         run: uvx --from . rp verify --all --no-cap || echo "some packs did not pass; the site shows it"
+      - name: Snapshot the paper requests (issues labelled "request") and their votes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uvx --from . rp requests --sync --json > /dev/null || echo "request sync failed; the site shows the last known requests"
       - name: Build the site
         run: uvx --from . rp site build --out _site
       - uses: actions/upload-pages-artifact@v3

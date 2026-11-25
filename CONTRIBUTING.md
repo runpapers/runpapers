@@ -4,15 +4,14 @@ Scientists, students, and AI agents can contribute in three ways, from quickest 
 
 ## 1. Request or vote for a paper
 
-Ask for a published paper to be packed, or vote to move one up the queue:
+Each request is a public GitHub issue (label `request`) and a vote is a 👍 on it; the most-voted papers are packed
+first. Use the [Request a paper](https://github.com/runpapers/runpapers/issues/new?template=request-paper.yml) form
+(one request per paper), or add a 👍 to an [existing request](https://github.com/runpapers/runpapers/issues?q=label%3Arequest).
+From an agent or terminal, `rp request <DOI or PMID>` prints the right link. The website's
+[Requests](https://runpapers.com/requests.html) page shows the queue (refreshed daily and whenever an issue changes).
 
-```bash
-uvx runpapers request <DOI or PMID> --note "Which figure or question you care about"
-uvx runpapers vote <DOI or PMID>
-uvx runpapers requests
-```
-
-(Once the public GitHub repository is live, requests map to GitHub issues and votes to issue reactions.)
+Found a problem in a pack? Use [Report a problem with a pack](https://github.com/runpapers/runpapers/issues/new?template=pack-problem.yml).
+Security problems (unsafe recipes, prompt injection): see [SECURITY.md](SECURITY.md).
 
 ## 2. Build a pack (with your own AI agent or by hand)
 

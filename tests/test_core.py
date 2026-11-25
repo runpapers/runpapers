@@ -241,6 +241,31 @@ class Requests(Base):
         rows = requests_log.summary(self.reg)
         self.assertEqual((rows[0]["doi"], rows[0]["votes"], rows[0]["status"]), ("10.9999/planned.1", 2, "planned"))
 
+    def test_github_issues_are_requests_and_thumbs_up_are_votes(self):
+        url = requests_log.issue_url("runpapers/runpapers", "10.9999/planned.1", "fig 2")
+        self.assertIn("template=request-paper.yml", url)
+        self.assertIn("doi=10.9999%2Fplanned.1", url)
+        form = "### DOI or PMID\n\n10.9999/PLANNED.1\n\n### What would you like to do with its data?\n\n_No response_"
+        issues = [
+            {"number": 3, "html_url": "https://github.com/x/y/issues/3", "title": "Paper request: ", "body": form,
+             "state": "open", "created_at": "2026-11-01T00:00:00Z", "reactions": {"+1": 4}},
+            {"number": 4, "html_url": "https://github.com/x/y/issues/4", "title": "Paper request: 10.1234/new.5", "body": "",
+             "state": "open", "created_at": "2026-11-02T00:00:00Z", "reactions": {"+1": 0}},
+            {"number": 5, "html_url": "https://github.com/x/y/issues/5", "title": "Paper request: 10.1234/spam", "body": "",
+             "state": "closed", "state_reason": "not_planned", "created_at": "2026-11-03T00:00:00Z", "reactions": {}},
+            {"number": 6, "html_url": "https://github.com/x/y/pull/6", "pull_request": {}, "title": "a PR", "body": ""},
+        ]
+        seen = []
+        rows = requests_log.sync_github(self.reg, "x/y", fetch=lambda u, tok: seen.append(u) or (issues if "page=1" in u else []),
+                                        resolve_online=False)
+        self.assertEqual([r["number"] for r in rows], [3, 4, 5])
+        self.assertIn("labels=request", seen[0])
+        requests_log.vote(self.reg, "10.9999/planned.1", by="local-maintainer")
+        s = {r["doi"]: r for r in requests_log.summary(self.reg)}
+        self.assertEqual((s["10.9999/planned.1"]["votes"], s["10.9999/planned.1"]["issue"]), (6, "https://github.com/x/y/issues/3"))
+        self.assertEqual((s["10.1234/new.5"]["votes"], s["10.1234/new.5"]["status"]), (1, "requested"))
+        self.assertNotIn("10.1234/spam", s)   # closed as not planned
+
 
 class SiteAndWorkspace(Base):
     def test_site_and_get(self):
@@ -414,6 +439,50 @@ class Release(Base):
         finally:
             fz.close()
             os.environ.pop("RUNPAPERS_ZENODO_SANDBOX_TOKEN", None)
+
+    def test_private_preview_then_publish_uses_the_same_draft(self):
+        from runpapers import release
+        pk = self.verified_pack()
+        release.build(self.reg, pk)
+        fz = FakeZenodo()
+        try:
+            os.environ["RUNPAPERS_ZENODO_TOKEN"] = "t"
+            d = release.publish_zenodo(self.reg, pk, publish=False, api=fz.url)
+            self.assertEqual((d["draft"], d["draft_id"]), (True, 1))
+            self.assertFalse(any(c[1].endswith("/actions/publish") for c in fz.calls))
+            self.assertEqual(verify.status(pk)["stage"], "agent-tested")      # a private draft is not a release
+            self.assertIsNone(release.published(pk))
+            out = release.publish_zenodo(self.reg, pk, api=fz.url)
+            self.assertEqual(out["doi"], "10.5072/zenodo.1")                  # the draft itself was published
+            self.assertEqual(sum(c[1] == "/api/deposit/depositions" for c in fz.calls), 1)
+            self.assertTrue(any(c[0] == "DELETE" and c[1] == "/api/deposit/depositions/1/files/old" for c in fz.calls))
+            self.assertEqual(verify.status(pk)["stage"], "released")
+            self.assertEqual(release.published(pk)["doi"], "10.5072/zenodo.1")
+            self.assertNotIn("draft_id", verify.record(pk, "release")["zenodo"]["zenodo"])
+            card = release.hf_card(self.reg, pk, "0.1.0", "Org/x")
+            self.assertNotIn("Allen", card)                                    # nothing paper-specific baked in
+            self.assertIn("RunPapers", card)
+        finally:
+            fz.close()
+            os.environ.pop("RUNPAPERS_ZENODO_TOKEN", None)
+
+    def test_prepublish_user_name_only_off_ci(self):
+        from runpapers import release
+        subprocess.run(["git", "init", "-q", "-b", "main", str(self.root)], check=True)
+        user = os.path.basename(os.path.expanduser("~"))
+        (self.root / "words.txt").write_text(f"the {user} word\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        saved = {k: os.environ.pop(k, None) for k in ("CI", "GITHUB_ACTIONS")}
+        try:
+            local = [w for _, w, _ in release.prepublish_scan(self.reg)]
+            os.environ["CI"] = "true"   # CI runners are called "runner": a common word, not private
+            ci = [w for _, w, _ in release.prepublish_scan(self.reg)]
+        finally:
+            os.environ.pop("CI", None)
+            os.environ.update({k: v for k, v in saved.items() if v is not None})
+        if len(user) > 3:
+            self.assertIn("words.txt", local)
+        self.assertNotIn("words.txt", ci)
 
     def test_prepublish_scan(self):
         from runpapers import release

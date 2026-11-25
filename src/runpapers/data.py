@@ -8,9 +8,9 @@ import time
 import urllib.request
 from pathlib import Path
 
-from . import ids
+from . import DEFAULT_BASE, ids
 
-UA = "runpapers/0.1 (+https://runpapers.org)"
+UA = f"runpapers/0.1 (+{DEFAULT_BASE})"
 TIER_RANK = {"lite": 0, "full": 1}
 
 
