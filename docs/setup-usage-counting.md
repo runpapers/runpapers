@@ -1,92 +1,89 @@
-# Setting up usage counting (Cloudflare) and the GitHub secret
+# Cloudflare setup, usage counting and sign-in-free intake
 
-For the maintainer. About 30 minutes. You need: the Cloudflare account that holds runpapers.com, and owner access to
-the `runpapers` organization on GitHub. Nothing here changes how the website looks; if anything goes wrong, Part 6
-undoes it in one minute.
+Reference for how `runpapers.com` sits behind Cloudflare and how reviewed changes in `deploy/cloudflare/` deploy
+automatically. Nobody pastes Worker code by hand: once the tokens below exist, reviewed commits on `main` deploy
+automatically via `deploy/cloudflare/deploy.py` and are verified end to end by `.github/workflows/usage-selftest.yml`.
 
-What you set up:
-1. Cloudflare in front of the website (the "orange cloud"), so it sees each request.
-2. A small Cloudflare Worker, `deploy/cloudflare/worker.js` in this repository, that counts page views by people and
-   by AI agents into Workers Analytics Engine (`runpapers_hits`) and serves every page unchanged (no cookies, no stored
-   IP addresses, fail-open if Analytics Engine is unavailable).
-3. A read-only Cloudflare token (`CLOUDFLARE_API_TOKEN`) and account ID (`CLOUDFLARE_ACCOUNT_ID`), stored in GitHub
-   Actions so the nightly job (`rp stats pull`) and the end-to-end `usage-selftest` workflow can read the counts.
+What runs in Cloudflare (`runpapers-counter` on `runpapers.com/*` and `www.runpapers.com/*`):
+1. **Cloudflare proxy ("orange cloud", SSL `Full (strict)`)**: serves GitHub Pages unchanged with zero cookies.
+2. **Usage counting (`HITS` -> `runpapers_hits`, Spec 004)**: fail-open edge counter recording views by people, views
+   by AI agents, `rp get` downloads, and crawlers without storing IP addresses or setting cookies.
+3. **Sign-in-free votes, paper requests and moderated comments (`DB` -> `runpapers_intake`, Spec 006)**: protected by
+   Cloudflare Turnstile, Crossref/PubMed resolution, 20 submissions/hour per-network rate limiting, email rejection, and
+   hourly deletion (`17 * * * *`) of daily-salted deduplication and rate-limit hashes after 48 hours.
 
-Cloudflare's menus move sometimes; if a name below differs slightly, look for the closest match.
+## Part 1: Cloudflare zone settings (one-time)
+1. In dash.cloudflare.com under **runpapers.com**:
+   - **SSL/TLS -> Overview**: encryption mode **Full (strict)**.
+   - **SSL/TLS -> Edge Certificates**: **Always Use HTTPS** off (GitHub Pages already redirects to HTTPS).
+   - **Security -> Bots**: **Bot Fight Mode** **off** (so AI agents and CLI tools are never blocked); **AI Crawl
+     Control** groups left **allowed**.
+2. **DNS -> Records**: all 9 records (four `A` and four `AAAA` for `runpapers.com`, plus `CNAME` `www`) set to orange
+   **Proxied**. (`curl -sI https://runpapers.com | grep -i cf-ray` confirms Cloudflare is in front with no
+   `set-cookie` header.)
 
-## Part 1: put Cloudflare in front of the website
-1. Sign in at dash.cloudflare.com and open **runpapers.com**.
-2. **SSL/TLS -> Overview**: set the encryption mode to **Full (strict)**. (GitHub already serves a valid certificate;
-   "strict" checks it.)
-3. **SSL/TLS -> Edge Certificates**: leave **Always Use HTTPS** off (GitHub already redirects to HTTPS).
-4. **Security -> Bots**: make sure **Bot Fight Mode** is **off**. It would block the AI agents and command-line tools
-   that use RunPapers. If you see **AI Crawl Control** (or "AI Audit"), leave every group **allowed**.
-5. **DNS -> Records**: for each of the 9 records you created (four `A` and four `AAAA` named `runpapers.com`, and the
-   `CNAME` named `www`), click **Edit**, switch **Proxy status** from grey "DNS only" to orange **Proxied**, **Save**.
-6. Wait two minutes, then open https://runpapers.com and https://www.runpapers.com in a private browser window. Both
-   should load normally. (Check from a terminal: `curl -sI https://runpapers.com | grep -i cf-ray` prints a line
-   when Cloudflare is in front, with no `set-cookie` header.)
+## Part 2: Worker secrets and fail-open routes
+- Worker name: `runpapers-counter`, routed to `runpapers.com/*` and `www.runpapers.com/*` with failure mode **Fail open
+  (proceed)** so the website keeps serving from GitHub Pages even if a Worker limit is ever reached.
+- Secrets on `runpapers-counter` (never stored in git; preserved across every deploy via `keep_bindings: ["secret_text"]`
+  in `deploy/cloudflare/deploy.py`):
+  - `SALT`: random hex string (`openssl rand -hex 16`) salting ephemeral daily visitor, vote-dedup, and rate-limit hashes.
+  - `TURNSTILE_SECRET`: managed automatically by `deploy/cloudflare/deploy.py` from the `RunPapers` Turnstile widget.
+  - `RP_INTAKE_SECRET`: shared bearer secret (`openssl rand -hex 24`) authenticating GitHub Actions issue sync and
+    moderation commands (also stored in GitHub repository **Secrets** as `RP_INTAKE_SECRET`; Cloudflare never holds a
+    GitHub token).
 
-## Part 2: create the counting Worker
-1. Left menu **Workers & Pages** -> **Create** (or **Create application**) -> **Create Worker**.
-2. Name it `runpapers-counter`, click **Deploy** (it deploys a "Hello World"; we replace it next).
-3. Click **Edit code**. Delete everything in the editor, open `deploy/cloudflare/worker.js` from this repository
-   (on GitHub: github.com/runpapers/runpapers/blob/main/deploy/cloudflare/worker.js -> "Raw"), copy all of it, paste
-   it into the editor, then click **Deploy**. (Whenever `deploy/cloudflare/worker.js` is updated in the repository,
-   paste and **Deploy** the updated code to `runpapers-counter` the same way, then run `usage-selftest` in Part 4.)
-4. Go back to the Worker (**Workers & Pages -> runpapers-counter**) -> **Settings -> Bindings** -> **Add** ->
-   **Analytics Engine**. Variable name: `HITS`. Dataset: `runpapers_hits`. **Save / Deploy**.
-5. Still in **Settings -> Variables and Secrets** -> **Add**: Type **Secret**, Name `SALT`, Value: a random string.
-   Make one with `openssl rand -hex 16` in a terminal (in Claude Code: `! openssl rand -hex 16`). You never need it
-   again; it only makes the daily visitor key unguessable. **Deploy**.
-6. **Settings -> Domains & Routes** -> **Add** -> **Route**. Zone: `runpapers.com`. Route: `runpapers.com/*`.
-   "Failure mode": **Fail open (proceed)**, so the site keeps working if the free daily limit is ever reached. Add a
-   second route `www.runpapers.com/*` the same way.
-7. Check: open https://runpapers.com and one paper page again; they must look exactly as before. After a minute,
-   **Workers & Pages -> runpapers-counter -> Metrics** shows requests.
+## Part 3: tokens (created once)
+1. **Read-only analytics token for GitHub Actions (`runpapers-stats-read`)**:
+   - Permission: **Account | Account Analytics | Read** (scoped to the RunPapers Cloudflare account).
+   - Stored in GitHub (`runpapers/runpapers` -> **Settings -> Secrets and variables -> Actions**) as secret
+     `CLOUDFLARE_API_TOKEN`, alongside repository variable `CLOUDFLARE_ACCOUNT_ID`.
+2. **Agent deployment token (`runpapers-agent`)**:
+   - Permissions on the RunPapers Cloudflare account and `runpapers.com` zone:
+     - **Account | Workers Scripts | Edit**
+     - **Account | D1 | Edit**
+     - **Account | Turnstile | Edit**
+     - **Account | Account Settings | Read**
+     - **Zone (`runpapers.com`) | Workers Routes | Edit**
+   - Used by the automated go-live routine (`python3 deploy/cloudflare/deploy.py` with `CLOUDFLARE_API_TOKEN` in the
+     environment). Whenever reviewed changes under `deploy/cloudflare/` land on `main`, `deploy.py` automatically:
+     1. Discovers or verifies `CLOUDFLARE_ACCOUNT_ID`.
+     2. Ensures D1 database `runpapers_intake` exists and applies `deploy/cloudflare/migrations/*.sql` idempotently.
+     3. Ensures the `RunPapers` Turnstile widget (`runpapers.com`, `www.runpapers.com`) exists.
+     4. Uploads `deploy/cloudflare/worker.js` to `runpapers-counter` while keeping `HITS` (`runpapers_hits`), `SALT`,
+        `RP_INTAKE_SECRET`, and the fail-open routes intact, binding `DB` (`runpapers_intake`) and `TURNSTILE_SITE_KEY`,
+        upserting `TURNSTILE_SECRET`, and configuring the `17 * * * *` cleanup cron.
 
-## Part 3: a read-only token for the nightly job
-1. Top right **profile icon -> My Profile -> API Tokens -> Create Token -> Custom token: Get started**.
-2. Token name: `runpapers-stats-read`.
-3. Permissions: **Account** | **Account Analytics** | **Read**. (Only this one line.)
-4. Account Resources: **Include** | your account. Leave IP filtering and TTL empty.
-5. **Continue to summary -> Create Token**. Copy the token now (Cloudflare shows it once). Keep the tab open for Part 4.
-6. Your **Account ID**: **Workers & Pages** overview page, right side "Account ID" (copy it; it is not secret).
+## Part 4: end-to-end verification (`usage-selftest`)
+Open **Actions -> usage-selftest -> Run workflow** (`.github/workflows/usage-selftest.yml`, running
+`deploy/cloudflare/selftest.py`).
+- If at least one pack is published in `https://runpapers.com/index.json` (or `RP_PAPER` is set), it tests that paper's
+  HTML page, `AGENT.md`, `index.md`, and `pack.json`; before the first pack is published, it automatically falls back to
+  testing `/` across all four visitor kinds (`person`, `agent`, `crawler`, `script`), each twice to verify 1-hour
+  deduplication, plus `/style.css`, a 404 page, and the `www.` 301 redirect.
+- It reads the `st-<run id>` rows back from `runpapers_hits` using `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`,
+  and checks both HTTPS certificates (Cloudflare's edge certificate and GitHub Pages' origin certificate).
 
-## Part 4: store them in GitHub and run the self-test
-1. Open github.com/runpapers/runpapers -> **Settings** (repository settings, top right of the repository tabs).
-2. Left menu **Secrets and variables -> Actions**.
-3. Tab **Secrets** -> **New repository secret**. Name: `CLOUDFLARE_API_TOKEN`. Secret: paste the token from Part 3.
-   **Add secret**. (GitHub never shows it again; the nightly job can use it, nobody can read it.)
-4. Tab **Variables** -> **New repository variable**. Name: `CLOUDFLARE_ACCOUNT_ID`. Value: the Account ID.
-   **Add variable**.
-5. Verify everything end to end: open **Actions -> usage-selftest -> Run workflow** (`.github/workflows/usage-selftest.yml`,
-   running `deploy/cloudflare/selftest.py`). It sends marked requests (`X-RunPapers-Action: st-<run id>`) through
-   Cloudflare as a browser, an AI agent, a crawler and a script (each twice to check 1-hour deduplication), verifies
-   no cookies are set, reads the rows back from `runpapers_hits` with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`,
-   and checks both HTTPS certificates (Cloudflare's edge certificate and GitHub Pages' origin certificate behind the
-   proxy). Re-run `usage-selftest` after any change to Cloudflare, the Worker or the token.
-
-## What is excluded from public counts
-- **Self-tests (`st-*`)**: `deploy/cloudflare/selftest.py` marks its requests with `X-RunPapers-Action: st-<run id>` so
-  it can verify Analytics Engine read-back; `rp stats pull` ignores every row whose action starts with `st-`.
+## What is excluded from public counts and queues
+- **Self-tests (`st-*`)**: `deploy/cloudflare/selftest.py` marks its requests with `X-RunPapers-Action: st-<run id>`
+  (and intake self-tests carry `test_action: "st-..."`). They are ignored by `rp stats pull`, excluded from `/_rp/api/public-counts`
+  and `/_rp/api/admin/queue`, and purged after verification.
 - **CI, `rp usertest` and `DO_NOT_TRACK=1`**: the `rp` CLI sends `X-RunPapers-Internal: 1` whenever `CI` or
-  `RUNPAPERS_INTERNAL` is set (including naive-user agent runs in `rp usertest`), and sends `X-RunPapers-NoCount: 1`
-  when `DO_NOT_TRACK=1`. The Worker skips recording whenever either header is `1`.
-- **Crawlers**: search and training crawlers (`GPTBot`, `ClaudeBot`, `Googlebot`, `CCBot`, etc.) are classified as
-  `crawler` in `runpapers_hits` for internal diagnostics and are never included in public view or download counts.
+  `RUNPAPERS_INTERNAL` is set (including naive-user agent runs in `rp usertest`, and `selftest.py`'s `/index.json`
+  lookup), and sends `X-RunPapers-NoCount: 1` when `DO_NOT_TRACK=1`. The Worker skips recording whenever either header is `1`.
+- **Crawlers**: search and training crawlers (`GPTBot`, `ClaudeBot`, `Googlebot`, `GoogleOther`, `CCBot`, etc.) are
+  classified as `crawler` in `runpapers_hits` for internal diagnostics and are never shown in public counts.
 
 ## Part 5: what to watch
-- The website loads normally from a phone and a laptop, with zero cookies.
-- GitHub Pages keeps its HTTPS certificate behind the proxy: **repository Settings -> Pages** should say the site is
-  live with HTTPS. Both `usage-selftest` and the daily operator check inspect Cloudflare's edge certificate and GitHub
-  Pages' origin certificate (`185.199.108.153` with SNI `runpapers.com`) and warn **14 days** before either expires
-  (current GitHub Pages renewal window before 2027-02-23).
+- Both `usage-selftest` and the daily operator check inspect Cloudflare's edge certificate and GitHub Pages' origin
+  certificate (`185.199.108.153` with SNI `runpapers.com`) and warn **14 days** before either expires (current GitHub
+  Pages renewal window before 2027-02-23).
 
 ## Part 6: undo or renew origin TLS (one minute, grey-cloud fallback)
-- To stop counting: **Workers & Pages -> runpapers-counter -> Settings -> Domains & Routes**, delete both routes.
-- To take Cloudflare out of the way entirely: **DNS -> Records**, switch the 9 records back to grey **DNS only**.
-- **Grey-cloud fallback for certificate renewal**: if the 14-day certificate check warns or GitHub ever reports a
-  certificate problem in **Settings -> Pages**, switch the 9 DNS records from **Proxied** back to grey **DNS only**,
-  wait until **Settings -> Pages** shows a renewed HTTPS certificate (up to a day), then switch them back to orange
-  **Proxied** and run **Actions -> usage-selftest**.
+- To stop the Worker without touching DNS: delete both routes under **Workers & Pages -> runpapers-counter -> Settings
+  -> Domains & Routes**.
+- To take Cloudflare out of the way entirely: switch the 9 DNS records back to grey **DNS only**.
+- **Grey-cloud fallback for certificate renewal**: if the 14-day certificate check warns or GitHub reports a certificate
+  problem in **Settings -> Pages**, switch the 9 DNS records from **Proxied** back to grey **DNS only**, wait until
+  **Settings -> Pages** shows a renewed HTTPS certificate (up to a day), then switch them back to orange **Proxied**
+  and run **Actions -> usage-selftest**.

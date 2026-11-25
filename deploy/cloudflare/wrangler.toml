@@ -1,0 +1,33 @@
+# Cloudflare Worker configuration for RunPapers usage counting (Spec 004) and sign-in-free intake (Spec 006).
+# Deployed automatically from reviewed `main` by `deploy/cloudflare/deploy.py`.
+name = "runpapers-counter"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+workers_dev = false
+
+routes = [
+  { pattern = "runpapers.com/*", zone_name = "runpapers.com" },
+  { pattern = "www.runpapers.com/*", zone_name = "runpapers.com" },
+]
+
+# Hourly cleanup of daily-salted deduplication and rate-limit hashes older than 48 hours (Spec 006 AC 5).
+[triggers]
+crons = ["17 * * * *"]
+
+# Workers Analytics Engine dataset for cookie-free, address-free usage counting (Spec 004).
+[[analytics_engine_datasets]]
+binding = "HITS"
+dataset = "runpapers_hits"
+
+# Cloudflare D1 database for website votes, verified paper requests, and moderated comments (Spec 006).
+# `deploy/cloudflare/deploy.py` discovers or creates `runpapers_intake` and binds its live UUID via the Workers API.
+[[d1_databases]]
+binding = "DB"
+database_name = "runpapers_intake"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# Secrets stored in Cloudflare (never in git; see docs/setup-usage-counting.md Parts 2 and 7):
+# - SALT: random hex string salting ephemeral visitor, vote-deduplication, and hourly rate-limit hashes
+# - TURNSTILE_SECRET: Cloudflare Turnstile secret key protecting /_rp/api/{vote,request,comment}
+# - RP_INTAKE_SECRET: shared bearer secret for GitHub Actions issue sync and daily moderation

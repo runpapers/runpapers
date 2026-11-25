@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """End-to-end check of the usage counter on runpapers.com (run by .github/workflows/usage-selftest.yml).
 
-1. Sends marked requests through Cloudflare as a browser, an AI agent, a crawler and a script (each twice), plus a
-   style sheet and a missing page, and checks every response: served, through Cloudflare, no cookie.
-2. Reads them back from Workers Analytics Engine with the read-only token (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID)
-   and checks each page was counted exactly once, under the right kind and page type, and that the style sheet and
-   the missing page were not counted.
-3. Checks both HTTPS certificates: Cloudflare's (what visitors see) and GitHub Pages' own (behind the proxy), and
+1. Resolves which paper to test (`RP_PAPER` if set; otherwise fetches `{SITE}/index.json` with `X-RunPapers-Internal: 1`
+   and uses `papers[0]` when at least one pack is published; when zero packs are published yet, tests `/` across all
+   four visitor kinds `person`, `agent`, `crawler` and `script`).
+2. Sends marked requests through Cloudflare (each twice to check 1-hour deduplication), plus `/style.css`, a missing
+   404 page, and `https://www.<host>/` (301 redirect), checking every response: served through Cloudflare, no cookie.
+3. Reads the rows back from Workers Analytics Engine (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) and checks each
+   expected `(kind, type, paper, path)` was counted once and that `/style.css`, 404s, and `www.` redirects were not counted.
+4. Checks both HTTPS certificates: Cloudflare's (what visitors see) and GitHub Pages' own (behind the proxy), and
    warns when either has 14 days or less left.
 
 Test rows carry the action "st-<run id>"; the nightly stats job ignores every action that starts with "st-".
 Standard library only. Exit code 0 = everything passed.
 """
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -37,16 +40,40 @@ UA = {
     "crawler": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)",
     "script": "curl/8.5.0",
 }
-# (who asks, path, expected status, expected (type, paper) when counted, or None when it must not be counted)
-CASES = [
-    ("person", f"/papers/{PAPER}/", 200, ("html", PAPER)),
-    ("agent", f"/papers/{PAPER}/AGENT.md", 200, ("agent", PAPER)),
-    ("crawler", f"/papers/{PAPER}/index.md", 200, ("md", PAPER)),
-    ("script", f"/papers/{PAPER}/pack.json", 200, ("pack", PAPER)),
-    ("person", "/", 200, ("html", "")),
-    ("person", "/style.css", 200, None),
-    ("person", f"/papers/{PAPER}/no-such-page-selftest", 404, None),
-]
+
+
+def _doi_slug(doi):
+    norm = str(doi or "").strip().lower()
+    s = re.sub(r"[^a-z0-9]+", "-", norm).strip("-")
+    if len(s) > 54:
+        s = s[:45].rstrip("-") + "-" + hashlib.sha256(norm.encode("utf-8")).hexdigest()[:8]
+    return s
+
+
+def build_cases(paper_slug):
+    """Build test request cases for an available paper slug, or root-only four-kind cases when no pack is released yet."""
+    if paper_slug:
+        return [
+            ("person", f"/papers/{paper_slug}/", 200, ("html", paper_slug)),
+            ("agent", f"/papers/{paper_slug}/AGENT.md", 200, ("agent", paper_slug)),
+            ("crawler", f"/papers/{paper_slug}/index.md", 200, ("md", paper_slug)),
+            ("script", f"/papers/{paper_slug}/pack.json", 200, ("pack", paper_slug)),
+            ("person", "/", 200, ("html", "")),
+            ("person", "/style.css", 200, None),
+            ("person", f"/papers/{paper_slug}/no-such-page-selftest", 404, None),
+        ]
+    return [
+        ("person", "/", 200, ("html", "")),
+        ("agent", "/", 200, ("html", "")),
+        ("crawler", "/", 200, ("html", "")),
+        ("script", "/", 200, ("html", "")),
+        ("person", "/style.css", 200, None),
+        ("person", "/no-such-page-selftest", 404, None),
+    ]
+
+
+# Default module-level cases when imported directly; `main()` resolves dynamically via `resolve_paper_slug()`.
+CASES = build_cases(PAPER)
 
 results = []   # (ok, check, detail)
 
@@ -63,6 +90,40 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 OPENER = urllib.request.build_opener(NoRedirect)
+
+
+def resolve_paper_slug(site=None, env=None):
+    """Return `RP_PAPER` if set in `env`; else inspect `{site}/index.json` (marked internal) and return `papers[0]`'s
+    slug, or `""` when zero published packs exist yet."""
+    e = os.environ if env is None else env
+    override = str(e.get("RP_PAPER", "")).strip()
+    if override:
+        return override
+    base = (SITE if site is None else site).rstrip("/")
+    req = urllib.request.Request(
+        f"{base}/index.json",
+        headers={"User-Agent": UA["script"], "X-RunPapers-Internal": "1", "Accept": "application/json"},
+    )
+    try:
+        with OPENER.open(req, timeout=30) as r:
+            if r.status != 200:
+                return ""
+            idx = json.loads(r.read().decode("utf-8"))
+    except (OSError, ValueError):
+        return ""
+    papers = idx.get("papers") if isinstance(idx, dict) else None
+    if not papers or not isinstance(papers, list):
+        return ""
+    first = papers[0] if isinstance(papers[0], dict) else {}
+    if first.get("slug"):
+        return str(first["slug"]).strip()
+    for field in ("url", "agent"):
+        m = re.search(r"/papers/([a-z0-9-]+)/", str(first.get(field) or ""))
+        if m:
+            return m.group(1)
+    if first.get("doi"):
+        return _doi_slug(first["doi"])
+    return ""
 
 
 def get(url, ua, action):
@@ -85,8 +146,8 @@ def send_requests(action, sleep_seconds=2, site=None, host=None, cases=None):
             code, headers, _ = get(site + path, UA[kind], action)
             if attempt == 1:
                 check(code == status, f"{path} as {kind}: HTTP {status}", f"got {code}")
-                check("cf-ray" in headers, f"{path}: served through Cloudflare")
-                check("set-cookie" not in headers, f"{path}: no cookie set")
+                check("cf-ray" in headers, f"{path} ({kind}): served through Cloudflare")
+                check("set-cookie" not in headers, f"{path} ({kind}): no cookie set")
             if sleep_seconds:
                 time.sleep(sleep_seconds)   # the first request's "seen" mark must be stored before the repeat arrives
     code, headers, _ = get(f"https://www.{host}/", UA["person"], action)
@@ -164,7 +225,10 @@ def cert_days(connect_host, sni, now=None):
 def main():
     results.clear()
     action = "st-" + secrets.token_hex(4)
-    print(f"Self-test run {action} against {SITE}\n", flush=True)
+    paper_slug = resolve_paper_slug(SITE)
+    cases = build_cases(paper_slug)
+    mode_desc = f"paper {paper_slug}" if paper_slug else "home page / across 4 visitor kinds (no published packs yet)"
+    print(f"Self-test run {action} against {SITE} ({mode_desc})\n", flush=True)
 
     token, account = clean("CLOUDFLARE_API_TOKEN"), clean("CLOUDFLARE_ACCOUNT_ID")
     raw = os.environ.get("CLOUDFLARE_API_TOKEN", "")
@@ -184,9 +248,9 @@ def main():
             status = None
         check(code == 200 and status == "active", "the Cloudflare token is active", f"HTTP {code}, status {status}")
 
-    send_requests(action)
+    send_requests(action, cases=cases)
 
-    want = {(kind, typ, paper, path): 1 for kind, path, _, exp in CASES if exp for (typ, paper) in [exp]}
+    want = {(kind, typ, paper, path): 1 for kind, path, _, exp in cases if exp for (typ, paper) in [exp]}
     rows = read_back(action, want) if has_token and has_account else []
     got = {(r["kind"], r["type"], r["paper"], r["path"]): int(float(r["n"])) for r in rows}
     for key, n in want.items():
