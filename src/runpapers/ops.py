@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 from . import __version__, ids, spec
+from .recipes import check_tolerance, format_expected
 from .registry import read_json, write_json
 from .requests_log import summary as requests_summary
 from .verify import STAGES, now, record, run_l1, status
@@ -76,23 +77,45 @@ def gallery(reg, pack, refs_dir=None):
     e = lambda x: html.escape(str(x))
     items, panels = [], []
     for r in pack.recipes:
-        res = read_json(l1_out(reg, pack) / r["id"] / "result.json") or {}
-        ours = [l1_out(reg, pack) / r["id"] / f for f in res.get("figures", [])]
-        theirs = sorted(refs.glob(f"{r['id']}*.*")) if refs.is_dir() else []
-        checks = "".join(f"<tr><td>{e(c['metric'])}</td><td>{e(c['expected'])}</td><td>{e(c['observed'])}</td>"
-                         f"<td style='color:{'#1f8a4c' if c['ok'] else ('#b07d0b' if not c.get('required', True) else '#b3261e')}'>{'match' if c['ok'] else ('known discrepancy' if not c.get('required', True) else 'MISMATCH')}</td>"
-                         f"<td>{e(c['detail'])}</td><td>{e(c['source'])}</td></tr>" for c in res.get("checks", []))
-        imgs = lambda ps, lab: "".join(f"<figure><figcaption>{lab}: {e(p.name)}</figcaption><img src='file://{e(str(p))}'></figure>" for p in ps) \
-            or f"<figure><figcaption>{lab}</figcaption><p class='mut'>none{' (published images are kept privately in refs/ until the paper license allows showing them)' if lab == 'Published' else ''}</p></figure>"
-        items.append(f"<section><h2>{e(r.get('panel', ''))} · <code>{e(r['id'])}</code> · {'PASS' if res.get('pass') else 'not passing'}</h2>"
+        rid = r["id"]
+        tier = r.get("tier", "lite")
+        rdir = l1_out(reg, pack) / rid
+        res = read_json(rdir / "result.json") or {}
+        ours = ([rdir / f for f in res["figures"]] if res.get("figures")
+                else (sorted(rdir.glob("*.png")) if res and rdir.is_dir() else []))
+        theirs = sorted(refs.glob(f"{rid}*.*")) if refs.is_dir() else []
+        targets = pack.targets_for(rid)
+        if res.get("checks"):
+            checks = "".join(
+                f"<tr><td>{e(c['metric'])}</td><td>{e(format_expected(c.get('expected'), check_tolerance(c, targets)))}</td><td>{e(c['observed'])}</td>"
+                f"<td style='color:{'#1f8a4c' if c['ok'] else ('#b07d0b' if not c.get('required', True) else '#b3261e')}'>{'match' if c['ok'] else ('known discrepancy' if not c.get('required', True) else 'MISMATCH')}</td>"
+                f"<td>{e(c['detail'])}</td><td>{e(c['source'])}</td></tr>"
+                for c in res["checks"]
+            )
+        else:
+            checks = "".join(
+                f"<tr><td>{e(t['metric'])}</td><td>{e(format_expected(t.get('expected'), t.get('tolerance')))}</td><td class='mut'>—</td>"
+                f"<td class='mut'>not run yet</td><td class='mut'>{'cluster / full-tier recipe not run locally yet' if tier == 'full' else 'run recipe to compare'}</td>"
+                f"<td>{e(t.get('source', ''))}</td></tr>"
+                for t in targets
+            )
+        tier_badge = "<span class='tier full'>full tier · cluster</span>" if tier == "full" else "<span class='tier'>lite</span>"
+        run_state = ("PASS" if res.get("pass") else ("not run yet (cluster / full tier)" if not res and tier == "full"
+                     else ("not run yet" if not res else "not passing")))
+        none_repro = "not run locally yet (full-tier cluster recipe)" if not res and tier == "full" else "none"
+        imgs = lambda ps, lab: "".join(f"<figure><figcaption>{lab}: {e(p.name)}</figcaption><img src='file://{e(str(p))}' alt='{e(lab)}: {e(p.name)}'></figure>" for p in ps) \
+            or f"<figure><figcaption>{lab}</figcaption><p class='mut'>{'none (published images are kept privately in refs/ until the paper license allows showing them)' if lab == 'Published' else none_repro}</p></figure>"
+        items.append(f"<section><h2>{e(r.get('panel', ''))} · <code>{e(rid)}</code> {tier_badge} · {run_state}</h2>"
                      f"<p>{e(r.get('title', ''))}</p><div class='pair'>{imgs(theirs, 'Published')}{imgs(ours, 'Reproduced')}</div>"
                      f"<table><tr><th>Metric</th><th>Paper</th><th>Ours</th><th></th><th>Detail</th><th>Source</th></tr>{checks}</table></section>")
-        panels.append({"recipe": r["id"], "panel": r.get("panel"), "pass": res.get("pass"), "ours": [str(p) for p in ours],
-                       "published": [str(p) for p in theirs], "checks": res.get("checks", [])})
+        panels.append({"recipe": rid, "panel": r.get("panel"), "tier": tier, "pass": res.get("pass"),
+                       "ours": [str(p) for p in ours], "published": [str(p) for p in theirs], "checks": res.get("checks", [])})
     page = f"""<!doctype html><meta charset=utf-8><title>Sign-off: {e(pack.title)}</title>
 <style>body{{font:15px/1.5 system-ui,sans-serif;max-width:1200px;margin:20px auto;padding:0 16px;color:#1d2230}}
 .pair{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}figure{{margin:0;border:1px solid #e3e7ef;border-radius:8px;padding:8px}}
 img{{width:100%}}table{{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0 24px}}td,th{{border-bottom:1px solid #e3e7ef;padding:5px;text-align:left}}
+.tier{{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:12px;background:#f3f4f6;color:#374151;vertical-align:middle}}
+.tier.full{{background:#eef2ff;color:#1e3a8a;border:1px solid #c7d2fe}}
 .mut{{color:#5b6475}}section{{border-top:2px solid #1d2230;margin-top:20px}}</style>
 <h1>{e(pack.title)}</h1><p>DOI {e(pack.doi)} · pack v{e(pack.version)} · hash {pack.content_hash()[:12]} · L1 at {e(l1.get('at', 'never'))}</p>
 {''.join(items)}"""

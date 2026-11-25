@@ -49,6 +49,36 @@ def compare(expected, observed, tol):
         return False, f"can't compare: {e}"
 
 
+def format_expected(expected, tol=None):
+    """Human-readable Paper/expected target display (shows [lo, hi] for range targets)."""
+    if isinstance(tol, dict) and isinstance(tol.get("range"), (list, tuple)) and len(tol["range"]) == 2:
+        lo, hi = tol["range"]
+        rng = f"[{lo}, {hi}]"
+        if expected is None or expected == list(tol["range"]) or str(expected) == rng:
+            return rng
+        if _num(expected) and _num(lo) and _num(hi) and math.isclose(expected, (lo + hi) / 2, rel_tol=1e-9, abs_tol=1e-9):
+            return rng
+        return f"{expected} ({rng})"
+    return "" if expected is None else str(expected)
+
+
+def check_tolerance(check, targets=()):
+    """Tolerance dict for one check row, falling back to pack targets when reading older result.json files."""
+    if isinstance(check.get("tolerance"), dict):
+        return check["tolerance"]
+    for t in targets:
+        if (t.get("metric") == check.get("metric") and t.get("expected") == check.get("expected")
+                and t.get("source", "") == check.get("source", "")):
+            return t.get("tolerance")
+    for t in targets:
+        if t.get("metric") == check.get("metric") and t.get("source", "") == check.get("source", ""):
+            return t.get("tolerance")
+    for t in targets:
+        if t.get("metric") == check.get("metric"):
+            return t.get("tolerance")
+    return None
+
+
 def command_for(script):
     text = Path(script).read_text(errors="replace")
     if shutil.which("uv") and "# /// script" in text:
@@ -109,10 +139,11 @@ def run(pack, rid, data_dir, out_root, ci=False, pack_dir=None, quiet=False):
             status = "no-metrics"
     checks = []
     for t in pack.targets_for(rid):
-        ok, detail = compare(t.get("expected"), metrics.get(t["metric"]), t.get("tolerance"))
+        tol = t.get("tolerance") or {"exact": True}
+        ok, detail = compare(t.get("expected"), metrics.get(t["metric"]), tol)
         checks.append({"metric": t["metric"], "expected": t.get("expected"), "observed": metrics.get(t["metric"]),
-                       "ok": ok, "detail": detail, "source": t.get("source", ""), "kind": t.get("kind", "figure"),
-                       "required": t.get("required", True), "note": t.get("note", "")})
+                       "tolerance": tol, "ok": ok, "detail": detail, "source": t.get("source", ""),
+                       "kind": t.get("kind", "figure"), "required": t.get("required", True), "note": t.get("note", "")})
     figures = sorted(p.name for p in out.iterdir() if p.suffix.lower() in (".png", ".svg", ".pdf", ".jpg"))
     res = {"recipe": rid, "panel": r.get("panel", ""), "status": status, "returncode": rc, "seconds": secs,
            "peak_rss_mb": peak_mb, "ci": ci, "checks": checks,

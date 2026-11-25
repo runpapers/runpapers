@@ -331,6 +331,226 @@ class SiteAndWorkspace(Base):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout)["doi"], DOI)
 
+    def test_c_run_fetches_only_recipe_data(self):
+        import contextlib
+        import io
+        from unittest import mock
+        from runpapers import cli, data
+
+        atac_bytes = b"BIGWIG_TRACK_BYTES_1234"
+        rna_bytes = b"HUGE_RNA_MATRIX_BYTES_567890"
+        (self.dir / "pack.toml").write_text(PACK + f'''
+[[data]]
+id = "atac_bw"
+url = "https://example.org/atac.bw"
+size = {len(atac_bytes)}
+md5 = "{hashlib.md5(atac_bytes).hexdigest()}"
+tier = "full"
+source = "test"
+license = "CC0"
+[[data]]
+id = "huge_rna"
+url = "https://example.org/huge_rna.h5ad"
+size = {len(rna_bytes)}
+md5 = "{hashlib.md5(rna_bytes).hexdigest()}"
+tier = "full"
+source = "test"
+license = "CC0"
+[[recipes]]
+id = "fig6b"
+title = "Enhancer tracks"
+panel = "Figure 6B"
+script = "recipes/fig6b.py"
+tier = "full"
+data = ["atac_bw"]
+max_minutes = 2
+[[recipes]]
+id = "fig0"
+title = "Synthetic summary"
+panel = "Figure 0"
+script = "recipes/fig0.py"
+tier = "full"
+data = []
+max_minutes = 2
+''')
+        (self.dir / "targets.toml").write_text(TARGETS + '''
+[[target]]
+recipe = "fig6b"
+metric = "bw_bytes"
+expected = 23
+tolerance = { exact = true }
+source = "Fig 6B"
+[[target]]
+recipe = "fig0"
+metric = "const_ok"
+expected = 1
+tolerance = { exact = true }
+source = "Fig 0"
+''')
+        (self.dir / "recipes" / "fig6b.py").write_text(textwrap.dedent('''\
+            import json, os
+            from pathlib import Path
+            n = (Path(os.environ["RP_DATA_DIR"]) / "atac.bw").stat().st_size
+            out = Path(os.environ["RP_OUT_DIR"])
+            (out / "metrics.json").write_text(json.dumps({"bw_bytes": n}))
+            (out / "tracks.png").write_bytes(b"\\x89PNG fake6b")
+        '''))
+        (self.dir / "recipes" / "fig0.py").write_text(textwrap.dedent('''\
+            import json, os
+            from pathlib import Path
+            out = Path(os.environ["RP_OUT_DIR"])
+            (out / "metrics.json").write_text(json.dumps({"const_ok": 1}))
+        '''))
+        self.assertEqual(spec.errors(spec.lint(self.pack())), [])
+
+        # Clear cached files so every download attempt goes through _download.
+        shutil.rmtree(data.data_dir(DOI), ignore_errors=True)
+        payloads = {
+            "https://example.org/counts.csv": CSV,
+            "https://example.org/atac.bw": atac_bytes,
+            "https://example.org/huge_rna.h5ad": rna_bytes,
+        }
+        seen_urls = []
+
+        def fake_download(url, dest, size, quiet=False):
+            seen_urls.append(url)
+            Path(dest).write_bytes(payloads[url])
+
+        with mock.patch("runpapers.data._download", side_effect=fake_download):
+            # Recipe with data = [] fetches nothing at all.
+            buf0 = io.StringIO()
+            with contextlib.redirect_stdout(buf0), contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as ctx0:
+                    cli.main(["run", "--json", DOI, "fig0"])
+            self.assertEqual(ctx0.exception.code, 0)
+            self.assertTrue(json.loads(buf0.getvalue())["pass"])
+            self.assertEqual(seen_urls, [])
+
+            # Single full recipe fetches ONLY its own data ID (atac_bw), not counts or huge_rna.
+            buf1 = io.StringIO()
+            with contextlib.redirect_stdout(buf1), contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as ctx1:
+                    cli.main(["run", "--json", DOI, "fig6b"])
+            self.assertEqual(ctx1.exception.code, 0)
+            self.assertTrue(json.loads(buf1.getvalue())["pass"])
+            self.assertEqual(seen_urls, ["https://example.org/atac.bw"])
+            self.assertFalse((data.data_dir(DOI) / "huge_rna.h5ad").exists())
+            self.assertFalse((data.data_dir(DOI) / "counts.csv").exists())
+
+            # `rp fetch --tier full` continues to fetch all open files of full tier and below.
+            seen_urls.clear()
+            buf2 = io.StringIO()
+            with contextlib.redirect_stdout(buf2), contextlib.redirect_stderr(io.StringIO()):
+                cli.main(["fetch", "--json", "--tier", "full", DOI])
+            self.assertEqual(set(json.loads(buf2.getvalue())["files"]), {"counts", "atac_bw", "huge_rna"})
+            self.assertEqual(set(seen_urls), {"https://example.org/counts.csv", "https://example.org/huge_rna.h5ad"})
+
+    def test_mixed_lite_full_gallery_site_and_range_targets(self):
+        from runpapers import data
+
+        atac_bytes = b"BIGWIG_TRACK_BYTES_1234"
+        (self.dir / "pack.toml").write_text(PACK + f'''
+[[data]]
+id = "atac_bw"
+url = "https://example.org/atac.bw"
+size = {len(atac_bytes)}
+md5 = "{hashlib.md5(atac_bytes).hexdigest()}"
+tier = "full"
+source = "test"
+license = "CC0"
+[[recipes]]
+id = "fig6b"
+title = "Enhancer tracks"
+panel = "Figure 6B"
+script = "recipes/fig6b.py"
+tier = "full"
+data = ["atac_bw"]
+max_minutes = 2
+''')
+        (self.dir / "targets.toml").write_text(TARGETS + '''
+[[target]]
+recipe = "fig1"
+metric = "pct_a"
+expected = 37.5
+tolerance = { range = [37.0, 38.0] }
+source = "Fig 1 merged stroke interval"
+[[target]]
+recipe = "fig1"
+metric = "pct_a"
+expected = 37.0
+tolerance = { range = [37.0, 38.0] }
+source = "main text p.2 truncated figure"
+[[target]]
+recipe = "fig6b"
+metric = "peak_score"
+expected = 2.0
+tolerance = { range = [1.8, 2.2] }
+source = "Fig 6B interval"
+''')
+        (self.dir / "recipes" / "fig6b.py").write_text(textwrap.dedent('''\
+            import json, os
+            from pathlib import Path
+            assert (Path(os.environ["RP_DATA_DIR"]) / "atac.bw").is_file()
+            out = Path(os.environ["RP_OUT_DIR"])
+            (out / "metrics.json").write_text(json.dumps({"peak_score": 2.05}))
+            (out / "tracks.png").write_bytes(b"\\x89PNG fake6b")
+        '''))
+        pk = self.pack()
+        self.assertEqual(spec.errors(spec.lint(pk)), [])
+
+        # Phase 1: before the full-tier recipe has been run locally (and without full data cached).
+        l1_dir = ops.l1_out(self.reg, pk)
+        rec = verify.run_l1(pk, ci=False, quiet=True, keep_out=l1_dir)
+        self.assertTrue(rec["pass"], rec)
+        self.assertEqual(list(rec["recipes"]), ["fig1"])
+        self.assertEqual(verify.status(pk)["stage"], "runs")
+
+        # result.json preserves backward-compatible expected and detail fields.
+        r1 = json.loads((l1_dir / "fig1" / "result.json").read_text())
+        by_src = {c["source"]: c for c in r1["checks"]}
+        self.assertEqual(by_src["Fig 1 merged stroke interval"]["expected"], 37.5)
+        self.assertEqual(by_src["Fig 1 merged stroke interval"]["detail"], "37.5 in [37.0, 38.0]")
+
+        gdir = ops.gallery(self.reg, pk)
+        ghtml = (gdir / "index.html").read_text()
+        self.assertIn("<td>[37.0, 38.0]</td><td>37.5</td>", ghtml)
+        self.assertNotIn("<td>37.5</td><td>37.5</td>", ghtml)
+        self.assertIn("<td>37.0 ([37.0, 38.0])</td><td>37.5</td>", ghtml)
+        self.assertIn("full tier · cluster", ghtml)
+        self.assertIn("not run yet (cluster / full tier)", ghtml)
+        self.assertIn("<td>[1.8, 2.2]</td>", ghtml)
+
+        sdir1, _ = site.build(self.reg, out=self.tmp / "site-before", base_url="http://x")
+        pdir1 = sdir1 / "papers" / "10-9999-test-2026-001"
+        phtml1 = (pdir1 / "index.html").read_text()
+        pmd1 = (pdir1 / "index.md").read_text()
+        self.assertTrue((pdir1 / "figures" / "fig1-figure.png").is_file())
+        self.assertFalse((pdir1 / "figures" / "fig6b-tracks.png").exists())
+        self.assertIn("full tier · cluster", phtml1)
+        self.assertIn("full tier, cluster", pmd1)
+        self.assertIn("[37.0, 38.0]", phtml1)
+        self.assertIn("37.0 ([37.0, 38.0])", phtml1)
+
+        # Phase 2: after build/l1/<doi>/fig6b/result.json and PNG exist.
+        (data.data_dir(DOI) / "atac.bw").write_bytes(atac_bytes)
+        res_full = recipes.run(pk, "fig6b", data.data_dir(DOI), l1_dir, ci=False, quiet=True)
+        self.assertTrue(res_full["pass"], res_full)
+
+        gdir2 = ops.gallery(self.reg, pk)
+        ghtml2 = (gdir2 / "index.html").read_text()
+        self.assertIn("Figure 6B · <code>fig6b</code> <span class='tier full'>full tier · cluster</span> · PASS", ghtml2)
+        self.assertIn("<td>[1.8, 2.2]</td><td>2.05</td>", ghtml2)
+        self.assertIn("tracks.png", ghtml2)
+
+        sdir2, _ = site.build(self.reg, out=self.tmp / "site-after", base_url="http://x")
+        pdir2 = sdir2 / "papers" / "10-9999-test-2026-001"
+        phtml2 = (pdir2 / "index.html").read_text()
+        pmd2 = (pdir2 / "index.md").read_text()
+        self.assertTrue((pdir2 / "figures" / "fig6b-tracks.png").is_file())
+        self.assertIn("fig6b-tracks.png", phtml2)
+        self.assertIn("[1.8, 2.2]", phtml2)
+        self.assertIn("1/1 paper targets matched", pmd2)
+
 
 if __name__ == "__main__":
     unittest.main()

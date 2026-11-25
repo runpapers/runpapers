@@ -9,7 +9,8 @@ from functools import partial
 from pathlib import Path
 
 from . import DEFAULT_BASE, __version__, ids
-from .registry import sha256_file
+from .recipes import check_tolerance, format_expected
+from .registry import read_json, sha256_file
 from .requests_log import issue_url as requests_issue_url
 from .requests_log import summary as requests_summary
 from .verify import now, status, resources
@@ -48,6 +49,11 @@ input.search{width:100%;padding:11px 14px;border:1px solid var(--line);border-ra
 .tabs button.on{background:var(--fg);color:#fff;border-color:var(--fg)}
 table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}
 .figs{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}.figs img{width:100%;border:1px solid var(--line);border-radius:8px}
+.tier{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:12px;background:var(--soft);color:var(--fg);white-space:nowrap}
+.tier.full{background:#eef2ff;color:#1e3a8a;border:1px solid #c7d2fe}
+details.targets{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:8px 0}
+details.targets summary{cursor:pointer;font-size:14px}
+.tscroll{overflow-x:auto}
 code{background:var(--soft);padding:1px 5px;border-radius:5px;font-size:90%}
 footer{margin:40px 0;color:var(--mut);font-size:13px;border-top:1px solid var(--line);padding-top:14px}
 @media(max-width:700px){.steps{grid-template-columns:1fr}}
@@ -387,7 +393,7 @@ Follow these steps in order. Ask the user before anything not listed here.
    This creates the folder `./{card['slug']}/`. Work inside it from now on (`cd {card['slug']}`).
 3. Read `SKILL.md` in that folder completely. It explains the data, the recipes and the guardrails. Follow the guardrails.
 4. Reproduce a published panel: `{install} run <recipe>`. Recipes:
-{chr(10).join(f"   - `{r['id']}`: {r['panel']}: {r['title']}" for r in card['recipes'])}
+{chr(10).join(f"   - `{r['id']}`{' (full tier, cluster)' if r.get('tier') == 'full' else ''}: {r['panel']}: {r['title']}" for r in card['recipes'])}
    Each run writes `out/<recipe>/` with the figure, `metrics.json` and `result.json` (the paper's numbers next to yours).
    Show the user the figure and report plainly which numbers matched.
 5. For the user's own questions, write scripts in `analyses/` that read `data/`, as SKILL.md describes. State what you
@@ -399,7 +405,7 @@ Verification of this pack: {", ".join(k for k, v in card['badges'].items() if v 
 """
 
 
-def paper_md(card, base, install="uvx runpapers"):
+def paper_md(card, base, install="uvx runpapers", results=None):
     doi = card["doi"]
     src_arg = f" --source {base}" if base != DEFAULT_BASE else ""
     terms = "; ".join(_data_terms(card)) or "see the original repository"
@@ -418,7 +424,12 @@ def paper_md(card, base, install="uvx runpapers"):
         f"Terminal setup: `{install} get {doi}{src_arg}`", "",
         "## Reproducible panels", "",
     ]
-    lines += [f"- `{r['id']}` ({r['tier']}): {r['panel']}: {r['title']}" for r in card["recipes"]]
+    for r in card["recipes"]:
+        tlabel = "full tier, cluster" if r.get("tier") == "full" else "lite"
+        pr = (results or {}).get(r["id"])
+        req = [c for c in (pr or {}).get("checks", []) if c.get("required", True)]
+        match_txt = f" — {sum(1 for c in req if c.get('ok'))}/{len(req)} paper targets matched" if pr and pr.get("pass") and req else ""
+        lines.append(f"- `{r['id']}` ({tlabel}): {r['panel']}: {r['title']}{match_txt}")
     if card.get("questions"):
         lines += ["", "## Example questions", ""] + [f"- {q}" for q in card["questions"]]
     if card.get("data"):
@@ -440,7 +451,13 @@ def _redirect(d, url, title):
         f'<meta name="robots" content="noindex"></head><body><p>This paper is at <a href="{e(url)}">{e(url)}</a>.</p></body></html>\n')
 
 
-def paper_html(card, base, install, figs):
+def _tier_pill(tier):
+    if tier == "full":
+        return '<span class="tier full" title="Runs on a computing cluster (full-tier data)">full tier · cluster</span>'
+    return '<span class="tier">lite</span>'
+
+
+def paper_html(card, base, install, figs, results=None):
     doi = card["doi"]
     depth = len(ids.page_path(doi).split("/"))
     up = "../" * depth
@@ -452,16 +469,39 @@ def paper_html(card, base, install, figs):
     )
     rec_by_id = {r["id"]: r for r in card["recipes"]}
     rec_rows = "".join(
-        f"<tr><td><code>{e(r['id'])}</code></td><td>{e(r['panel'])}</td><td>{e(r['title'])}</td><td>{e(r['tier'])}</td></tr>"
+        f"<tr><td><code>{e(r['id'])}</code></td><td>{e(r['panel'])}</td><td>{e(r['title'])}</td><td>{_tier_pill(r.get('tier', 'lite'))}</td></tr>"
         for r in card["recipes"]
     )
+    target_blocks = []
+    for r in card["recipes"]:
+        pr = (results or {}).get(r["id"])
+        if not pr or not pr.get("pass") or not pr.get("checks"):
+            continue
+        req_checks = [c for c in pr["checks"] if c.get("required", True)]
+        n_ok = sum(1 for c in req_checks if c.get("ok"))
+        trows = "".join(
+            f"<tr><td><code>{e(c['metric'])}</code></td><td>{e(c.get('paper_display', c.get('expected')))}</td>"
+            f"<td>{e(c.get('observed'))}</td>"
+            f"<td>{'match' if c.get('ok') else ('known paper discrepancy' if not c.get('required', True) else 'mismatch')}</td>"
+            f"<td>{e(c.get('source', ''))}</td></tr>"
+            for c in pr["checks"]
+        )
+        target_blocks.append(
+            f'<details class="targets"><summary><b>{e(r.get("panel") or r["id"])}</b> '
+            f'(<code>{e(r["id"])}</code>) {_tier_pill(r.get("tier", "lite"))} · '
+            f'{n_ok}/{len(req_checks)} paper targets matched</summary>'
+            f'<div class="tscroll"><table><tr><th>Metric</th><th>Paper</th><th>Ours</th><th>Status</th><th>Source</th></tr>'
+            f'{trows}</table></div></details>'
+        )
+    targets_html = "".join(target_blocks)
     fig_items = []
     for fname, rid in figs:
         r = rec_by_id.get(rid, {})
         cap = f"{r.get('panel', rid)}: {r.get('title', fname)}" if r else fname
+        tier_note = f' {_tier_pill("full")}' if r.get("tier") == "full" else ""
         fig_items.append(
             f'<figure style="margin:0"><img src="figures/{e(fname)}" alt="{e(cap)}">'
-            f'<figcaption class="small mut">{e(cap)}</figcaption></figure>'
+            f'<figcaption class="small mut">{e(cap)}{tier_note}</figcaption></figure>'
         )
     fig_html = "".join(fig_items)
     qs = "".join(f"<li>{e(q)}</li>" for q in card.get("questions") or [])
@@ -491,10 +531,11 @@ def paper_html(card, base, install, figs):
 <div class="tabs">{tabs}</div><p class="small mut" id="how">{e(next(iter(HOW.values())))}</p>
 <div class="prompt"><button class="copy" onclick="cp('{pid}',this)">Copy</button><span id="{pid}">{e(copy_prompt(card, base))}</span></div>
 <p class="small mut">{e(cost_text(card.get('resources')))} Your agent asks you once whether to run it on this computer or on your computing cluster (preferred when you have one). Data come from the paper's original repositories; nothing is sent to RunPapers. Or from a terminal: <code>{e(install)} get {e(doi)}{e(src_arg)}</code></p>
-<h2>Reproducible panels</h2><table><tr><th>Recipe</th><th>Panel</th><th>What it shows</th><th>Tier</th></tr>{rec_rows}</table>
+<h2>Reproducible panels</h2><div class="tscroll"><table><tr><th>Recipe</th><th>Panel</th><th>What it shows</th><th>Tier</th></tr>{rec_rows}</table></div>
+{targets_html}
 {('<h2>Reproduced figures</h2><div class="figs">' + fig_html + '</div>') if fig_items else ''}
 {('<h2>Example questions</h2><ul>' + qs + '</ul>') if qs else ''}
-<h2>Data</h2>{terms_note}<table><tr><th>File</th><th>Tier</th><th>Size</th><th>Source</th><th>Terms / license</th></tr>{data_rows}</table>
+<h2>Data</h2>{terms_note}<div class="tscroll"><table><tr><th>File</th><th>Tier</th><th>Size</th><th>Source</th><th>Terms / license</th></tr>{data_rows}</table></div>
 <h2>Cite</h2><p class="small">Cite the paper ({ids_line}), the original data source per its terms above, and this pack: {_pack_cite_html(card, base)}</p>
 <p class="small mut">Machine-readable: <a href="index.md">index.md</a> · <a href="AGENT.md">AGENT.md</a> · <a href="pack.json">pack.json</a></p>
 """
@@ -655,16 +696,38 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
             files.append({"path": rel, "sha256": sha256_file(pk.dir / rel), "size": (pk.dir / rel).stat().st_size})
         (pdir / "pack.json").write_text(json.dumps({"doi": pk.doi, "version": pk.version, "pack_hash": pk.content_hash(),
                                                     "files": files}, indent=1))
-        figs = []
+        figs, panel_results = [], {}
         src = l1_dir / ids.doi_relpath(pk.doi)
         if st["badges"]["runs"] == "pass" and src.is_dir():
-            (pdir / "figures").mkdir()
+            for r in pk.recipes:
+                rid = r["id"]
+                res = read_json(src / rid / "result.json")
+                if res and res.get("checks"):
+                    targets = pk.targets_for(rid)
+                    panel_results[rid] = {
+                        "pass": bool(res.get("pass")),
+                        "checks": [
+                            {**c, "paper_display": format_expected(c.get("expected"), check_tolerance(c, targets))}
+                            for c in res["checks"]
+                        ],
+                    }
+            known_rids = {r["id"]: i for i, r in enumerate(pk.recipes)}
+            pngs = []
             for f in sorted(src.glob("*/*.png")):
-                name = f"{f.parent.name}-{f.name}"
-                shutil.copy2(f, pdir / "figures" / name)
-                figs.append((name, f.parent.name))
-        (pdir / "index.html").write_text(paper_html(card, base, install, figs))
-        (pdir / "index.md").write_text(paper_md(card, base, install))
+                rid = f.parent.name
+                res = read_json(f.parent / "result.json")
+                if res is not None and not res.get("pass", False):
+                    continue
+                pngs.append((known_rids.get(rid, len(known_rids)), rid, f))
+            pngs.sort(key=lambda x: (x[0], x[1], x[2].name))
+            if pngs:
+                (pdir / "figures").mkdir()
+                for _, rid, f in pngs:
+                    name = f"{rid}-{f.name}"
+                    shutil.copy2(f, pdir / "figures" / name)
+                    figs.append((name, rid))
+        (pdir / "index.html").write_text(paper_html(card, base, install, figs, panel_results))
+        (pdir / "index.md").write_text(paper_md(card, base, install, panel_results))
         (pdir / "AGENT.md").write_text(agent_md(card, base, install))
         _redirect(out / "doi" / ids.doi_relpath(pk.doi), f"{base}/{ids.page_path(pk.doi)}/", card["title"])
     planned = {d: p for d, p in reg.planned().items() if d not in {c["doi"] for c in cards}}

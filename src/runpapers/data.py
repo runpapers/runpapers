@@ -84,7 +84,7 @@ def fetch(pack, tier="lite", only=None, quiet=False, dest_dir=None):
     dd.mkdir(parents=True, exist_ok=True)
     paths, notes = {}, []
     for e in pack.data:
-        if only and e["id"] not in only:
+        if only is not None and e["id"] not in only:
             continue
         if TIER_RANK.get(e.get("tier", "lite"), 0) > TIER_RANK[tier]:
             continue

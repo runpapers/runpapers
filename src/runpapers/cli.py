@@ -64,7 +64,8 @@ def c_run(a):
     todo = [r["id"] for r in pk.recipes if a.all and (r.get("tier", "lite") == "lite" or a.tier == "full")] if a.all else [rid]
     if not todo or todo == [None]:
         raise SystemExit("which recipe? `rp recipes` lists them")
-    data.fetch(pk, a.tier if a.all else pk.recipe(rid).get("tier", "lite"), quiet=a.json)
+    needed = {d for r in todo for d in pk.recipe(r).get("data", [])}
+    data.fetch(pk, a.tier if a.all else pk.recipe(rid).get("tier", "lite"), only=needed, quiet=a.json, dest_dir=dd)
     res = [recipes.run(pk, r, dd, out_root, ci=a.ci, quiet=a.json) for r in todo]
     out(res if len(res) > 1 else res[0], a.json, None if a.json else "\n".join(f"{r['recipe']}: {'PASS' if r['pass'] else 'FAIL'} -> {Path(r['log']).parent}" for r in res))
     sys.exit(0 if all(r["pass"] for r in res) else 1)
