@@ -22,9 +22,8 @@ On a paper's page, click **Copy** on the prompt and paste it into your agent in 
 I want to work with the data from this paper using RunPapers:
   "Cross-species multiomic atlas of the primate basal ganglia" (Johansen et al., Cell 2026), DOI 10.1016/j.cell.2026.10.012, PMID 43020019
 Setup for you, the AI agent: fetch https://runpapers.com/papers/10-1016-j-cell-2026-10-012/AGENT.md (or `curl -sL` it) and follow it exactly.
-Then:
-1) Reproduce Figure 1B and show it to me, with a table of the paper's numbers next to yours.
-2) Answer my question using the paper's data: <write your question here>
+Ask me everything you need in one message first. Then reproduce Figure 1B and show it to me with a table of
+the paper's numbers next to yours, and then help me explore the data with my own questions.
 ```
 
 Your agent needs only [`uv`](https://docs.astral.sh/uv/). It downloads the laptop-size ("lite") files straight from the

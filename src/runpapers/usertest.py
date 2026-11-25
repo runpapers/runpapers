@@ -29,8 +29,9 @@ KEEP_RUNS = 40
 
 def harness_prompt(card, base, questions):
     qs = "\n".join(f"- {q['id']}: {q['ask']}" for q in questions)
-    return (site.copy_prompt(card, base).replace("<write your question here>", "see the questions below") +
-            "\n\n(Test run: please work only inside the current folder and don't ask me anything; I'm not available.)\n"
+    return (site.copy_prompt(card, base) +
+            "\n\n(Test run, so here are my answers in advance: run it here on this computer, in the current folder; "
+            "my questions are below. Don't ask me anything; I'm not available.)\n"
             "After reproducing the panel, answer these questions with the paper's data. Write your answers to the file "
             "answers.json in the current folder as a JSON object {\"<question id>\": <answer>}, numbers as plain numbers "
             "(no units, no % sign):\n" + qs + "\n")

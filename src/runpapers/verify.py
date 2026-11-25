@@ -171,3 +171,44 @@ def status(pack):
 
 def tool_available(name):
     return shutil.which(name) is not None
+
+
+def resources(pack, l1_root=None):
+    """What running this pack costs, measured on our own runs (2026-11-25, the PI): disk (data + outputs), how long
+    the recipes take and their peak memory (the last L1 run), and how long a fresh AI agent took from the pasted
+    prompt to a finished reproduction (naive-user tests on the current version). Nothing here is a guess except
+    'env_bytes', the usual size of the Python packages a recipe installs the first time."""
+    from . import ids
+    lite = [d for d in pack.data if d.get("tier", "lite") == "lite"]
+    full = [d for d in pack.data if d.get("tier", "lite") != "lite"]
+    out = {"data_bytes": sum(int(d.get("size", 0)) for d in lite),
+           "full_data_bytes": sum(int(d.get("size", 0)) for d in full) or None,
+           "env_bytes": 300_000_000, "outputs_bytes": None, "recipes": {}, "recipe_minutes": None,
+           "peak_ram_gb": None, "agent_minutes": None, "measured_on": None, "cluster_recipes": []}
+    if l1_root:
+        d = Path(l1_root) / ids.doi_relpath(pack.doi)
+        if d.is_dir():
+            out["outputs_bytes"] = sum(f.stat().st_size for f in d.rglob("*") if f.is_file())
+    l1 = record(pack, "l1") or {}
+    tiers = {r["id"]: r.get("tier", "lite") for r in pack.recipes}
+    secs, rss = [], []
+    for rid, r in (l1.get("recipes") or {}).items():
+        if isinstance(r, dict) and r.get("seconds") is not None:
+            out["recipes"][rid] = {"seconds": r["seconds"], "peak_ram_mb": r.get("peak_rss_mb"), "tier": tiers.get(rid, "lite")}
+            if tiers.get(rid, "lite") == "lite":
+                secs.append(r["seconds"])
+                if r.get("peak_rss_mb"):
+                    rss.append(r["peak_rss_mb"])
+    out["cluster_recipes"] = [rid for rid, t in tiers.items() if t != "lite"]
+    if secs:
+        out["recipe_minutes"] = round(sum(secs) / 60, 1)
+        out["measured_on"] = l1.get("platform")
+    if rss:
+        out["peak_ram_gb"] = round(max(rss) / 1024, 1)
+    ut = [r for r in ((record(pack, "usertest") or {}).get("runs") or [])
+          if r.get("pass") and r.get("seconds") and r.get("version") == pack.version]
+    if ut:
+        m = sorted(r["seconds"] for r in ut)
+        out["agent_minutes"] = [round(m[0] / 60), round(m[-1] / 60)]
+    out["disk_bytes"] = out["data_bytes"] + (out["outputs_bytes"] or 0) + out["env_bytes"]
+    return out

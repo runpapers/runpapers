@@ -12,7 +12,7 @@ from . import DEFAULT_BASE, __version__, ids
 from .registry import sha256_file
 from .requests_log import issue_url as requests_issue_url
 from .requests_log import summary as requests_summary
-from .verify import now, status
+from .verify import now, status, resources
 from .workspace import shipped
 
 BADGES = [
@@ -88,8 +88,8 @@ paper's original repository and runs it on your own computer.
    gene, a cell type, a brain region, a DOI or a PMID. Click the paper.
 2. **Read the badges** at the top of its page. They say how thoroughly the pack was checked ([what they mean](#badges)).
    The page also lists the panels that can be reproduced and example questions.
-3. **Copy the prompt.** Choose your agent's tab, then press **Copy** on the dark box. Replace
-   `<write your question here>` with your question, or leave it and ask later.
+3. **Copy the prompt.** Choose your agent's tab, then press **Copy**. There is nothing to fill in: your agent asks
+   you what it needs (where to run it, and what you want to know) in one message.
 4. **Start your agent in an empty folder and paste the prompt.** For Claude Code: open a terminal, run
    `mkdir my-paper`, then `cd my-paper`, then `claude`, and paste. For Codex, the same with `codex`. For Antigravity,
    open an empty folder and paste into the agent panel. Approve the commands your agent asks to run.
@@ -320,13 +320,52 @@ def copy_prompt(card, base):
             f"  \"{card['title']}\" ({card.get('first_author', '').split()[-1] if card.get('first_author') else ''} et al., "
             f"{card.get('journal', '')} {card.get('year', '')}), DOI {doi}" + (f", PMID {card['pmid']}" if card.get("pmid") else "") + "\n"
             f"Setup for you, the AI agent: fetch {base}/{ids.page_path(doi)}/AGENT.md (or `curl -sL` it) and follow it exactly.\n"
-            f"Then:\n"
-            f"1) Reproduce {panel} and show it to me, with a table of the paper's numbers next to yours.\n"
-            f"2) Answer my question using the paper's data: <write your question here>")
+            f"Ask me everything you need in one message first. Then reproduce {panel} and show it to me with a table of\n"
+            f"the paper's numbers next to yours, and then help me explore the data with my own questions.")
 
 
 def _data_terms(card):
     return sorted({d.get("license", "").strip() for d in card.get("data", []) if d.get("license", "").strip()})
+
+
+def cost_text(res):
+    """One plain sentence about disk, time and memory, from our own measured runs."""
+    if not res:
+        return ""
+    parts = [f"About {fmt_bytes(res['disk_bytes'])} of disk ({fmt_bytes(res['data_bytes'])} of data from the original source, "
+             f"the rest Python packages and results)"]
+    if res.get("agent_minutes"):
+        a, b = res["agent_minutes"]
+        parts.append(f"in our tests a fresh AI agent took {a} to {b} minutes from the pasted prompt to the reproduced figure"
+                     if a != b else f"in our tests a fresh AI agent took about {a} minutes from the pasted prompt to the reproduced figure")
+    if res.get("recipe_minutes") is not None:
+        parts.append(f"the recipes themselves run in about {max(1, round(res['recipe_minutes']))} minute"
+                     f"{'s' if round(res['recipe_minutes']) > 1 else ''}" + (f" and need about {res['peak_ram_gb']} GB of memory" if res.get("peak_ram_gb") else ""))
+    text = "; ".join(parts) + "."
+    if res.get("cluster_recipes"):
+        text += (f" Recipes {', '.join(res['cluster_recipes'])} need a computing cluster"
+                 + (f" (about {fmt_bytes(res['full_data_bytes'])} of data)" if res.get("full_data_bytes") else "") + ".")
+    else:
+        text += " Everything runs on a laptop."
+    return text
+
+
+def ask_once_md(card, install):
+    """The single question an agent asks before starting (2026-11-25, the PI: one round, cluster preferred)."""
+    res = card.get("resources") or {}
+    return f"""0. **Ask the user once, then work without further questions.** Unless the user's prompt already says where to run,
+   send ONE message, then wait for the answer:
+   - What it costs: {cost_text(res)}
+   - Where to run: on this computer (in the current folder), or on their HPC cluster if they have one, which is
+     preferred (ask for how they connect, for example the `ssh` name).
+   - Which folder to use (default: the current folder here, or a new folder on the cluster).
+   - What they want to explore with this paper's data (their question; they can also say "just reproduce it first").
+   Make the message short, numbered and easy to answer in one reply; offer the recommended answer for each item.
+   After the answer, don't ask again unless something fails or they asked to be consulted.
+   On a cluster: check `ssh <name> true` works without a password prompt, then run every step below there
+   (`ssh <name> 'cd <folder> && ...'`); use an interactive or batch job (e.g. `srun`/`sbatch`) for any recipe that
+   needs a cluster or more memory than a login node allows; copy the figure and tables back to show them.
+"""
 
 
 def agent_md(card, base, install):
@@ -339,6 +378,7 @@ def agent_md(card, base, install):
 You are helping a scientist use the verified RunPapers pack for this paper (DOI {doi}{pmid_txt}, version {card['version']}).
 Follow these steps in order. Ask the user before anything not listed here.
 
+{ask_once_md(card, install)}
 1. Check that `uv` is installed: `uv --version`. If it is missing, install it with the official installer:
    - macOS / Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
    - Windows (PowerShell): `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
@@ -370,6 +410,7 @@ def paper_md(card, base, install="uvx runpapers"):
         f"RunPapers pack v{card['version']} · stage: {card['stage']} · badges: "
         + (", ".join(k for k, v in card["badges"].items() if v == "pass") or "none yet")
         + (f" · archived: https://doi.org/{card['release']['doi']}" if (card.get("release") or {}).get("doi") else ""), "",
+        f"Size and time: {cost_text(card.get('resources'))}", "",
         card.get("summary", ""), "",
         "## Use it from your AI agent", "",
         "```", copy_prompt(card, base), "```", "",
@@ -449,7 +490,7 @@ def paper_html(card, base, install, figs):
 <h2>Use it from your own AI agent</h2>
 <div class="tabs">{tabs}</div><p class="small mut" id="how">{e(next(iter(HOW.values())))}</p>
 <div class="prompt"><button class="copy" onclick="cp('{pid}',this)">Copy</button><span id="{pid}">{e(copy_prompt(card, base))}</span></div>
-<p class="small mut">Your agent downloads about {e(fmt_bytes(card['lite_bytes']))} from the paper's original data repositories and runs everything locally on your computer. Nothing is sent to RunPapers. Or from a terminal: <code>{e(install)} get {e(doi)}{e(src_arg)}</code></p>
+<p class="small mut">{e(cost_text(card.get('resources')))} Your agent asks you once whether to run it on this computer or on your computing cluster (preferred when you have one). Data come from the paper's original repositories; nothing is sent to RunPapers. Or from a terminal: <code>{e(install)} get {e(doi)}{e(src_arg)}</code></p>
 <h2>Reproducible panels</h2><table><tr><th>Recipe</th><th>Panel</th><th>What it shows</th><th>Tier</th></tr>{rec_rows}</table>
 {('<h2>Reproduced figures</h2><div class="figs">' + fig_html + '</div>') if fig_items else ''}
 {('<h2>Example questions</h2><ul>' + qs + '</ul>') if qs else ''}
@@ -600,7 +641,8 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
     cards = []
     for pk in reg.packs():
         st = status(pk)
-        card = {**pk.card(), **{k: st[k] for k in ("stage", "badges")}, "data": pk.data, "release": published(pk)}
+        card = {**pk.card(), **{k: st[k] for k in ("stage", "badges")}, "data": pk.data, "release": published(pk),
+                "resources": resources(pk, l1_dir)}
         cards.append(card)
         pdir = out / ids.page_path(pk.doi)
         (pdir / "pack").mkdir(parents=True)
@@ -680,7 +722,7 @@ and scientific guardrails that keep new analyses honest. Every pack is verified 
     (out / "about.md").write_text(about_md(install))
     index = {"generated": now(), "rp_version": __version__, "base_url": base, "install": install,
              "papers": [{k: c[k] for k in ("doi", "pmid", "pmcid", "preprint_doi", "title", "first_author", "senior_author", "journal",
-                                            "year", "slug", "collections", "version", "summary", "profile", "recipes", "lite_bytes",
+                                            "year", "slug", "collections", "version", "summary", "profile", "recipes", "lite_bytes", "resources",
                                             "questions", "stage", "badges")}
                         | {"data_terms": _data_terms(c), "release": c.get("release"), "url": f"{base}/{ids.page_path(c['doi'])}/",
                            "agent": f"{base}/{ids.page_path(c['doi'])}/AGENT.md"}
