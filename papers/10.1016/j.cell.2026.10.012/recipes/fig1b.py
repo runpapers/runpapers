@@ -8,10 +8,11 @@ Reproduces the three quantitative columns of published Figure 1B in the paper's 
 (Table S2, from STRd D1 Matrix SPN to Endo):
   1. log10 total nuclei sampled per Group (red heatmap, 2 to 5.5)
   2. Relative proportion of nuclei per species within each Group (gray heatmap, 0 to 1)
-  3. Dissected-region distribution per Group (stacked barplot using value_sets.csv colors; excludes
-     marmoset tiled slabs labeled 'Br', which carry no regional dissection code)
+  3. Dissected-region distribution per Group (stacked barplot using the ABC release palette from
+     value_sets.csv, where VTA is teal rather than the paper's brown SN-VTA; excludes marmoset tiled
+     slabs labeled 'Br', which carry no regional dissection code)
 The taxonomic dendrogram tree on the left of published Figure 1B is omitted because branch lengths
-are not included in the public metadata tables; Neighborhood/Class groupings are annotated instead."""
+are not included in the public metadata tables; data-derived Class/Neighborhood brackets are shown."""
 import matplotlib
 
 matplotlib.use("Agg")
@@ -20,7 +21,15 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 
-from bg_atlas import SPECIES, group_order, load_cells, out_dir, region_palette, write_metrics
+from bg_atlas import (
+    SPECIES,
+    group_order,
+    group_taxonomy_map,
+    load_cells,
+    out_dir,
+    region_palette,
+    write_metrics,
+)
 
 cells, donors = load_cells()
 m = {"n_nuclei_total": int(len(cells)), "n_groups_total": int(cells["Group"].nunique()),
@@ -58,21 +67,25 @@ reg_counts = (dissected.groupby(["Group", "region_of_interest_label"], observed=
 reg_prop = reg_counts.div(reg_counts.sum(axis=1).replace(0, np.nan), axis=0).fillna(0.0)
 reg_prop.to_csv(out_dir() / "group_region_proportions.csv")
 
-# Major published row blocks for clean left-margin taxonomic brackets (matching Figure 1B order)
-BLOCKS = [
-    (0, 10, "CN LGE\nGABA"),
-    (11, 24, "F M / Cx\nGABA"),
-    (25, 37, "CN CGE /\nMGE GABA"),
-    (38, 43, "Glut /\nDopa"),
-    (44, 60, "Nonneuron"),
+# Derive left-margin Class / Neighborhood brackets directly from the release taxonomy (no hardcoded row indices)
+gtax = group_taxonomy_map()
+row_labels = [
+    "Nonneuron" if gtax.loc[g, "Neighborhood"] == "Nonneuron" else str(gtax.loc[g, "Class"])
+    for g in order
 ]
+blocks = []
+start = 0
+for i in range(1, len(row_labels) + 1):
+    if i == len(row_labels) or row_labels[i] != row_labels[start]:
+        blocks.append((start, i - 1, row_labels[start]))
+        start = i
 
 n = len(order)
-fig = plt.figure(figsize=(7.6, 14.2))
+fig = plt.figure(figsize=(8.0, 14.4))
 gs = gridspec.GridSpec(
     2, 5,
     height_ratios=[1.0, 0.095],
-    width_ratios=[0.75, 0.42, 1.15, 2.05, 3.15],
+    width_ratios=[1.05, 0.42, 1.15, 2.05, 3.15],
     wspace=0.05, hspace=0.05,
     left=0.02, right=0.98, top=0.895, bottom=0.03,
 )
@@ -83,15 +96,18 @@ ax_sp = fig.add_subplot(gs[0, 2])
 ax_reg = fig.add_subplot(gs[0, 3])
 ax_lbl = fig.add_subplot(gs[0, 4])
 
-# Left taxonomic block brackets (dendrogram branch lengths are not in metadata)
+# Left taxonomic brackets derived directly from Class (and Nonneuron Neighborhood)
 ax_blk.set_xlim(0, 1)
 ax_blk.set_ylim(n - 0.5, -0.5)
 ax_blk.axis("off")
-for start, end, label in BLOCKS:
-    ax_blk.plot([0.86, 0.94, 0.94, 0.86], [start - 0.25, start - 0.25, end + 0.25, end + 0.25],
-                color="#444444", lw=0.9)
-    ax_blk.text(0.80, (start + end) / 2.0, label, ha="right", va="center",
-                fontsize=7.2, fontweight="bold", color="#222222")
+for s_idx, e_idx, label in blocks:
+    if s_idx == e_idx:
+        ax_blk.plot([0.86, 0.95], [s_idx, s_idx], color="#444444", lw=0.9)
+    else:
+        ax_blk.plot([0.86, 0.94, 0.94, 0.86], [s_idx - 0.25, s_idx - 0.25, e_idx + 0.25, e_idx + 0.25],
+                    color="#444444", lw=0.9)
+    ax_blk.text(0.81, (s_idx + e_idx) / 2.0, label, ha="right", va="center",
+                fontsize=6.5, fontweight="bold", color="#222222")
 
 # Column 1: log10 total nuclei heatmap (red, 2 to 5.5)
 im_log = ax_log.imshow(log10_tot, aspect="auto", cmap="Reds", vmin=2.0, vmax=5.5, interpolation="nearest")
@@ -121,7 +137,7 @@ for sp_name in ("top", "right", "bottom", "left"):
     ax_sp.spines[sp_name].set_color("#888888")
     ax_sp.spines[sp_name].set_linewidth(0.5)
 
-# Column 3: dissected-region stacked barplot
+# Column 3: dissected-region stacked barplot (release palette from value_sets.csv)
 y_pos = np.arange(n)
 left = np.zeros(n)
 present_regions = []
@@ -170,8 +186,8 @@ ax_leg_reg.axis("off")
 handles = [mpatches.Patch(facecolor=reg_colors[r], edgecolor="#666666", linewidth=0.3, label=r) for r in present_regions]
 ax_leg_reg.legend(handles=handles, ncol=7, loc="center left", frameon=False,
                   fontsize=6.4, handlelength=0.9, handleheight=0.8, columnspacing=0.7, handletextpad=0.35,
-                  title="Dissected regions (Human + Macaque; marmoset slabs labeled 'Br' excluded)",
-                  title_fontsize=6.8)
+                  title="Dissected regions (release palette from value_sets.csv; marmoset 'Br' excluded)",
+                  title_fontsize=6.6)
 
 fig.suptitle(
     f"Figure 1B: Basal ganglia consensus taxonomy ({m['n_nuclei_total']:,} nuclei, {m['n_groups_total']} Groups, {m['n_donors_total']} donors)",
@@ -179,8 +195,8 @@ fig.suptitle(
 )
 fig.text(
     0.5, 0.962,
-    "Groups in published Figure 1B / Table S2 order (dendrogram branch lengths not in public metadata; omitted).",
-    ha="center", va="top", fontsize=7.4, color="#444444",
+    "Groups in published Figure 1B / Table S2 order; left brackets derived from release Class labels (dendrogram omitted).",
+    ha="center", va="top", fontsize=7.3, color="#444444",
 )
 
 fig.savefig(out_dir() / "fig1b.png", dpi=180)

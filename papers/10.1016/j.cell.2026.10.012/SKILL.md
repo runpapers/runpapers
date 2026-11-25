@@ -1,131 +1,99 @@
 ---
 name: runpapers-10-1016-j-cell-2026-10-012
-description: Reproduce figures from and answer new questions with the data of "Cross-species multiomic atlas of the primate basal ganglia" (Johansen et al., Cell 2026, DOI 10.1016/j.cell.2026.10.012). Use when the user asks about basal ganglia cell types, spiny projection neurons (SPNs), the STR D2 SMYD2-HTR7 SPN, cell-type composition by species, donor or region in this atlas.
+description: Reproduce figures from and answer new questions with the data of "Cross-species multiomic atlas of the primate basal ganglia" (Johansen et al., Cell 2026, DOI 10.1016/j.cell.2026.10.012). Use when the user asks about basal ganglia cell types, spiny projection neurons (SPNs), STR D2 SMYD2-HTR7 SPN, cross-species gene conservation, primate-mouse homology, basal ganglia spatial transcriptomics, macaque Patch-seq electrophysiology, snATAC-seq enhancers, DeepHumanBG motif grammar, or AD/SCZ disease genetics in this atlas.
 ---
 
 # Cross-species multiomic atlas of the primate basal ganglia (Johansen et al., Cell 2026)
 
 ## What this paper did and found
-The authors profiled 1,896,133 single nuclei (~1.9 million, referred to as "1.8 million" in the paper's text) from the
-basal ganglia (caudate, putamen, nucleus accumbens, globus pallidus, subthalamic nucleus, substantia nigra and
-neighbours) of 10 human, 8 macaque and 4 marmoset donors with 10x Multiome (RNA and chromatin from the same nucleus),
-and built one consensus cell-type taxonomy across the three primates: 4 Neighborhoods, 12 Classes, 36 Subclasses and
-61 Groups. They compared it with mouse, mapped it in tissue with spatial transcriptomics, linked cell types to
-brain-disease genetics, and described a rare D2 spiny projection neuron type, **STR D2 SMYD2-HTR7 SPN** (called
-"StrioMat hybrid" in the preprint), that sits between striosome and matrix and makes up 3.49% of classical D2 SPNs
-(written as "3.4%" in the paper's text).
+Johansen et al. profiled 1,896,133 single nuclei (~1.9 million, referred to as "1.8 million" in the main text) from the basal ganglia (caudate, putamen, nucleus accumbens, globus pallidus, subthalamic nucleus, substantia nigra, and neighboring structures) of 10 human, 8 macaque, and 4 marmoset donors using 10x Multiome (paired snRNA-seq and snATAC-seq), establishing one consensus primate taxonomy of 4 Neighborhoods, 12 Classes, 36 Subclasses, and 61 Groups (1,435 species-specific clusters). They combined this multiomic atlas with:
 
-This pack covers what can be done on a laptop from the public cell metadata: **who the nuclei are** (Group, Class,
-species, donor, dissected region). It reproduces the atlas tallies and Group composition (Figure 1B, minus the
-dendrogram branch lengths) and the D2 SPN composition per donor (Figure 2F). Gene expression and chromatin are not in
-this version (they are 15-30 GB matrices; a "full" tier is planned).
+- **Cross-species transcriptomics and primate-mouse homology:** Expressolog AUROC and Tau specificity across 16,630 1:1 primate orthologs show that transcription factors (TFs) are conserved Group markers that organize classical spiny projection neurons (SPNs) by D1/D2 pathway identity rather than dorsal/ventral anatomy, while dorsal-ventral identity is more evolutionarily conserved than pathway or striosome-matrix axes. Mapping the 44 neuronal primate Groups onto the Mouse Whole-Brain (WMB) atlas confirms broad homology alongside primate-expanded peri-striatal olfactory bulb-like populations (`OB Dopa-GABA` and `OB FRMD7 GABA`).
+- **Spatial transcriptomics and Patch-seq:** MERSCOPE (human, macaque), Xenium (marmoset), and MERFISH (mouse) resolve striosome-matrix architecture and peri-striatal OB-like distributions, while macaque Patch-seq links molecular identity to intrinsic physiology, characterizing the rare **STR D2 SMYD2-HTR7 SPN** (called "StrioMat hybrid" in the preprint; 3.49% of classical D2 SPNs, written as "3.4%" in the main text) as a low-rheobase, low-3 dB-cutoff SPN distributed neutrally across striosome and matrix compartments.
+- **Chromatin evolution, deep sequence modeling, and disease genetics:** Primate snATAC-seq identifies 1.36M (human), 1.37M (macaque), and 1.22M (marmoset) accessible cCREs, including human BG cCREs overlapping Human Ancestor Quickly Evolved Regions (HAQERs). The pretrained `DeepHumanBG` CREsted sequence-to-accessibility CNN captures cell-type TF motif grammars (e.g., `LHX8`/`GBX2`/`ZIC3` in cholinergic interneurons, `MEIS2`/`EGR1`/`RARB` in `AiE0779m`), predicts activity of striatal AAV enhancers from Hunker et al. (2025), and scores non-coding schizophrenia (SCZ) risk variants identified via MAGMA enrichment across 453 human clusters—highlighting `rs1883123` (`CACNA1I`, `chr22:39,600,877 C>T`), which disrupts an `ATGCTAAT` motif selectively in `GPe MEIS2-SOX6 GABA` neurons while Alzheimer's disease (AD) GWAS enrichment localizes exclusively to non-neuronal immune/glial clusters.
+
+This unified pack reproduces **31 main-figure panels** (Figures 1A–E, 2A–G, 3A–E, 4D–G, 5B–E, 6A–B, 6D, 6F, and 7B–E) strictly from open public datasets.
 
 ## Data
-All files are in `data/` (the folder `$RP_DATA_DIR`), downloaded unchanged from the Allen Brain Cell Atlas public
-bucket (release 20261130, dataset version 20261031). `recipes/bg_atlas.py` has `load_cells()`, which joins them into
-one table with a row per nucleus; use it rather than re-joining by hand.
+All 62 open data files are downloaded unchanged into `$RP_DATA_DIR` on demand when running a recipe (`rp run <recipe>` fetches only that recipe's declared `data` files). Total size across all 62 files is ~99.4 GB, but individual recipes range from 0.7 MB to 48.7 GB. See `references/data-and-modalities.md` for complete schemas, join keys, and per-file sizes.
 
-- `cell_metadata.csv` (1,896,133 rows, one per nucleus): `cell_label` (unique id), `donor_label`, `library_label`,
-  `doublet_score` (0-1, higher = more likely two nuclei), `umi_count` (RNA molecules detected). **Important caveat:**
-  `doublet_score` and `umi_count` are complete for human (1,034,819 nuclei) and macaque (548,281 nuclei) but are
-  **missing (`NaN`) for all 313,033 marmoset nuclei** in this public ABC Atlas release, even though Table S1 reports
-  species-level marmoset means.
-- `cell_to_cluster_membership.csv`: `cell_label` -> `cluster_alias` (text such as `Human-451`; clusters are species-specific).
-- `cluster_to_cluster_annotation_membership.csv`: `cluster_alias` -> taxonomy term at each level
-  (`cluster_annotation_term_set_name` is Neighborhood / Class / Subclass / Group; the term is `cluster_annotation_term_name`).
-- `cluster_annotation_term.csv`: every taxonomy term with `term_order` (the ABC release's internal ordering, not the
-  published Figure 1B order; `recipes/bg_atlas.py` `group_order()` provides the published Figure 1B / Table S2 order)
-  and `color_hex_triplet`.
-- `donor.csv` (22 rows): `donor_label`, `species_genus` (Human / Macaque / Marmoset), `species_scientific_name`,
-  `donor_sex`, `donor_age_value`. Note two naming quirks: (1) Table S4 lists the four marmoset donors by colony name
-  (`cjCroissant`, `cjJellybean`, `cjNutmeg`, `cjRambo`) whereas `donor.csv` uses `CJ23.56.002`, `CJ23.56.003`,
-  `CJ24.56.001`, and `CJ24.56.004` with no public mapping between the two; and (2) `species_genus == "Macaque"`
-  combines two species—6 *Macaca mulatta* and 2 *Macaca nemestrina* (distinguished in `species_scientific_name`).
-- `library.csv`: `library_label` -> `region_of_interest_label` (dissected region, e.g. `CaB` caudate body, `PuR`
-  rostral putamen, `NAC` nucleus accumbens, `GPe`, `STH` subthalamic nucleus, `SN` substantia nigra; full names in
-  `region_of_interest_name`), plus `enrichment_population` and slab ids. Region codes are hierarchical and overlapping
-  (`Ca`/`CaB`/`CaH`/`CaT`, `Pu`/`PuR`/`PuC`/`PuPV`, `NAC`/`NACc`/`NACs`, `GP`/`GPe`/`GPi`), and all marmoset tiled
-  dissections are labeled `Br` without regional sub-labels.
-- `cluster.csv`, `cluster_annotation_term_set.csv`, `value_sets.csv`: cluster list, taxonomy levels, vocabularies and
-  published region/species colors.
+- **Primate 10x Multiome core metadata (560 MB, 9 CSVs):** `cell_metadata.csv` (1,896,133 nuclei), `donor.csv` (22 donors), `library.csv`, `value_sets.csv`, `cell_to_cluster_membership.csv`, `cluster.csv`, `cluster_annotation_term.csv`, `cluster_annotation_term_set.csv`, `cluster_to_cluster_annotation_membership.csv` (ABC Atlas release `20261130`, version `20261031`, taxonomy `HMBA-BG-taxonomy-CCN20250428`). Use `recipes/bg_atlas.py` `load_cells()` rather than re-joining by hand.
+- **Primate snRNA-seq matrices & TF catalog (46.9 GB):** `HMBA-10xMultiome-BG-Cross-Species-log2.h5ad` (15.8 GB, 1,896,133 × 16,630 orthologs), `HMBA-10xMultiome-BG-Cross-Species-raw.h5ad` (15.4 GB), `HMBA-10xMultiome-BG-Human-log2.h5ad` (15.6 GB, full human gene set for 453-cluster MAGMA), and `lambert_TF_names_v_1.01.txt` (1,639 human TFs). Always open `.h5ad` files with `anndata.read_h5ad(..., backed="r")` and stream contiguous row chunks.
+- **Macaque Patch-seq (0.52 MB, 5 prefixed CSVs):** `macaque_patchseq_{cell_metadata,donor,mmc_results,cross_sweep_long_square_features,chrip_features}.csv` (note upstream spelling `chrip_features.csv`). Join on `cell_label`, and map `Group_label` (`CS20250428_GROUP_xxxx`) via `bg_atlas.group_id_to_name()` because `mmc_results.csv` still shows preprint Group strings.
+- **Spatial transcriptomics across 4 species (7.0 GB, 13 prefixed CSVs) & Mouse WMB RNA (33.8 GB, 6 files):** Human MERSCOPE, Macaque MERSCOPE, Marmoset Xenium (`HMBA-BG-*-20261101`, joined by `cell_label`), Mouse MERFISH (`MERFISH-C57BL6J-638850`), and Mouse WMB-10Xv3 (`STR`, `PAL`, `MB`, `OLF` `.h5ad` + metadata). Use `recipes/bg_spatial.py` helpers.
+- **Primate snATAC-seq, `DeepHumanBG`, enhancers, genomes & GWAS (10.7 GB):** Human/macaque/marmoset `Group_by_peaks` and `consensus_peaks.bed`, Human Harmony UMAP (`52 MB`), 5 Human Group bigWigs (`0.81–1.67 GB` each), `haqer.hg38.bed` (1,581 HAQERs), `JASPAR2024` MEME motifs, UCSC `ncbiRefSeqCurated.txt.gz`, `allen_gta_v2_snapshot.zip` (all 48 Hunker et al. 2025 enhancers), `human_BG_20260204_finetune_epoch_12.keras` (`DeepHumanBG`), `hg38.fa.gz`, `mm10.fa.gz`, MAGMA v1.10 Linux binary + 1000G EUR reference + GRCh38/GRCh37 gene locations + Bellenguez et al. (2022) AD and PGC3 SCZ EUR summary statistics. Use `recipes/bg_epig.py` helpers.
 
-Shortcut: `rp run fig1b` also writes `out/fig1b/composition.csv`, the number of nuclei for every combination of
-species, donor, dissected region and taxonomy level (Neighborhood, Class, Subclass, Group, cluster). Most composition
-questions can be answered from this small table alone; use `load_cells(extra_cols=("doublet_score", "umi_count"))`
-only when you need per-nucleus QC values (human and macaque only).
-
-Joins: nucleus -> cluster by `cell_label`; cluster -> Group by `cluster_alias`; nucleus -> species by `donor_label`;
-nucleus -> region by `library_label`. In this release every nucleus belongs to the consensus taxonomy.
+Shortcut: `rp run fig1b` writes `out/fig1b/composition.csv` (nuclei counts by species, donor, dissected region, Neighborhood, Class, Subclass, Group, cluster), which answers most composition queries without loading the full 1.9M-row `cell_metadata.csv`.
 
 ## Recipes
-- `fig1b` (Figure 1B): atlas tallies and the three quantitative columns of published Figure 1B in Table S2 Group order
-  (log10 total nuclei heatmap, per-species proportion heatmap, and human+macaque dissected-region stacked barplot; the
-  dendrogram tree is omitted because branch lengths are not in the public metadata). `rp run fig1b`
-- `fig2f` (Figure 2F): per-donor shares of the four classical D2 SPN Groups; the STR D2 SMYD2-HTR7 SPN. `rp run fig2f`
+Run `rp needs 10.1016/j.cell.2026.10.012` to inspect exact per-recipe download sizes, RAM, GPU, and runtime requirements. Each recipe writes `out/<recipe>/` (`<recipe>.png`, CSV tables, `metrics.json`, `result.json`).
 
-Each run writes `out/<recipe>/`: the figure, `metrics.json`, tables (CSV), and `result.json`, which lists the
-paper's numbers next to ours with the source of each. Show the user the figure and the comparison.
+**Desktop-friendly recipes (CPU, 0.7 MB–1.4 GB data, 2–6 GB RAM, 1–5 min):**
+- `fig1a` (Figure 1A; 0.56 GB, 4 GB RAM): Dissection coverage dot plot across 19 Human/Macaque regions + Marmoset `Br`.
+- `fig1b` (Figure 1B; 0.56 GB, 4 GB RAM): Atlas tallies and 61-Group composition in Table S2 order (dendrogram omitted).
+- `fig2f` (Figure 2F; 0.56 GB, 4 GB RAM): Per-donor proportions of the four classical D2 SPN Groups across 21 donors.
+- `fig6f` (Figure 6F, Macaque; 0.72 MB, 2 GB RAM): Macaque Patch-seq rheobase (`pA`) and 3 dB cutoff (`Hz`) across 6 SPN Groups.
+- `fig4f` (Figure 4F; 0.59 GB, 4 GB RAM): Human snATAC-seq SPN Harmony UMAP and 9-SPN cCRE Jaccard UPGMA dendrogram.
+- `fig4g` (Figure 4G; 0.51 GB, 4 GB RAM): HAQER intersection with human BG cCREs (binary 60-Group cascade, coverage, Gini).
+- `fig7d` (Figure 7D; 0.85 GB, 4 GB RAM, requires `pyBigWig`): `CACNA1I` locus ATAC track in `GPe MEIS2-SOX6 GABA` highlighting `rs1883123`.
+- `fig4d` (Figure 4D, partial; 1.48 GB, 4 GB RAM): JASPAR2024 TF motif promoter fraction vs cell-type Gini specificity (447-mammal Cactus axis requires unbundled >1 TB HAL).
+- `fig4e` (Figure 4E; 1.55 GB, 6 GB RAM): 3-species cCRE counts, Group-specific heatmaps, and human 60×60 / 9×9 SPN Jaccard heatmaps.
+
+**Spatial & mouse homology recipes (CPU, 1.0–50.2 GB data, 8–32 GB RAM, 2–15 min):**
+- `fig1e` (Figure 1E, top row; 2.0 GB, 12 GB RAM): Macaque anterior striatal MERSCOPE map of 6 SPN Groups (wet-lab morphologies/traces excluded).
+- `fig3c` (Figure 3C; 1.0 GB, 8 GB RAM): Mouse MERFISH coronal comparison of the two homologous striatal D2 SPN supertypes.
+- `fig3e` (Figure 3E; 7.0 GB, 24 GB RAM): Four-species peri-striatal spatial localization of `OB Dopa-GABA` and `OB FRMD7 GABA` + mouse OB inset.
+- `fig6d` (Figure 6D, right; 2.0 GB, 12 GB RAM): Macaque MERSCOPE permutation-standardized striosome neighborhood enrichment z-scores (DAPI microscopy excluded).
+- `fig3a` (Figure 3A; 50.2 GB, 32 GB RAM): Primate vs mouse sampling depth, 44-Group homology heatmap, and 57-gene conserved marker dot-pie.
+- `fig3b` (Figure 3B; 50.2 GB, 32 GB RAM): Zoomed 7 classical SPN Groups × 14 mouse SPN supertypes homology heatmap.
+
+**Primate expression, bigWig, MAGMA & GPU deep-learning recipes (CPU 4–64 GB RAM or 1 GPU, 1.6–31.8 GB data):**
+- `fig1cd` (Figure 1C–D; 16.4 GB, 64 GB RAM, GPU): From-scratch cross-species Harmony integration and UMAP across 1.90M nuclei (scVI `X_umap` not in ABC `.h5ad`).
+- `fig2a`, `fig2b`, `fig2c`, `fig3d`, `fig6a` (16.4 GB, 24 GB RAM, CPU, ~5 min each): Expressolog examples (`ADORA2A`/`MCHR2`/`KCNIP1`/`OPRM1`), Expressolog AUROC vs Tau & conserved TF heatmap, SPN Dorsal/Ventral-to-D1/D2 dendrogram tanglegram, 13-gene OB marker pie-dot plot, and 28-gene `STR D2 SMYD2-HTR7 SPN` profile.
+- `fig2de` (Figure 2D–E; 16.4 GB, 48 GB RAM, GPU): Integrated SPN UMAP (`841,005` nuclei) and 30-gene conserved marker stacked violin plot.
+- `fig2g` (Figure 2G; 31.8 GB, 64 GB RAM, CPU): SPN evolutionary axes (`PyDESeq2` + LOWESS-residual `|log2FC|`, shot-noise-corrected `CNR1` correlation).
+- `fig6b` (Figure 6B, partial; 5.3 GB, 4 GB RAM, CPU, requires `pyBigWig`): `SMYD2` locus human ATAC bigWigs across 4 SPN Groups (companion mouse tracks excluded).
+- `fig7b` (Figure 7B, partial; 17.3 GB, 16 GB RAM, CPU, ~45 min): From-scratch MAGMA v1.10 AD (Bellenguez 2022) and SCZ (PGC3 EUR) enrichment across 453 human clusters (restricted 23andMe MDD/BD/Alcohol cohorts excluded).
+- `fig5b`, `fig5c`, `fig5d`, `fig5e`, `fig7c`, `fig7e` (`DeepHumanBG`, 1.6–18.0 GB data, 16–24 GB RAM, 1 GPU, 5–15 min): Latent UMAP + 5 IG tracks (`fig5b`), 59×45 TF grammar × expression clustermap (`fig5c`, uses `rna-cross-species-log2`), 48 Hunker AAV enhancer predictions (`fig5d`), `AiE0779m` D1-SPN IG logo (`fig5e`, 447-mammal Cactus scatter requires unbundled HAL), 8 SCZ SNPs × 18 MAGMA Groups (`fig7c`), and `rs1883123` `ATGCTAAT` motif disruption IG tracks (`fig7e`).
 
 ## Guardrails
-- **Donors, not nuclei, are the replicates.** With 10 / 8 / 4 donors (and 6 *M. mulatta* + 2 *M. nemestrina* combined
-  under `"Macaque"`), say so whenever you compare species or regions, and show per-donor values (as Figure 2F does)
-  rather than only pooled percentages. Do not treat Table S4's marmoset colony names (`cjCroissant`, `cjJellybean`,
-  `cjNutmeg`, `cjRambo`) as missing from `donor.csv`—the public release simply uses `CJ23.56.002`–`CJ24.56.004`
-  without a published crosswalk.
-- **Composition depends on dissection, and slab labels are not exact cytoarchitectonic boundaries.** Donors were
-  sampled from different regions, and `region_of_interest_label` mixes coarse and fine hierarchical codes
-  (`Ca`/`CaB`/`CaH`/`CaT`, `Pu`/`PuR`/`PuC`/`PuPV`, `NAC`/`NACc`/`NACs`, `GP`/`GPe`/`GPi`; all marmoset slabs are
-  `Br`). Because dissections are physical slabs, nuclei of a striatal cell type appearing in a `GPe` library reflect
-  adjacent striatum caught in the slab, not pallidal SPNs. Compare within matching regions when you can. Example:
-  human donor H19.30.004 was dissected from the subthalamic nucleus only and has a single D2 SPN nucleus (the dot at
-  1.0 in Figure 2F); macaque donor QM21.26.001 has no D2 SPNs at all.
-- **Names changed between preprint and paper.** "StrioMat hybrid" (preprint) = STR D2 SMYD2-HTR7 SPN (paper);
-  "hybrid" SPNs were renamed "eccentric" (eSPN). Use the paper's names and mention the old one if the user does.
-- **Known discrepancies and text rounding.**
-  - Total nuclei: the released atlas and Table S1 contain 1,896,133 nuclei (~1.9 million), whereas the main text
-    writes "1.8 million"; do not "correct" the data count down or the text quote up.
-  - SMYD2-HTR7 share of classical D2 SPNs: pooled data give 3.49%, which main text p.7 truncates to "3.4%".
-  - SMYD2-HTR7 share of all SPNs: main text p.7 says "1% of all SPNs", whereas Table S9's cell-level sheet totals
-    848,201 SPNs including `OT ICj Granule` (13,483 / 848,201 = 1.59%) and the 9 classical + eccentric SPN Groups
-    total 841,005 nuclei (1.60%). Table S9's donor-level means are 1.49% (human), 1.66% (macaque), and 1.03%
-    (marmoset)—making the marmoset donor mean a plausible source of the text's "1%". Report both if asked; do not
-    silently pick one.
-- **Doublets (human and macaque only — missing in marmoset).** Rare Groups are the most sensitive to doublet
-  filtering, but `doublet_score` and `umi_count` are `NaN` for every marmoset nucleus in this public release. Be
-  careful of the `NaN` filter trap: `doublet_score < 0.2` silently drops all 313,033 marmoset nuclei, whereas
-  `~(doublet_score >= 0.2)` keeps all marmoset nuclei unfiltered. Therefore, run doublet-sensitivity re-checks
-  (`doublet_score < 0.2` among non-null nuclei) **only in human and macaque**, and explicitly tell the user that
-  marmoset cannot be doublet-filtered from this release. For example, excluding `doublet_score >= 0.2` drops the
-  human `STR D2 SMYD2-HTR7 SPN` share of classical D2 SPNs from 3.67% to 2.97% (23% of its human nuclei have
-  `doublet_score >= 0.2`), while macaque changes slightly from 3.69% to 3.59%.
-- **Terms of use.** The data come from the Allen Brain Cell Atlas under the Allen Institute Terms of Use:
-  noncommercial research use, and anything you publish must cite the paper (DOI 10.1016/j.cell.2026.10.012) and the
-  Allen Brain Cell Atlas following the Allen Institute Citation Policy. Tell the user this when they plan to publish
-  or to use the data commercially.
-- This pack has no expression or chromatin data. Don't answer gene-expression questions from memory or from the
-  Group names; say the full tier is needed.
+- **Donors, not nuclei, are the replicates.** With 10 human, 8 macaque (6 *M. mulatta* + 2 *M. nemestrina* combined under `"Macaque"` in `species_genus`), and 4 marmoset donors, report per-donor variation alongside pooled counts. Do not treat Table S4's marmoset colony names (`cjCroissant`, `cjJellybean`, `cjNutmeg`, `cjRambo`) as missing from `donor.csv`—the public release uses `CJ23.56.002`–`CJ24.56.004` without a published crosswalk.
+- **Dissection slabs and hierarchical region codes.** `region_of_interest_label` mixes coarse and fine codes (`Ca`/`CaB`/`CaH`/`CaT`, `Pu`/`PuR`/`PuC`/`PuPV`, `NAC`/`NACc`/`NACs`, `GP`/`GPe`/`GPi`; all marmoset slabs are `Br`; `GPeR`/`GPeC` are pooled as `GPe` and `SN-VTA` is labeled `VTA` in the 20261031 release). Physical slabs catch adjacent tissue (e.g., striatal SPNs in `GPe` libraries reflect neighboring striatum, not pallidal SPNs; human donor `H19.30.004` was dissected from `STH` only; macaque `QM21.26.001` has zero D2 SPNs).
+- **Missing marmoset QC metrics (`NaN` filter trap).** `doublet_score` and `umi_count` are complete in human and macaque but **`NaN` for all 313,033 marmoset nuclei** in this public release. Never write `doublet_score < 0.2` across all species (it silently drops every marmoset nucleus); run doublet checks only in human and macaque and state explicitly that marmoset QC metrics are unavailable.
+- **Preprint vs Cell 2026 nomenclature.** "StrioMat hybrid" (preprint) = `STR D2 SMYD2-HTR7 SPN`; "hybrid" SPN = `STR D1D2 eSPN` (eccentric SPN). Several public files (`macaque_patchseq_mmc_results.csv`, ATAC Harmony UMAP, ATAC column headers) retain preprint strings or underscores—always map via `CS20250428_GROUP_xxxx` (`bg_atlas.group_id_to_name()`) or `bg_epig.canon_group()`.
+- **Documented paper & release discrepancies (never "fix" silently; see `references/data-and-modalities.md` for details):**
+  - *Atlas tallies & rounding:* Released data contain 1,896,133 nuclei (~1.9M, written as "1.8 million"); `STR D2 SMYD2-HTR7 SPN` is 3.49% of classical D2 SPNs (truncated to "3.4%") and 1.59%–1.60% of all SPNs pooled (written as "1%", matching the marmoset donor mean 1.03%).
+  - *Release palette (`value_sets.csv`):* `VTA` is teal (`#00bfa0`) in the release palette vs brown `SN-VTA` in published Figures 1A–B; describe it as the release palette.
+  - *Figure 2B (`11,432` vs `16,620` genes):* Plotting filters strictly to `xspecies_min > 0` (minimum Tau across all three primates) and uses the Lambert et al. (2018) 1,639-TF catalog.
+  - *Figure 2G (`memento` sensitivity & DEG count discrepancy):* Text/legend/Table S10 differ on DEG thresholds (`656`/`459` vs `495`/`738`), and the Dorsal–Ventral conservation result requires shot-noise-corrected correlation on raw UMIs (naive single-cell Pearson correlation with `CNR1` reverses the conclusion).
+  - *Figure 3B & 6D methodology:* Linear ortholog correlation without scVI recovers the #1 mouse homolog for `STR D2 SMYD2-HTR7 SPN` while ranking canonical D2 supertypes slightly ahead of the secondary ventral homolog (`fig3b`); striosome enrichment permutation nulls (`fig6d`) must restrict to striatal SPNs (including white-matter oligodendrocytes introduces a strong gray-matter colocalization bias).
+  - *`DeepHumanBG` 59-channel mapping & Figure 7C sign inversion:* `SN GATA3-PVALB GABA` (7 peaks) was omitted from the 59-head model—always calibrate channels via `bg_epig.calibrate_deephumanbg_channels()`. Author code for Figure 7C/Table S20 computes `Ref - Alt` while labeling `Alt - Ref` and used unbundled checkpoint `99.keras` instead of public `finetune_epoch_12.keras`.
+  - *Figure 7B MAGMA AD counts & restricted GWAS:* Text mentions 13 Microglia + 1 T cell whereas Table S19 lists 22 AD clusters (`P < 1e-4`), and from-scratch MAGMA on the 20250630 `log2(CPM+1)` matrix recovers 15 Microglia + 3 BAM with 0 neuronal false positives. Published MDD/BD/Alcohol meta-analyses include restricted 23andMe cohorts and are excluded.
+  - *Patch-seq artifacts:* Screen `input_resistance` for rare negative IPFX values (cross-check `input_resistance_ss`); mouse Patch-seq data in Figure 6F belong to companion study Budzillo et al.
+- **Excluded panels:** Pure schematics (1A top artwork, 4A, 5A, 7A), >1 TB unbundled 447-way Zoonomia Cactus HAL panels (4B, 4C, and the Cactus axes of 4D/5E), companion wet-lab microscopy/morphologies/traces (1E bottom, 6D DAPI, 6E), and unbundled companion enhancer `AiE3022q` (6C).
+- **Terms of use:** ABC Atlas and Allen S3 datasets are governed by the Allen Institute Terms of Use (noncommercial research use; cite Johansen et al. `10.1016/j.cell.2026.10.012` and the Allen Brain Cell Atlas). External references carry CC-BY-4.0 or open academic licenses (see `pack.toml`).
 
 ## Answering new questions
-Well supported: how many nuclei of a Group, Class or Subclass per species, donor, sex or dissected region;
-compositional comparisons across species with per-donor variation; which dissected regions (human and macaque) a cell
-type comes from; per-nucleus quality metrics (`umi_count`, `doublet_score`) by Group **in human and macaque only**
-(not available in marmoset).
+Well supported directly from the pack data (load only the files needed for the question):
+- **Cell composition & QC:** Counts and per-donor proportions by species, sex, age, dissected region, and taxonomy level (`bg_atlas.load_cells()` or `out/fig1b/composition.csv`); per-nucleus `umi_count` and `doublet_score` in human and macaque only.
+- **Cross-species gene expression & primate-mouse homology:** Expression, specificity (`Tau`), Expressolog AUROC, differential expression, and primate-mouse ortholog comparisons across all 61 primate Groups and Mouse WMB supertypes (stream `.h5ad` backed).
+- **Spatial transcriptomics & Patch-seq:** Anatomical distribution, striosome-matrix neighborhood enrichment, and peri-striatal mapping across 4 species (`bg_spatial.py`); macaque Patch-seq electrophysiology (`rheobase_i`, `3db_freq_chirp`, `input_resistance_ss`) mapped to Cell 2026 Groups.
+- **Chromatin, regulatory grammar & variant scoring:** Human/macaque/marmoset cCRE accessibility across Groups, HAQER overlaps, ATAC locus tracks (`pyBigWig`), `DeepHumanBG` accessibility/motif predictions and in-silico mutagenesis for any hg38/mm10 sequence or variant (GPU recommended), and 453-cluster MAGMA GWAS enrichment.
 
-Not supported here: per-nucleus `doublet_score` or `umi_count` in marmoset (missing from this public release),
-expression of any gene, chromatin accessibility, spatial position, mouse comparisons, disease genetics. Say so and
-point to the paper's figures or tables instead.
+Not supported from this pack: marmoset `doublet_score`/`umi_count` (all `NaN`), 447-mammal Zoonomia Cactus HAL conservation scores, companion mouse Patch-seq/morphologies/voltage traces, `AiE3022q` enhancer sequences, or restricted 23andMe GWAS summary statistics.
 
-Worked example: "Which macaque dissected regions contribute `STRd D1 Striosome SPN` nuclei?"
+Worked example: "Which macaque dissected regions contribute `STRd D1 Striosome SPN` nuclei, and how many donors back each region?"
 
 ```python
 import sys; sys.path.insert(0, "recipes")
 from bg_atlas import load_cells
 cells, donors = load_cells()
 m = cells[(cells.species_genus == "Macaque") & (cells.Group == "STRd D1 Striosome SPN")]
-print(m.region_of_interest_label.value_counts())              # nuclei per region
-print(m.groupby("region_of_interest_label", observed=True).donor_label.nunique())  # donors per region
+summary = m.groupby("region_of_interest_label", observed=True).agg(
+    nuclei=("cell_label", "size"),
+    donors=("donor_label", "nunique"),
+).sort_values("nuclei", ascending=False)
+print(summary.head(10))
 ```
 
-Then report counts with the number of donors behind each, note hierarchical region codes (`Ca` vs `CaH`/`CaB`/`CaT`,
-`Pu` vs `PuR`/`PuC`/`PuPV`) and slab boundaries (striatal SPNs in `GPe` libraries reflect adjacent striatum in the
-dissection slab), and compare against each region's total SPN count before calling a region "enriched".
+Report both nucleus and donor counts per region, note hierarchical dissection codes (`Ca`/`CaH`/`CaB`/`CaT`, `Pu`/`PuR`/`PuC`/`PuPV`) and slab boundaries, and normalize against each region's total SPN count before claiming enrichment.

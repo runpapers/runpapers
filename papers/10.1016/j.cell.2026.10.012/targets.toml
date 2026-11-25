@@ -1,7 +1,73 @@
-# Numbers from the paper that each recipe must reproduce. Every expected value is the paper's, never ours.
-# required = false marks a known discrepancy inside the paper: it is checked and shown, but it can't fail the run.
+# Locked paper targets for Johansen et al., Cell 2026 (DOI: 10.1016/j.cell.2026.10.012).
+# Every expected value is taken strictly from the published paper (main text, figures, or supplementary tables).
+# required = false marks a documented paper-internal discrepancy or unbundled external asset.
 
-# ---- Figure 1B: atlas tallies (Table S1/S3/S4; main text p.5)
+# ---- fig1a (Figure 1A) ----
+[[target]]
+recipe = "fig1a"
+metric = "n_nuclei_total"
+expected = 1896133
+tolerance = { exact = true }
+source = "Table S1 (sum of Human, Macaque, Marmoset QC Group tables)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1a"
+metric = "n_donors_total"
+expected = 22
+tolerance = { exact = true }
+source = "Table S4 (10 human, 8 macaque, 4 marmoset donors)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1a"
+metric = "n_donors_human"
+expected = 10
+tolerance = { exact = true }
+source = "Table S4 (10 human donors)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1a"
+metric = "n_donors_macaque"
+expected = 8
+tolerance = { exact = true }
+source = "Table S4 (8 macaque donors: 6 M. mulatta + 2 M. nemestrina)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1a"
+metric = "n_donors_marmoset"
+expected = 4
+tolerance = { exact = true }
+source = "Table S4 (4 marmoset donors)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1a"
+metric = "max_donors_per_region_human"
+expected = 9
+tolerance = { exact = true }
+source = "Figure 1A donor colorbar upper bound ('9' donors; Table S4 / library dissections)"
+kind = "figure"
+
+[[target]]
+recipe = "fig1a"
+metric = "n_regions_marmoset"
+expected = 1
+tolerance = { exact = true }
+source = "Figure 1A ('Tiled Dissections' single slab label 'Br' for all marmoset libraries)"
+kind = "figure"
+
+[[target]]
+recipe = "fig1a"
+metric = "n_nuclei_marmoset_br"
+expected = 313033
+tolerance = { exact = true }
+source = "Table S1.Marmoset_qc_Group (all 313,033 marmoset nuclei carry slab label 'Br')"
+kind = "tally"
+
+# ---- fig1b (Figure 1B) ----
 [[target]]
 recipe = "fig1b"
 metric = "n_nuclei_total"
@@ -106,12 +172,330 @@ tolerance = { exact = true }
 source = "Table S3.Marmoset"
 kind = "tally"
 
-# ---- Figure 2F: D2 SPN Group proportions per donor (main text p.6-7; Figure 2F; Table S9)
+# ---- fig1cd (Figure 1C-D) ----
+[[target]]
+recipe = "fig1cd"
+metric = "n_nuclei_total"
+expected = 1896133
+tolerance = { exact = true }
+source = "Table S1; Figure 1C (all nuclei from human, macaque, and marmoset)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1cd"
+metric = "n_neighborhoods"
+expected = 4
+tolerance = { exact = true }
+source = "main text p.5 (4 Neighborhoods)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1cd"
+metric = "n_groups_embedded"
+expected = 61
+tolerance = { exact = true }
+source = "main text p.5; Figure 1C (all 61 consensus Groups represented)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1cd"
+metric = "harmony_improves_species_mixing"
+expected = true
+tolerance = { exact = true }
+source = "Figure 1D left: cross-species integration increases local species alignment entropy"
+kind = "figure"
+
+[[target]]
+recipe = "fig1cd"
+metric = "neighborhood_knn15_purity"
+expected = 0.95
+tolerance = { range = [0.9, 1.0] }
+source = "Figure 1C: clean separation of the 4 major Neighborhoods in the integrated latent space"
+kind = "figure"
+
+[[target]]
+recipe = "fig1cd"
+metric = "gaba_marker_enriched_in_gaba_groups"
+expected = true
+tolerance = { exact = true }
+source = "Figure 1D right: GABAergic neurotransmitter identity (GAD1/GAD2/SLC32A1)"
+kind = "figure"
+
+[[target]]
+recipe = "fig1cd"
+metric = "glut_marker_enriched_in_glut_groups"
+expected = true
+tolerance = { exact = true }
+source = "Figure 1D right: Glutamatergic neurotransmitter identity (SLC17A6/SLC17A7)"
+kind = "figure"
+
+[[target]]
+recipe = "fig1cd"
+metric = "dopa_marker_enriched_in_dopa_groups"
+expected = true
+tolerance = { exact = true }
+source = "Figure 1D right: Dopaminergic neurotransmitter identity (TH/DDC/SLC6A3/SLC18A2)"
+kind = "figure"
+
+[[target]]
+recipe = "fig1cd"
+metric = "chol_marker_enriched_in_chol_groups"
+expected = true
+tolerance = { exact = true }
+source = "Figure 1D right: Cholinergic neurotransmitter identity (CHAT/SLC5A7)"
+kind = "figure"
+
+# ---- fig1e (Figure 1E) ----
+[[target]]
+recipe = "fig1e"
+metric = "n_spn_groups_plotted"
+expected = 6
+tolerance = { exact = true }
+source = "Figure 1E (main p.4): spatial transcriptomics for six distinct SPN Groups from macaque (STRd D1/D2 Matrix SPN, STRd D1/D2 Striosome SPN, STR D2 SMYD2-HTR7 SPN, STR D1D2 eSPN)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1e"
+metric = "all_six_spn_groups_present"
+expected = true
+tolerance = { exact = true }
+source = "Figure 1E (main p.4): all six macaque SPN Groups are present in the anterior striatal coronal section"
+kind = "figure"
+
+[[target]]
+recipe = "fig1e"
+metric = "matrix_more_abundant_than_striosome_and_smyd2"
+expected = true
+tolerance = { exact = true }
+source = "Figure 1E (main p.4) & Figure 2F (main p.6-7): dorsal Matrix SPNs outnumber Striosome SPNs and the rare STR D2 SMYD2-HTR7 SPN population"
+kind = "figure"
+
+[[target]]
+recipe = "fig1e"
+metric = "striosome_more_clustered_than_matrix"
+expected = true
+tolerance = { exact = true }
+source = "Figure 1E (main p.4): STRd D1/D2 Striosome SPNs form compact striosomal patches with higher local self-neighborhood enrichment than surrounding Matrix SPNs"
+kind = "figure"
+
+# ---- fig2a (Figure 2A) ----
+[[target]]
+recipe = "fig2a"
+metric = "n_orthologs_total"
+expected = 16620
+tolerance = { rel = 0.02 }
+source = "Table S8 (16,620 unique 1:1 orthologs; Cross-Species-log2.h5ad carries 16,630 ortholog rows)"
+kind = "tally"
+
+[[target]]
+recipe = "fig2a"
+metric = "auroc_adora2a"
+expected = 0.9957
+tolerance = { abs = 0.03 }
+source = "Figure 2A header: ADORA2A Conservation = 0.9957 (Table S8)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2a"
+metric = "auroc_mchr2"
+expected = 0.2176
+tolerance = { abs = 0.03 }
+source = "Figure 2A header: MCHR2 Conservation = 0.2176 (Table S8)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2a"
+metric = "auroc_kcnip1"
+expected = 0.7596
+tolerance = { abs = 0.03 }
+source = "Figure 2A header: KCNIP1 Conservation = 0.7596 (Table S8)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2a"
+metric = "auroc_oprm1"
+expected = 0.3416
+tolerance = { abs = 0.03 }
+source = "Figure 2A header: OPRM1 Conservation = 0.3416 (Table S8)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2a"
+metric = "auroc_rank_order_exact"
+expected = true
+tolerance = { exact = true }
+source = "Figure 2A: ADORA2A (0.9957) > KCNIP1 (0.7596) > OPRM1 (0.3416) > MCHR2 (0.2176)"
+kind = "figure"
+
+# ---- fig2b (Figure 2B) ----
+[[target]]
+recipe = "fig2b"
+metric = "quadrant_rank_order_exact"
+expected = true
+tolerance = { exact = true }
+source = "Figure 2B & main text p.7: Q4 (6,938) > Q2 (2,719) > Q1 (941) > Q3 (834)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2b"
+metric = "tf_enriched_in_markers"
+expected = true
+tolerance = { exact = true }
+source = "main text p.7: TFs significantly enriched among Group markers (Tau > 0.75, adjusted Fisher's exact p = 1.8e-6)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2b"
+metric = "q1_conserved_marker"
+expected = 941
+tolerance = { rel = 0.15 }
+source = "main text p.7 & Figure 2B: 941 conserved Group markers (AUROC > 0.75, Tau xspecies_min > 0.75)"
+kind = "discrepancy"
+required = false
+note = "Table S8 has 16,620 orthologs and reproduces 941/2719/834/6938 (11,432 genes) exactly when filtered by xspecies_min > 0 (an unstated filter visible in the authors' R script). From-scratch 10x random donor subsampling on the 20261031 log2 matrix (16,630 genes) yields slightly different boundary counts (~10% higher) due to stochastic donor draws and 10 extra orthologs."
+
+[[target]]
+recipe = "fig2b"
+metric = "q2_conserved_broad"
+expected = 2719
+tolerance = { rel = 0.15 }
+source = "main text p.7 & Figure 2B: 2,719 conserved broadly expressed genes (AUROC > 0.75, Tau <= 0.75)"
+kind = "discrepancy"
+required = false
+note = "See q1_conserved_marker note on xspecies_min > 0 filter and 10x random donor subsampling variance."
+
+[[target]]
+recipe = "fig2b"
+metric = "q3_divergent_marker"
+expected = 834
+tolerance = { rel = 0.15 }
+source = "main text p.7 & Figure 2B: 834 divergent Group markers (AUROC <= 0.75, Tau > 0.75)"
+kind = "discrepancy"
+required = false
+note = "See q1_conserved_marker note on xspecies_min > 0 filter and 10x random donor subsampling variance."
+
+[[target]]
+recipe = "fig2b"
+metric = "q4_divergent_broad"
+expected = 6938
+tolerance = { rel = 0.15 }
+source = "main text p.7 & Figure 2B: 6,938 divergent broadly expressed genes (AUROC <= 0.75, Tau <= 0.75)"
+kind = "discrepancy"
+required = false
+note = "See q1_conserved_marker note on xspecies_min > 0 filter and 10x random donor subsampling variance."
+
+# ---- fig2c (Figure 2C) ----
+[[target]]
+recipe = "fig2c"
+metric = "eccentric_outgroup_all_genes"
+expected = true
+tolerance = { exact = true }
+source = "main text p.7 & Figure 2C: eccentric SPN Groups branch as basal outgroup using all orthologs"
+kind = "figure"
+
+[[target]]
+recipe = "fig2c"
+metric = "eccentric_outgroup_tfs"
+expected = true
+tolerance = { exact = true }
+source = "main text p.7 & Figure 2C: eccentric SPN Groups remain basal outgroup using TFs only"
+kind = "figure"
+
+[[target]]
+recipe = "fig2c"
+metric = "all_genes_ventral_clade"
+expected = true
+tolerance = { exact = true }
+source = "main text p.7 & Figure 2C: using all orthologs, ventral (STRv D1 + STRv D2) Groups cluster together separate from dorsal Groups"
+kind = "figure"
+
+[[target]]
+recipe = "fig2c"
+metric = "tfs_d1_clade"
+expected = true
+tolerance = { exact = true }
+source = "main text p.7 & Figure 2C: using TFs only, all three D1 SPN Groups (STRd D1 Matrix, STRd D1 Striosome, STRv D1) form one clade"
+kind = "figure"
+
+[[target]]
+recipe = "fig2c"
+metric = "tfs_d2_clade"
+expected = true
+tolerance = { exact = true }
+source = "main text p.7 & Figure 2C: using TFs only, D2 SPN Groups cluster together separate from D1 SPNs"
+kind = "figure"
+
+[[target]]
+recipe = "fig2c"
+metric = "topological_switch_exact"
+expected = true
+tolerance = { exact = true }
+source = "main text p.7 & Figure 2C: complete Dorsal/Ventral -> D1/D2 topological switch with eccentric outgroup"
+kind = "figure"
+
+# ---- fig2de (Figure 2D-E) ----
+[[target]]
+recipe = "fig2de"
+metric = "n_spn_nuclei_total"
+expected = 841005
+tolerance = { exact = true }
+source = "Table S1 (sum of the 9 SPN Groups across Human, Macaque, and Marmoset)"
+kind = "tally"
+
+[[target]]
+recipe = "fig2de"
+metric = "n_spn_groups"
+expected = 9
+tolerance = { exact = true }
+source = "Figure 2D-E (9 SPN Groups)"
+kind = "tally"
+
+[[target]]
+recipe = "fig2de"
+metric = "spn_subclass_knn15_purity"
+expected = 0.95
+tolerance = { range = [0.9, 1.0] }
+source = "Figure 2D & main text p.7: clear separation of STR D1 SPN, STR D2 SPN, and STR Eccentric SPN subclasses"
+kind = "figure"
+
+[[target]]
+recipe = "fig2de"
+metric = "drd1_enriched_in_d1_all_species"
+expected = true
+tolerance = { exact = true }
+source = "Figure 2E & main text p.7: DRD1 enriched in D1 SPNs across all 3 primates"
+kind = "figure"
+
+[[target]]
+recipe = "fig2de"
+metric = "drd2_enriched_in_d2_all_species"
+expected = true
+tolerance = { exact = true }
+source = "Figure 2E & main text p.7: DRD2 enriched in D2 SPNs across all 3 primates"
+kind = "figure"
+
+[[target]]
+recipe = "fig2de"
+metric = "smyd2_kcnt2_enriched_in_smyd2_all_species"
+expected = true
+tolerance = { exact = true }
+source = "Figure 2E: SMYD2 and KCNT2 enriched in STR D2 SMYD2-HTR7 SPN across all 3 primates"
+kind = "figure"
+
+[[target]]
+recipe = "fig2de"
+metric = "rxfp1_restricted_to_espn_all_species"
+expected = true
+tolerance = { exact = true }
+source = "Figure 2E & main text p.7: RXFP1 marks eccentric SPNs across all 3 primates"
+kind = "figure"
+
+# ---- fig2f (Figure 2F) ----
 [[target]]
 recipe = "fig2f"
 metric = "smyd2_pct_of_d2_pooled"
 expected = 3.4
-tolerance = { range = [3.40, 3.50] }
+tolerance = { range = [3.4, 3.5] }
 source = "main text p.7: 'comprising only 3.4% of classical STR D2 SPNs (Figure 2F)'"
 kind = "figure"
 note = "Main text p.7 writes '3.4%' by truncating 3.49% to one decimal place (similar to writing 1,896,133 nuclei as '1.8 million'); the truncation interval [3.40, 3.50] covers values that truncate to 3.4%."
@@ -190,7 +574,6 @@ tolerance = { exact = true }
 source = "Figure 2F: STRd D2 Matrix SPN is the highest box in every species"
 kind = "figure"
 
-# Donor medians read off the published Figure 2F (vector PDF rendered at 1200-2400 dpi, ~0.05 pp reading precision)
 [[target]]
 recipe = "fig2f"
 metric = "median_pct_strv_human"
@@ -288,3 +671,829 @@ tolerance = { range = [1.6, 2.3] }
 source = "Figure 2F, STR D2 SMYD2-HTR7 SPN, marmoset box: at 1200-2400 dpi the lower-quartile and median strokes merge across 1.6-2.3% (upper quartile 2.67%)"
 kind = "figure"
 note = "Merged lower-quartile and median box strokes at high dpi constrain the published median to [1.6, 2.3]%."
+
+# ---- fig2g (Figure 2G) ----
+[[target]]
+recipe = "fig2g"
+metric = "strio_mat_and_d1_d2_more_diverged_than_hvg"
+expected = true
+tolerance = { exact = true }
+source = "main text p.7 & Figure 2G: Striosome-Matrix and D1-D2 genes are significantly more diverged than 5,000 HVG (Bonferroni Dunn p < 0.01)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2g"
+metric = "dv_less_diverged_than_strio_mat_and_d1_d2"
+expected = true
+tolerance = { exact = true }
+source = "main text p.7 & Figure 2G: Dorsal-Ventral identity is more conserved than pathway (D1-D2) or compartment (Striosome-Matrix) identity"
+kind = "figure"
+
+[[target]]
+recipe = "fig2g"
+metric = "n_genes_d1_d2_lfc10"
+expected = 656
+tolerance = { rel = 0.1 }
+source = "main text p.7 & Figure 2G graphic: 656 D1-D2 DEGs (vs 495 unique genes in Table S10)"
+kind = "discrepancy"
+required = false
+note = "Internal discrepancy between text/Figure 2G (656 D1-D2 DEGs, 459 Striosome-Matrix DEGs; Figure 2G legend states LFC > 1.5), STAR Methods p.29 (|log2FC| > 1), and Table S10 (495 unique D1-D2 genes, 738 unique Striosome-Matrix genes). From-scratch Wilcoxon gives ~631 D1-D2 at LFC > 1 and ~460 Striosome-Matrix at LFC > 1.5."
+
+[[target]]
+recipe = "fig2g"
+metric = "n_genes_strio_mat_lfc15"
+expected = 459
+tolerance = { rel = 0.1 }
+source = "main text p.7 & Figure 2G graphic: 459 Striosome-Matrix DEGs (vs 738 unique genes in Table S10)"
+kind = "discrepancy"
+required = false
+note = "See n_genes_d1_d2_lfc10 note on the text/legend/Table S10 threshold discrepancy."
+
+[[target]]
+recipe = "fig2g"
+metric = "n_genes_dv_memento"
+expected = 738
+tolerance = { rel = 0.25 }
+source = "main text p.7, Figure 2G & Table S10: 738 genes with |r| > 0.3 to CNR1 via memento"
+kind = "discrepancy"
+required = false
+note = "Method-of-moments Poisson shot-noise correction approximates memento's capture-noise-adjusted correlation without requiring private intermediate tables; raw single-cell Pearson without shot-noise correction yields far fewer genes and reverses the Dorsal-Ventral conservation finding."
+
+# ---- fig3a (Figure 3A) ----
+[[target]]
+recipe = "fig3a"
+metric = "n_neuronal_groups_plotted"
+expected = 44
+tolerance = { exact = true }
+source = "Figure 3A (main p.8): 44 neuronal primate BG Groups on the y-axis from STRd D1 Matrix SPN to STH PVALB-PITX2 Glut"
+kind = "tally"
+
+[[target]]
+recipe = "fig3a"
+metric = "n_marker_genes_plotted"
+expected = 57
+tolerance = { exact = true }
+source = "Figure 3A right (main p.8): 57 conserved Group marker genes from DRD1 to PITX2 on the x-axis of the macaque-mouse dot pie chart"
+kind = "tally"
+
+[[target]]
+recipe = "fig3a"
+metric = "primate_exceeds_mouse_sampling_depth"
+expected = true
+tolerance = { exact = true }
+source = "Figure 3A left (main p.8): primate basal ganglia sampling depth exceeds mouse whole-brain BG sampling (median fold change > 1)"
+kind = "figure"
+
+[[target]]
+recipe = "fig3a"
+metric = "homology_concordance_pct_with_table_s12"
+expected = 92.5
+tolerance = { range = [85.0, 100.0] }
+source = "Figure 3A (main p.8-9) & Table S12: >85% of primate BG Groups with curated mouse homologs match their Table S12 curated mouse supertype or subclass"
+kind = "figure"
+
+[[target]]
+recipe = "fig3a"
+metric = "conserved_marker_macaque_mouse_corr_positive"
+expected = true
+tolerance = { exact = true }
+source = "Figure 3A right (main p.8): conserved Group marker genes exhibit strong positive correlation (Pearson r > 0.5) between macaque and matched mouse supertypes"
+kind = "figure"
+
+# ---- fig3b (Figure 3B) ----
+[[target]]
+recipe = "fig3b"
+metric = "n_classical_spn_groups_plotted"
+expected = 7
+tolerance = { exact = true }
+source = "Figure 3B (main p.8): 7 classical SPN Groups highlighted by the orange box in Figure 3A (STRd D1/D2 Matrix, STRd D1/D2 Striosome, STRv D1/D2, STR D2 SMYD2-HTR7 SPN)"
+kind = "tally"
+
+[[target]]
+recipe = "fig3b"
+metric = "n_mouse_spn_supertypes_plotted"
+expected = 14
+tolerance = { exact = true }
+source = "Figure 3B (main p.8): 14 mouse STR D1/D2 Gaba supertypes on the x-axis (0267, 0268, 0277, 0272, 0270, 0265, 0271, 0269, 0273, 0274, 0275, 0278, 0279, 0276)"
+kind = "tally"
+
+[[target]]
+recipe = "fig3b"
+metric = "smyd2_top1_mouse_supertype_is_0279"
+expected = true
+tolerance = { exact = true }
+source = "main text p.9, Figure 3B (main p.8), Table S12: STR D2 SMYD2-HTR7 SPN maps primarily to mouse 0279 STR D2 Gaba_6"
+kind = "figure"
+
+[[target]]
+recipe = "fig3b"
+metric = "d1_matrix_top1_is_0267"
+expected = true
+tolerance = { exact = true }
+source = "Figure 3B (main p.8) & Table S12: STRd D1 Matrix SPN maps to 0267 STR D1 Gaba_3"
+kind = "figure"
+
+[[target]]
+recipe = "fig3b"
+metric = "d2_matrix_top1_is_0277"
+expected = true
+tolerance = { exact = true }
+source = "Figure 3B (main p.8) & Table S12: STRd D2 Matrix SPN maps to 0277 STR D2 Gaba_4"
+kind = "figure"
+
+[[target]]
+recipe = "fig3b"
+metric = "smyd2_top2_includes_0276"
+expected = true
+tolerance = { exact = true }
+source = "main text p.9 & Figure 3B (main p.8): STR D2 SMYD2-HTR7 SPN maps to 0279 STR D2 Gaba_6 and 0276 STR D2 Gaba_3"
+kind = "discrepancy"
+required = false
+note = "Published Figure 3B computes similarity in the scVI integrated cross-species latent space, where 0279 STR D2 Gaba_6 and 0276 STR D2 Gaba_3 are the top two matches for STR D2 SMYD2-HTR7 SPN; in z-scored ortholog expression correlation without scVI, 0279 is #1 while canonical D2 supertypes (0277/0275) can score slightly above 0276."
+
+# ---- fig3c (Figure 3C) ----
+[[target]]
+recipe = "fig3c"
+metric = "gaba6_0279_more_abundant_than_gaba3_0276"
+expected = true
+tolerance = { exact = true }
+source = "Figure 3C (main p.8-9): 0279 STR D2 Gaba_6 is broadly distributed across striatum whereas 0276 STR D2 Gaba_3 is a smaller ventrally enriched population"
+kind = "figure"
+
+[[target]]
+recipe = "fig3c"
+metric = "gaba3_0276_more_ventral_than_gaba6_0279"
+expected = true
+tolerance = { exact = true }
+source = "main text p.9 & Figure 3C (main p.8): 0276 STR D2 Gaba_3 is ventrally biased relative to 0279 STR D2 Gaba_6 (larger median CCF y coordinate, where larger y is ventral)"
+kind = "figure"
+
+[[target]]
+recipe = "fig3c"
+metric = "dv_mannwhitney_p_lt_1e10"
+expected = true
+tolerance = { exact = true }
+source = "main text p.9 & Figure 3C (main p.8): dorsal-ventral positional separation between 0276 STR D2 Gaba_3 and 0279 STR D2 Gaba_6 is highly significant (two-sided Mann-Whitney U p < 1e-10)"
+kind = "figure"
+
+# ---- fig3d (Figure 3D) ----
+[[target]]
+recipe = "fig3d"
+metric = "n_genes"
+expected = 13
+tolerance = { exact = true }
+source = "Figure 3D (13 conserved marker genes across OB Dopa-GABA and OB FRMD7 GABA)"
+kind = "tally"
+
+[[target]]
+recipe = "fig3d"
+metric = "dopa_core_higher_in_ob_dopa_all_species"
+expected = true
+tolerance = { exact = true }
+source = "Figure 3D: ETV1, TH, DDC, and SLC18A2 enriched in OB Dopa-GABA over OB FRMD7 GABA across Human, Macaque, and Marmoset"
+kind = "figure"
+
+[[target]]
+recipe = "fig3d"
+metric = "scgn_higher_in_ob_dopa_human_macaque"
+expected = true
+tolerance = { exact = true }
+source = "Figure 3D: SCGN enriched in OB Dopa-GABA over OB FRMD7 GABA in Human and Macaque (Marmoset SCGN wedge absent in published Figure 3D)"
+kind = "figure"
+
+[[target]]
+recipe = "fig3d"
+metric = "frmd7_markers_higher_in_ob_frmd7_mean"
+expected = true
+tolerance = { exact = true }
+source = "Figure 3D: FRMD7, APOLD1, GRIK3 enriched in OB FRMD7 GABA over OB Dopa-GABA"
+kind = "figure"
+
+[[target]]
+recipe = "fig3d"
+metric = "shared_gad2_meis2_expressed_both"
+expected = true
+tolerance = { exact = true }
+source = "Figure 3D: GAD2 and MEIS2 broadly expressed in both OB Dopa-GABA and OB FRMD7 GABA"
+kind = "figure"
+
+# ---- fig3e (Figure 3E) ----
+[[target]]
+recipe = "fig3e"
+metric = "n_species_plotted"
+expected = 4
+tolerance = { exact = true }
+source = "Figure 3E (main p.8): four species shown \u2014 human, macaque, marmoset, and mouse (plus mouse olfactory bulb inset)"
+kind = "tally"
+
+[[target]]
+recipe = "fig3e"
+metric = "ob_groups_present_in_all_three_primates"
+expected = true
+tolerance = { exact = true }
+source = "main text p.9 & Figure 3E (main p.8): both OB Dopa-GABA and OB FRMD7 GABA are detected in human, macaque, and marmoset peri-striatal spatial sections"
+kind = "figure"
+
+[[target]]
+recipe = "fig3e"
+metric = "mouse_ob_strongly_enriched_in_ob_over_striatum"
+expected = true
+tolerance = { exact = true }
+source = "main text p.9 & Figure 3E legend (main p.8): homologous mouse OB supertypes are strongly enriched (>10-fold) in olfactory bulb compared to striatal sections"
+kind = "figure"
+
+[[target]]
+recipe = "fig3e"
+metric = "mouse_ob_pct_in_striatal_sections_lt_5"
+expected = true
+tolerance = { exact = true }
+source = "main text p.9 & Figure 3E (main p.8): homologous mouse OB groups are extremely rare in mouse peri-striatal regions (<5% of all mouse OB-homologous cells)"
+kind = "figure"
+
+# ---- fig4d (Figure 4D) ----
+[[target]]
+recipe = "fig4d"
+metric = "n_motifs_scored"
+expected = 737
+tolerance = { range = [600, 900] }
+source = "Figure 4D and STAR Methods: JASPAR2024 CORE vertebrate non-redundant TF motifs (737 in Table S15; ~879 in JASPAR2024 CORE)"
+kind = "tally"
+
+[[target]]
+recipe = "fig4d"
+metric = "promoter_motifs_lower_gini_than_pou_hox"
+expected = true
+tolerance = { exact = true }
+source = "main p.9 and Figure 4D: promoter-enriched HINFP/TCFL5 have lower cell-type specificity (Gini) than conserved neuronal POU/HOX motifs (POU3F1)"
+kind = "figure"
+
+[[target]]
+recipe = "fig4d"
+metric = "hinfp_higher_promoter_fraction_than_pou3f1"
+expected = true
+tolerance = { exact = true }
+source = "main p.9 and Figure 4D: HINFP and TCFL5 localize preferentially to promoters compared with cell-type-specific POU/HOX distal enhancer motifs"
+kind = "figure"
+
+[[target]]
+recipe = "fig4d"
+metric = "pou3f1_mean_evo_distance"
+expected = 0.4152
+tolerance = { abs = 0.001 }
+source = "Table S15 row POU3F1 (mean_evo_distance = 0.415188); Figure 4D (POU/HOX apex)"
+kind = "figure"
+required = false
+note = "447-mammal Cactus mean_evo_distance requires the unbundled >1 TB Zoonomia HAL or Cell VoR Table S15 (PMC supplementary /bin/ returns interstitial HTML). Verified automatically when Table S15 is supplied."
+
+[[target]]
+recipe = "fig4d"
+metric = "hinfp_mean_evo_distance"
+expected = 0.417
+tolerance = { abs = 0.001 }
+source = "Table S15 row HINFP (mean_evo_distance = 0.416993); Figure 4D"
+kind = "figure"
+required = false
+note = "Requires Table S15 or 447-way Cactus HAL; checked automatically when Table S15 is present."
+
+[[target]]
+recipe = "fig4d"
+metric = "otx2_mean_evo_distance"
+expected = 0.2173
+tolerance = { abs = 0.001 }
+source = "Table S15 row OTX2 (mean_evo_distance = 0.217280); Figure 4D"
+kind = "figure"
+required = false
+note = "Requires Table S15 or 447-way Cactus HAL; checked automatically when Table S15 is present."
+
+# ---- fig4e (Figure 4E) ----
+[[target]]
+recipe = "fig4e"
+metric = "n_ccres_human"
+expected = 1360000
+tolerance = { rel = 0.02 }
+source = "main p.9: 'identifying 1.36 million, 1.37 million, and 1.22 million accessible regions, respectively'"
+kind = "tally"
+
+[[target]]
+recipe = "fig4e"
+metric = "n_ccres_macaque"
+expected = 1370000
+tolerance = { rel = 0.02 }
+source = "main p.9: '1.37 million' accessible regions in macaque"
+kind = "tally"
+
+[[target]]
+recipe = "fig4e"
+metric = "n_ccres_marmoset"
+expected = 1220000
+tolerance = { rel = 0.02 }
+source = "main p.9: '1.22 million' accessible regions in marmoset"
+kind = "tally"
+
+[[target]]
+recipe = "fig4e"
+metric = "n_human_groups_in_atac"
+expected = 60
+tolerance = { exact = true }
+source = "Table S1.Human_qc_Group (60 human Groups) and Figure 4E (1 Group missing in human)"
+kind = "tally"
+
+[[target]]
+recipe = "fig4e"
+metric = "within_compartment_d1_d2_gt_across_compartment"
+expected = true
+tolerance = { exact = true }
+source = "main p.9 and Figure 4E: D1 and D2 SPNs within the same compartment (Matrix, Striosome, Ventral) share higher cCRE Jaccard similarity than same-receptor SPNs across compartments"
+kind = "figure"
+
+# ---- fig4f (Figure 4F) ----
+[[target]]
+recipe = "fig4f"
+metric = "n_spn_groups"
+expected = 9
+tolerance = { exact = true }
+source = "Figure 4F: 9 SPN Groups colored in the snATAC-seq UMAP and Jaccard dendrogram"
+kind = "tally"
+
+[[target]]
+recipe = "fig4f"
+metric = "d1_d2_pair_within_compartments_in_dendrogram"
+expected = true
+tolerance = { exact = true }
+source = "main p.9 and Figure 4F dendrogram: STRd D1/D2 Matrix, STRd D1/D2 Striosome, and STRv D1/D2 each pair together before merging across compartments"
+kind = "figure"
+
+[[target]]
+recipe = "fig4f"
+metric = "smyd2_bridges_striosome_and_espn"
+expected = true
+tolerance = { exact = true }
+source = "main p.9 and Figure 4F: STR D2 SMYD2-HTR7 SPN shows an intermediate cCRE accessibility profile bridging STR D1D2 eSPN and striosome SPNs (Jaccard with D2 Striosome > Matrix, and elevated overlap with STR D1D2 eSPN)"
+kind = "figure"
+
+# ---- fig4g (Figure 4G) ----
+[[target]]
+recipe = "fig4g"
+metric = "n_haqers_total"
+expected = 1581
+tolerance = { exact = true }
+source = "Figure 4G header: 'HAQERs (504/1581)'"
+kind = "tally"
+
+[[target]]
+recipe = "fig4g"
+metric = "n_haqers_overlapping_human_ccres"
+expected = 504
+tolerance = { exact = true }
+source = "Figure 4G header: 'HAQERs (504/1581)'"
+kind = "figure"
+
+[[target]]
+recipe = "fig4g"
+metric = "n_conserved_haqers_table_s16"
+expected = 113
+tolerance = { exact = true }
+source = "main p.11: 'a subset (n = 113, mean evo-distance = 0.64)' and Table S16 (113 unique HAQER_IDs)"
+kind = "figure"
+required = false
+note = "Checked when Table S16 is available alongside haqer.hg38.bed; set required = false so the open haqer.hg38.bed run passes independently."
+
+# ---- fig5b (Figure 5B) ----
+[[target]]
+recipe = "fig5b"
+metric = "embedding_dim"
+expected = 512
+tolerance = { exact = true }
+source = "STAR Methods p.31-32: CREsted dilated CNN global_average_pooling_1d latent representation"
+kind = "tally"
+
+[[target]]
+recipe = "fig5b"
+metric = "knn_5fold_subclass_accuracy"
+expected = 0.8
+tolerance = { range = [0.7, 1.0] }
+source = "main p.11 and Figure 5B: top-100 Group-specific neuronal cCRE embeddings form discrete clusters corresponding to neuronal Groups/Subclasses (while D1/D2 pairs overlap)"
+kind = "figure"
+
+[[target]]
+recipe = "fig5b"
+metric = "d1_d2_within_compartment_overlap_higher_than_across"
+expected = true
+tolerance = { exact = true }
+source = "main p.11: DeepHumanBG resolves matrix, striosome, ventral, and eccentric SPNs while D1 and D2 counterparts share overlapping sequence embeddings"
+kind = "figure"
+
+# ---- fig5c (Figure 5C) ----
+[[target]]
+recipe = "fig5c"
+metric = "cholinergic_lhx8_zic3_enriched"
+expected = true
+tolerance = { exact = true }
+source = "main p.11 and Figure 5C: Cholinergic neurons exhibit a coherent motif signature composed of LHX8, GBX2, and ZIC3 elements"
+kind = "figure"
+
+[[target]]
+recipe = "fig5c"
+metric = "gbx2_higher_in_striatal_than_gpin_cholinergic"
+expected = true
+tolerance = { exact = true }
+source = "main p.11: 'notably, GBX2 was selectively enriched in striatal cholinergic neurons but absent from the interstitial globus pallidus cholinergic population (GPin-BF)'"
+kind = "figure"
+
+[[target]]
+recipe = "fig5c"
+metric = "dlx56_higher_in_espn_than_ventral_spn"
+expected = true
+tolerance = { exact = true }
+source = "main p.11: 'DLX5/6 motifs were broadly important yet displayed Group-specific polarity, strongly enriched in eccentric SPNs, attenuated in dorsal matrix and striosome SPNs, and negatively weighted in ventral SPNs'"
+kind = "figure"
+
+# ---- fig5d (Figure 5D) ----
+[[target]]
+recipe = "fig5d"
+metric = "n_hunker_enhancers_scored"
+expected = 48
+tolerance = { exact = true }
+source = "Figure 5D y-axis: 48 Hunker, Wirthlin et al. (2025) striatal AAV enhancers and core-concatemer variants across 6 target classes"
+kind = "tally"
+
+[[target]]
+recipe = "fig5d"
+metric = "aie0441h_top_group_is_espn"
+expected = true
+tolerance = { exact = true }
+source = "main p.12 and Figure 5D: 'AiE0441h and its optimized variants described as D1-selective were predicted to preferentially target D1D2 eSPNs, separating them from classical D1 matrix and striosome populations'"
+kind = "figure"
+
+[[target]]
+recipe = "fig5d"
+metric = "aie1419m_top_group_is_pvalb"
+expected = true
+tolerance = { exact = true }
+source = "main p.12 and Figure 5D: 'The model identified AiE1419m as the most selective enhancer for fast-spiking PVALB interneurons'"
+kind = "figure"
+
+[[target]]
+recipe = "fig5d"
+metric = "aie1404m_top_group_is_sst_chodl"
+expected = true
+tolerance = { exact = true }
+source = "main p.12 and Figure 5D: 'AiE1404m as the strongest enhancer for SST Chodl interneurons'"
+kind = "figure"
+
+[[target]]
+recipe = "fig5d"
+metric = "aie0779m_6xc2_gt_3xc2_gt_fl"
+expected = true
+tolerance = { exact = true }
+source = "main p.12 and Figure 5D: 'we correctly predicted increased activity of optimized variants of AiE0779m' (6xC2 > 3xC2 > FL)"
+kind = "figure"
+
+[[target]]
+recipe = "fig5d"
+metric = "cholinergic_enhancers_peak_in_cholinergic"
+expected = true
+tolerance = { exact = true }
+source = "Figure 5D orange block: the 7 cholinergic AAV enhancers peak selectively in GPin-BF / STR / STRd Cholinergic GABA Groups"
+kind = "figure"
+
+# ---- fig5e (Figure 5E) ----
+[[target]]
+recipe = "fig5e"
+metric = "aie0779m_ref_length_bp"
+expected = 480
+tolerance = { abs = 5 }
+source = "Allen GTA 2.0 / Hunker et al. (2025) & Figure 5E: mouse AiE0779m cloned cCRE mm10 chr10:19829172-19829652 (480 bp)"
+kind = "tally"
+
+[[target]]
+recipe = "fig5e"
+metric = "aie0779m_positive_d1_spn_pred"
+expected = true
+tolerance = { exact = true }
+source = "main p.13 and Figure 5E: mouse AiE0779m drives positive DeepHumanBG predicted accessibility across D1 SPN heads"
+kind = "figure"
+
+[[target]]
+recipe = "fig5e"
+metric = "aie0779m_meis2_egr1_rarb_positive_ig"
+expected = true
+tolerance = { exact = true }
+source = "main p.13 and Figure 5E: 'the D1-SPN enhancer AiE0779m sequence was predicted to be active across diverse mammals with MEIS2, EGR1, and RARB motifs as the principal drivers of specificity'"
+kind = "figure"
+
+[[target]]
+recipe = "fig5e"
+metric = "n_mammalian_species_scored"
+expected = 447
+tolerance = { exact = true }
+source = "main p.11-13 and Table S14/S17: 447 mammalian genomes in the Zoonomia Cactus alignment"
+kind = "tally"
+required = false
+note = "447-species Cactus alignment requires the unbundled >1 TB Zoonomia HAL or Cell VoR Tables S14/S17 (PMC /bin/ returns interstitial HTML). Verified automatically when Tables S14/S17 are supplied."
+
+[[target]]
+recipe = "fig5e"
+metric = "n_clades_plotted"
+expected = 19
+tolerance = { exact = true }
+source = "Figure 5E y-axis and Table S14.clade_order (6 primate clades + 13 non-primate mammalian orders = 19 clades)"
+kind = "tally"
+required = false
+note = "Checked automatically when Tables S14/S17 are supplied."
+
+[[target]]
+recipe = "fig5e"
+metric = "lagomorpha_gt_primates_gt_cingulata_gt_pholidota"
+expected = true
+tolerance = { exact = true }
+source = "main p.13 and Figure 5E: Lagomorpha exhibits increased predicted AiE0779m activity while Cingulata and Pholidota exhibit reduced activity"
+kind = "figure"
+required = false
+note = "Checked automatically when Tables S14/S17 are supplied."
+
+# ---- fig6a (Figure 6A) ----
+[[target]]
+recipe = "fig6a"
+metric = "n_genes_plotted"
+expected = 28
+tolerance = { exact = true }
+source = "Figure 6A (28 genes: 6 Markers, 7 Ion Channels, 15 Neurotransmitter receptors)"
+kind = "tally"
+
+[[target]]
+recipe = "fig6a"
+metric = "smyd2_top_group"
+expected = "STR D2 SMYD2-HTR7 SPN"
+tolerance = { exact = true }
+source = "Figure 6A & main text p.13: SMYD2 peaks in STR D2 SMYD2-HTR7 SPN"
+kind = "figure"
+
+[[target]]
+recipe = "fig6a"
+metric = "htr7_top_group"
+expected = "STR D2 SMYD2-HTR7 SPN"
+tolerance = { exact = true }
+source = "Figure 6A & main text p.13: HTR7 peaks in STR D2 SMYD2-HTR7 SPN"
+kind = "figure"
+
+[[target]]
+recipe = "fig6a"
+metric = "rxfp1_top_group"
+expected = "STR D1D2 eSPN"
+tolerance = { exact = true }
+source = "main text p.7 & p.13: RXFP1 marks eccentric SPNs and is absent/depleted in STR D2 SMYD2-HTR7 SPN"
+kind = "figure"
+
+[[target]]
+recipe = "fig6a"
+metric = "rxfp1_depleted_vs_espn"
+expected = true
+tolerance = { exact = true }
+source = "main text p.13: RXFP1 strongly depleted in STR D2 SMYD2-HTR7 SPN compared with STR D1D2 eSPN"
+kind = "figure"
+
+[[target]]
+recipe = "fig6a"
+metric = "n_of_10_markers_enriched_vs_canon_d2"
+expected = 10
+tolerance = { exact = true }
+source = "Figure 6A & main text p.13: all 10 named enriched markers (SMYD2, PTN, TTN, HTR7, GRIK1, KCNT2, CACNA2D2, CACNA1G, HCN1, CHRM2) elevated in STR D2 SMYD2-HTR7 SPN vs canonical D2 SPNs"
+kind = "figure"
+
+# ---- fig6b (Figure 6B) ----
+[[target]]
+recipe = "fig6b"
+metric = "smyd2_peak_fold_vs_d2_striosome"
+expected = 2.4
+tolerance = { range = [2.0, 4.0] }
+source = "main p.13 and Figure 6B: STR D2 SMYD2-HTR7 SPN shows selectively elevated open chromatin at SMYD2 (chr1:214,150-214,400 kb) vs STRd D2 Striosome"
+kind = "figure"
+
+[[target]]
+recipe = "fig6b"
+metric = "smyd2_peak_fold_vs_d2_matrix"
+expected = 2.3
+tolerance = { range = [2.0, 4.0] }
+source = "main p.13 and Figure 6B: STR D2 SMYD2-HTR7 SPN shows selectively elevated open chromatin at SMYD2 vs STRd D2 Matrix"
+kind = "figure"
+
+[[target]]
+recipe = "fig6b"
+metric = "smyd2_highest_max_and_mean_atac"
+expected = true
+tolerance = { exact = true }
+source = "Figure 6B ATAC tracks: STR D2 SMYD2-HTR7 SPN has the highest peak and mean accessibility at SMYD2 among the four SPN subtypes"
+kind = "figure"
+
+# ---- fig6d (Figure 6D) ----
+[[target]]
+recipe = "fig6d"
+metric = "n_spn_groups_plotted"
+expected = 5
+tolerance = { exact = true }
+source = "Figure 6D right (main p.14): five SPN Groups plotted (STRd D1 Striosome, STRd D2 Striosome, STR D2 SMYD2, STRd D1 Matrix, STRd D2 Matrix)"
+kind = "tally"
+
+[[target]]
+recipe = "fig6d"
+metric = "striosome_groups_positive_z"
+expected = true
+tolerance = { exact = true }
+source = "Figure 6D right (main p.14): STRd D1 Striosome SPN and STRd D2 Striosome SPN show strongly positive median striosome enrichment z-scores"
+kind = "figure"
+
+[[target]]
+recipe = "fig6d"
+metric = "matrix_groups_negative_z"
+expected = true
+tolerance = { exact = true }
+source = "Figure 6D right (main p.14): STRd D1 Matrix SPN and STRd D2 Matrix SPN show strongly negative median striosome enrichment z-scores"
+kind = "figure"
+
+[[target]]
+recipe = "fig6d"
+metric = "smyd2_near_neutral_relative_to_striosome_and_matrix"
+expected = true
+tolerance = { exact = true }
+source = "main text p.13 & Figure 6D right (main p.14): STR D2 SMYD2-HTR7 SPNs show neither strong enrichment nor depletion in striosomes (|median z(SMYD2)| < 0.25 * min(|median z(Striosome)|, |median z(Matrix)|))"
+kind = "figure"
+
+[[target]]
+recipe = "fig6d"
+metric = "exact_ordering_striosome_gt_smyd2_gt_matrix"
+expected = true
+tolerance = { exact = true }
+source = "Figure 6D right (main p.14): median striosome enrichment z-score satisfies min(STRd D1/D2 Striosome) > STR D2 SMYD2 > max(STRd D1/D2 Matrix)"
+kind = "figure"
+
+# ---- fig6f (Figure 6F) ----
+[[target]]
+recipe = "fig6f"
+metric = "n_smyd2_mapped"
+expected = 20
+tolerance = { abs = 2 }
+source = "main text p.13: 'macaques (electrophysiology n = 20; morphology n = 6)'"
+kind = "tally"
+
+[[target]]
+recipe = "fig6f"
+metric = "smyd2_lowest_rheobase"
+expected = true
+tolerance = { exact = true }
+source = "main text p.13 & Figure 6F: STR D2 SMYD2-HTR7 SPN has the lowest median Rheobase (pA) among the 6 SPN Groups"
+kind = "figure"
+
+[[target]]
+recipe = "fig6f"
+metric = "smyd2_lowest_3db"
+expected = true
+tolerance = { exact = true }
+source = "main text p.13 & Figure 6F: STR D2 SMYD2-HTR7 SPN has the lowest median 3 dB cutoff frequency (Hz) among the 6 SPN Groups"
+kind = "figure"
+
+[[target]]
+recipe = "fig6f"
+metric = "rheobase_sig_lt_005"
+expected = true
+tolerance = { exact = true }
+source = "main text p.13 & Figure 6F: STR D2 SMYD2-HTR7 SPN has significantly lower Rheobase than canonical SPNs (Mann-Whitney p < 0.05)"
+kind = "figure"
+
+[[target]]
+recipe = "fig6f"
+metric = "cutoff_3db_sig_lt_005"
+expected = true
+tolerance = { exact = true }
+source = "main text p.13 & Figure 6F: STR D2 SMYD2-HTR7 SPN has significantly lower 3 dB cutoff frequency than canonical SPNs (Mann-Whitney p < 0.05)"
+kind = "figure"
+
+# ---- fig7b (Figure 7B) ----
+[[target]]
+recipe = "fig7b"
+metric = "n_human_clusters_tested"
+expected = 453
+tolerance = { exact = true }
+source = "STAR Methods p.33: '453 clusters tested'; Table S19"
+kind = "tally"
+
+[[target]]
+recipe = "fig7b"
+metric = "ad_magma_microglia_sig_clusters"
+expected = 13
+tolerance = { abs = 1 }
+source = "main p.15 and Figure 7B / Table S19: 'significant enrichment in 13 microglial clusters' (MAGMA P < 1e-4)"
+kind = "discrepancy"
+required = false
+note = "From-scratch MAGMA v1.10 on the public 20250630 HMBA-10xMultiome-BG-Human-log2.h5ad specificity matrix recovers 15 Microglia clusters at P < 1e-4 (13 clusters at P <= 4.45e-5 plus 2 borderline Microglia clusters Human-448 at P = 7.16e-5 and Human-6 at P = 7.34e-5) and 3 BAM clusters with 0 neuronal false positives; linear CPM specificity yields 16 Microglia + 3 BAM. Minor threshold boundary shift reflects preprint vs 20250630 matrix preprocessing."
+
+[[target]]
+recipe = "fig7b"
+metric = "ad_magma_zero_neuronal_false_positives"
+expected = true
+tolerance = { exact = true }
+source = "main p.15: 'AD GWAS signals localized exclusively to non-neuronal cell types'"
+kind = "figure"
+
+[[target]]
+recipe = "fig7b"
+metric = "scz_magma_ventral_spn_and_vip_enriched"
+expected = true
+tolerance = { exact = true }
+source = "main p.15 and Figure 7B: SCZ enriches strongly in ventral SPNs (STRv D1 NUDAP eSPN, STRv D2 SPN), GPe MEIS2-SOX6 GABA, and VIP GABA"
+kind = "figure"
+
+[[target]]
+recipe = "fig7b"
+metric = "ad_magma_tcell_sig_clusters"
+expected = 1
+tolerance = { exact = true }
+source = "main p.15: '13 microglial clusters and one T cell cluster'; Table S19 reports 22 total AD clusters (13 Microglia, 5 BAM, 2 ImAstro, 1 ImOligo, 1 T cell)"
+kind = "discrepancy"
+required = false
+note = "Published text mentions 13 Microglia + 1 T cell while Table S19 also includes 5 BAM, 2 ImAstro, and 1 ImOligo at P < 1e-4; from-scratch MAGMA using log2(CPM+1) and 17,126 genes recovers 13 Microglia + 2 BAM with 9 borderline immune/glial clusters at P = 1.6e-4..3.4e-3."
+
+# ---- fig7c (Figure 7C) ----
+[[target]]
+recipe = "fig7c"
+metric = "n_scz_snps_scored"
+expected = 8
+tolerance = { exact = true }
+source = "Figure 7C y-axis: 8 genome-wide significant SCZ SNPs (rs700670, rs118134308, rs13262595, rs7587598, rs1113736, rs2711117, rs1610602, rs1883123)"
+kind = "tally"
+
+[[target]]
+recipe = "fig7c"
+metric = "n_bg_groups_plotted"
+expected = 18
+tolerance = { exact = true }
+source = "Figure 7C x-axis and Table S20.SCZ_SNPs (18 MAGMA-enriched neuronal BG Groups)"
+kind = "tally"
+
+[[target]]
+recipe = "fig7c"
+metric = "rs1883123_top_group_is_gpe_meis2_sox6"
+expected = true
+tolerance = { exact = true }
+source = "main p.15 and Figure 7C: rs1883123 in CACNA1I shows its strongest predicted accessibility reduction selectively in GPe MEIS2-SOX6 GABA"
+kind = "figure"
+
+[[target]]
+recipe = "fig7c"
+metric = "rs1883123_alt_decreases_gpe_accessibility"
+expected = true
+tolerance = { exact = true }
+source = "main p.15 and Figure 7E: SCZ alternate allele T at rs1883123 decreases predicted accessibility (pred_alt < pred_ref; note published Fig 7C and Table S20 plot Ref - Alt while labeling Alt - Ref)"
+kind = "figure"
+
+[[target]]
+recipe = "fig7c"
+metric = "rs1883123_gpe_delta_ref_minus_alt_table_s20"
+expected = 45.31
+tolerance = { abs = 5.0 }
+source = "Table S20.SCZ_SNPs row rs1883123 column GPe_MEIS2-SOX6_GABA = +45.3058 (Ref - Alt, computed with pretrain 99.keras)"
+kind = "discrepancy"
+required = false
+note = "Published Table S20 used pretraining checkpoint 99.keras (not distributed on S3) and inverted sign (Ref - Alt labeled Alt - Ref). The publicly released finetune_epoch_12.keras checkpoint reproduces the exact direction and Group profile (r = 0.90 across 18 Groups; r = 0.93 for GPe across 8 SNPs) with larger magnitude (~81.5 vs 45.3)."
+
+# ---- fig7d (Figure 7D) ----
+[[target]]
+recipe = "fig7d"
+metric = "rs1883123_on_tallest_locus_peak"
+expected = true
+tolerance = { exact = true }
+source = "Figure 7D: rs1883123 (chr22:39,600,877) sits directly on the tallest intronic ATAC peak in GPe MEIS2-SOX6 GABA across CACNA1I (chr22:39,570,753-39,689,735)"
+kind = "figure"
+
+[[target]]
+recipe = "fig7d"
+metric = "rs1883123_overlaps_consensus_ccre"
+expected = true
+tolerance = { exact = true }
+source = "Figure 7D legend: 'rs1883123 (also shown in C) is located in an intronic cCRE'"
+kind = "figure"
+
+# ---- fig7e (Figure 7E) ----
+[[target]]
+recipe = "fig7e"
+metric = "ref_base_is_C"
+expected = true
+tolerance = { exact = true }
+source = "Figure 7E header: 'rs1883123 chr22:39600877 C>T'"
+kind = "tally"
+
+[[target]]
+recipe = "fig7e"
+metric = "contains_atgctaat_motif"
+expected = true
+tolerance = { exact = true }
+source = "Figure 7E sequence logo inset: 'ATGCTAAT' motif disrupted by C>T transition at position 5"
+kind = "figure"
+
+[[target]]
+recipe = "fig7e"
+metric = "alt_reduces_pred_and_motif_ig"
+expected = true
+tolerance = { exact = true }
+source = "main p.15 and Figure 7E: C>T mutation reduces both predicted GPe MEIS2-SOX6 GABA accessibility and local Integrated Gradients contribution over the ATGCTAAT motif"
+kind = "figure"

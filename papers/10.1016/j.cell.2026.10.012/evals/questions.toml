@@ -1,5 +1,6 @@
-# Held-out test questions. Answers were computed twice: by the recipes and by independent code that does not
-# use this pack (2026-11-24). These files are never copied into a user's workspace.
+# Held-out test questions for Johansen et al., Cell 2026 (10.1016/j.cell.2026.10.012).
+# Every answer was computed twice: by the recipes and by independent code that does not import the pack.
+# Never shipped to users.
 
 [[question]]
 id = "q1"
@@ -65,8 +66,78 @@ public = true
 id = "q7"
 ask = "In this public ABC Atlas release, what is the median doublet_score of marmoset Astrocyte nuclei? Answer with the number if available, or state 'not available' if the metric is missing."
 answer = "not available"
-contains_any = ["missing", "nan", "not available", "unavailable", "empty", "null", "none", "absent", "no doublet"]
+contains_any = ["missing", "not available", "unavailable", "absent", "no doublet", "all nan", "is nan"]
 kind = "text"
-level = "new"
+level = "guardrail"
 source = "bg_atlas.load_cells(extra_cols=('doublet_score','umi_count')): 0/26,192 marmoset Astrocyte nuclei (and 0/313,033 marmoset nuclei overall) have non-null doublet_score or umi_count; independent raw cell_metadata.csv + donor.csv + cell_to_cluster_membership.csv check confirms 0/26,192 non-null"
+public = false
+
+[[question]]
+id = "q8"
+ask = "Across all 10 human donors in the consensus atlas, which dissected region (library region_of_interest_label) contributed the highest total number of nuclei? Answer with the region label as written in the data."
+answer = "GPe"
+contains_any = ["gpe"]
+kind = "text"
+level = "reproduce"
+source = "recipe fig1a fig1a_region_coverage.csv: Human GPe = 155,954 nuclei (8 donors) > CaB (136,183) > PuR (125,659); independent cell_metadata + donor + library join confirms GPe = 155,954"
+public = true
+
+[[question]]
+id = "q9"
+ask = "In the macaque Patch-seq dataset (HMBA-Macaque-PatchSeq), what is the median rheobase current (rheobase_i, in pA) of neurons mapped to the STR D2 SMYD2-HTR7 SPN Group?"
+answer = 100.0
+tolerance = { abs = 1.0 }
+kind = "number"
+level = "reproduce"
+source = "recipe fig6f metric median_rheobase_smyd2_pa (100.0 pA, n=17); independent raw CSV join on CS20250428_GROUP_0053 confirms n=17, median=100.0 pA"
+public = true
+
+[[question]]
+id = "q10"
+ask = "In the macaque Patch-seq dataset (HMBA-Macaque-PatchSeq), what is the median 3 dB cutoff frequency (3db_freq_chirp, in Hz) of neurons mapped to the STR D1D2 eSPN Group?"
+answer = 6.55
+tolerance = { abs = 0.05 }
+kind = "number"
+level = "new"
+source = "recipe fig6f metric median_3db_espn_hz (6.552 Hz, n=14); independent raw CSV join on CS20250428_GROUP_0051 confirms n=14, median=6.5517 Hz"
+public = false
+
+[[question]]
+id = "q11"
+ask = "In the Mouse Whole Brain (WMB-10Xv3) cross-species homology comparison, which mouse striatal supertype shows the highest transcriptomic similarity to primate STR D2 SMYD2-HTR7 SPN? Answer with the full supertype name including its 4-digit prefix."
+answer = "0279 STR D2 Gaba_6"
+contains_any = ["0279 STR D2 Gaba_6", "0279"]
+kind = "text"
+level = "reproduce"
+source = "recipe fig3b metric smyd2_top1_mouse_supertype ('0279 STR D2 Gaba_6', r=0.5638); independent verification from fig3b_spn_similarity.csv and Table S12 curated homology"
+public = true
+
+[[question]]
+id = "q12"
+ask = "In the mouse whole-brain MERFISH atlas (MERFISH-C57BL6J-638850), what percentage of all cells belonging to the four homologous olfactory-bulb subclasses (041 OB-in Frmd7 Gaba, 042 OB-out Frmd7 Gaba, 043 OB-mi Frmd7 Gaba, and 044 OB Dopa-Gaba) lie in coronal striatal sections (sections containing at least 2,000 STR D1/D2 Gaba cells)?"
+answer = 1.09
+tolerance = { abs = 0.05 }
+kind = "number"
+level = "new"
+source = "recipe fig3e metric mouse_ob_pct_in_striatal_sections (1.0888%, 863 / 79,259 cells); independent raw pandas query on mouse_merfish_cell_metadata.csv (863 / 79,259 = 1.0888%)"
+public = true
+
+[[question]]
+id = "q13"
+ask = "How many of the 1,581 GRCh38 Human Ancestor Quickly Evolved Regions (HAQERs) in haqer.hg38.bed overlap at least one human basal ganglia consensus cCRE?"
+answer = 504
+tolerance = { exact = true }
+kind = "number"
+level = "reproduce"
+source = "Verified twice: (1) fig4g.py interval intersection of haqer.hg38.bed with atac_human_Group_by_peaks.csv yields 504/1,581; (2) independent interval intersection against atac_human_consensus_peaks.bed yields 504/1,581; matches Figure 4G header 'HAQERs (504/1581)'."
+public = true
+
+[[question]]
+id = "q14"
+ask = "In the human basal ganglia snATAC-seq Harmony UMAP table (atac_human_concatenated_peakmat_UMAP_harmony.csv), how many nuclei belong to the STR D2 SMYD2-HTR7 SPN population?"
+answer = 5847
+tolerance = { exact = true }
+kind = "number"
+level = "new"
+source = "Verified twice: (1) canonicalizing legacy preprint labels via bg_epig.canon_group() maps 'STRd D2 StrioMat Hybrid MSN' -> 'STR D2 SMYD2-HTR7 SPN' and counts 5,847 rows; (2) independent direct value_counts() on raw column Group for 'STRd D2 StrioMat Hybrid MSN' confirms 5,847 nuclei (tests whether an agent catches the 20250531 -> 20261031 rename guardrail instead of returning 0)."
 public = false

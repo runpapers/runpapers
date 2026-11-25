@@ -1,4 +1,4 @@
-spec = "runpapers/0.1"
+spec = "runpapers/0.2"
 
 [paper]
 doi = "10.1016/j.cell.2026.10.012"
@@ -10,30 +10,30 @@ first_author = "Nelson J. Johansen"
 senior_author = "Trygve E. Bakken"
 journal = "Cell"
 year = 2026
-license = "CC-BY-NC-ND-4.0"   # Crossref VoR license: published figure images are not redistributed; the paper's license (e.g. CC-BY-4.0): decides whether published figure images may be shown
+license = "CC-BY-NC-ND-4.0"   # Crossref VoR license: published figure images are not redistributed
 collections = ["bican-2026"]
 
 [pack]
-version = "0.1.0"
-summary = "A consensus cell-type taxonomy of the basal ganglia from 1,896,133 nuclei (~1.9 million; referred to as '1.8 million' in the paper's text) across human, macaque and marmoset (61 Groups), with conserved and species-specific features. This pack reproduces the atlas tallies and Group composition (Fig 1B) and the rare STR D2 SMYD2-HTR7 SPN population (Fig 2F) from the public metadata on a laptop."
+version = "0.2.0"
+summary = "A consensus multiomic and spatial atlas of the primate basal ganglia across 1,896,133 single nuclei (referred to as '1.8 million' in the text) from 10 human, 8 macaque, and 4 marmoset donors (61 consensus Groups), paired with primate MERSCOPE/Xenium and mouse MERFISH spatial maps, macaque Patch-seq electrophysiology, primate snATAC-seq chromatin landscapes, DeepHumanBG sequence-to-accessibility models, and MAGMA disease-genetics enrichment across 31 main-figure recipes."
 license = "CC-BY-4.0"   # pack content; recipe code is MIT
 code_license = "MIT"
 maintainers = [{ name = "RunPapers maintainers", orcid = "" }]
 
-[profile]               # structured description used for search and agent meetings (use ontology terms)
-species = ["Homo sapiens", "Macaca mulatta", "Macaca nemestrina", "Callithrix jacchus"]
-tissues = ["caudate nucleus", "putamen", "nucleus accumbens", "globus pallidus", "subthalamic nucleus", "substantia nigra"]
-assays = ["10x Multiome snRNA-seq", "10x Multiome snATAC-seq", "MERSCOPE", "Xenium", "Patch-seq"]
-cell_types = ["spiny projection neuron", "D1 SPN", "D2 SPN", "eccentric SPN", "astrocyte", "microglia", "oligodendrocyte"]
-key_genes = ["SMYD2", "HTR7", "DRD1", "DRD2", "RXFP1", "ADORA2A"]
+[profile]
+species = ["Homo sapiens", "Macaca mulatta", "Macaca nemestrina", "Callithrix jacchus", "Mus musculus"]
+tissues = ["caudate nucleus", "putamen", "nucleus accumbens", "globus pallidus", "subthalamic nucleus", "substantia nigra", "olfactory bulb"]
+assays = ["10x Multiome snRNA-seq", "10x Multiome snATAC-seq", "MERSCOPE", "Xenium", "MERFISH", "Patch-seq", "MAGMA GWAS enrichment", "CREsted sequence modeling"]
+cell_types = ["spiny projection neuron", "D1 SPN", "D2 SPN", "eccentric SPN", "STR D2 SMYD2-HTR7 SPN", "cholinergic interneuron", "PVALB interneuron", "SST-CHODL interneuron", "globus pallidus neuron", "dopaminergic neuron", "olfactory bulb neuron", "astrocyte", "microglia", "oligodendrocyte"]
+key_genes = ["SMYD2", "HTR7", "DRD1", "DRD2", "RXFP1", "ADORA2A", "MCHR2", "KCNIP1", "OPRM1", "CNR1", "CACNA1I", "MEIS2", "EGR1", "RARB", "LHX8", "GBX2", "ZIC3", "POU3F1", "HINFP"]
 
 [[data]]
 id = "cells"
 title = "Per-nucleus metadata: donor, library, QC (1.9M nuclei)"
 url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-10xMultiome-BG-Cross-Species/20261031/cell_metadata.csv"
+filename = "cell_metadata.csv"
 size = 448741495
 md5 = "d5dc817f93ebb9c3b465114e8c4eb227"
-tier = "lite"
 source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
 license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
 access = "open"
@@ -42,9 +42,9 @@ access = "open"
 id = "donors"
 title = "Donors: species, sex, age (22 donors)"
 url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-10xMultiome-BG-Cross-Species/20261031/donor.csv"
+filename = "donor.csv"
 size = 2012
 md5 = "997e6bea0d8d29cf102d49e371f34a1a"
-tier = "lite"
 source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
 license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
 access = "open"
@@ -53,20 +53,20 @@ access = "open"
 id = "libraries"
 title = "Libraries: dissected region per library"
 url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-10xMultiome-BG-Cross-Species/20261031/library.csv"
+filename = "library.csv"
 size = 108674
 md5 = "35d804ba642376f4c452237f158a8f9a"
-tier = "lite"
 source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
 license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
 access = "open"
 
 [[data]]
 id = "value-sets"
-title = "Controlled vocabularies and colors"
+title = "Controlled vocabularies and release palette colors"
 url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-10xMultiome-BG-Cross-Species/20261031/value_sets.csv"
+filename = "value_sets.csv"
 size = 4161
 md5 = "da8f35327cf07915b739da176bb07ca3"
-tier = "lite"
 source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
 license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
 access = "open"
@@ -75,9 +75,9 @@ access = "open"
 id = "cell-clusters"
 title = "Nucleus to cluster assignment"
 url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-taxonomy/20261031/cell_to_cluster_membership.csv"
+filename = "cell_to_cluster_membership.csv"
 size = 110529161
 md5 = "3620bd471aa8d70448cb4ff79e42285c"
-tier = "lite"
 source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
 license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
 access = "open"
@@ -86,9 +86,9 @@ access = "open"
 id = "clusters"
 title = "Clusters (1,435) with aliases"
 url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-taxonomy/20261031/cluster.csv"
+filename = "cluster.csv"
 size = 79917
 md5 = "24b474a7373338625ef3a28778ab2545"
-tier = "lite"
 source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
 license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
 access = "open"
@@ -97,9 +97,9 @@ access = "open"
 id = "terms"
 title = "Taxonomy terms (Neighborhood, Class, Subclass, Group) with order and colors"
 url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-taxonomy/20261031/cluster_annotation_term.csv"
+filename = "cluster_annotation_term.csv"
 size = 206520
 md5 = "e745bf6aacd66da64761610e27ff74a3"
-tier = "lite"
 source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
 license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
 access = "open"
@@ -108,9 +108,9 @@ access = "open"
 id = "term-sets"
 title = "Taxonomy levels"
 url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-taxonomy/20261031/cluster_annotation_term_set.csv"
+filename = "cluster_annotation_term_set.csv"
 size = 223
 md5 = "8bb57bd233afbced2229fdeb803e41a9"
-tier = "lite"
 source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
 license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
 access = "open"
@@ -119,29 +119,840 @@ access = "open"
 id = "cluster-terms"
 title = "Cluster to taxonomy term at each level"
 url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-taxonomy/20261031/cluster_to_cluster_annotation_membership.csv"
+filename = "cluster_to_cluster_annotation_membership.csv"
 size = 569375
 md5 = "8e8ed27a867312b0786d6dd880a6c99e"
-tier = "lite"
 source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
 license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
 access = "open"
+
+[[data]]
+id = "patchseq-cells"
+title = "Macaque Patch-seq per-cell metadata (717 neurons)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-Macaque-PatchSeq/20260228/cell_metadata.csv"
+filename = "macaque_patchseq_cell_metadata.csv"
+size = 108629
+md5 = "e7d314462f20bf91a4e8cbcf1ad749c1"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (HMBA-Macaque-PatchSeq version 20260228)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "patchseq-mmc"
+title = "Macaque Patch-seq MapMyCells taxonomy assignments (717 neurons)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-Macaque-PatchSeq/20260228/mmc_results.csv"
+filename = "macaque_patchseq_mmc_results.csv"
+size = 201451
+md5 = "21c203c1541d4538fcef75ba70e70856"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (HMBA-Macaque-PatchSeq version 20260228)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "patchseq-long-square"
+title = "Macaque Patch-seq cross-sweep long-square electrophysiology features (rheobase, input resistance)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-Macaque-PatchSeq/20260228/cross_sweep_long_square_features.csv"
+filename = "macaque_patchseq_cross_sweep_long_square_features.csv"
+size = 135560
+md5 = "3d0b8f89771f40c8b3eab8d6529cd9f4"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (HMBA-Macaque-PatchSeq version 20260228)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "patchseq-chirp"
+title = "Macaque Patch-seq chirp frequency-response features (3 dB cutoff frequency)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-Macaque-PatchSeq/20260228/chrip_features.csv"
+filename = "macaque_patchseq_chrip_features.csv"
+size = 65030
+md5 = "88e592a18c1a1acc9b1af3f7b184f4b7"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (HMBA-Macaque-PatchSeq version 20260228; note original upstream filename spelling 'chrip')"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "patchseq-donors"
+title = "Macaque Patch-seq donor metadata (70 donors)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-Macaque-PatchSeq/20260228/donor.csv"
+filename = "macaque_patchseq_donor.csv"
+size = 6559
+md5 = "f0f69bed09fdadcfed0a0490388ec836"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (HMBA-Macaque-PatchSeq version 20260228)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "lambert-tfs"
+title = "Lambert et al. (Cell 2018) curated human transcription factor symbols (HumanTFs v1.01, 1,639 TFs)"
+url = "https://humantfs.ccbr.utoronto.ca/download/v_1.01/TF_names_v_1.01.txt"
+filename = "lambert_TF_names_v_1.01.txt"
+size = 11838
+md5 = "41fc0baff1d7012a94cc2fb9d97c366b"
+source = "The Human Transcription Factors database v1.01 (University of Toronto CCBR; Lambert et al., Cell 2018, DOI: 10.1016/j.cell.2018.01.029)"
+license = "Open academic access with citation (Lambert et al., Cell 2018, PMID: 29425488)"
+access = "open"
+
+[[data]]
+id = "rna-cross-species-log2"
+title = "Cross-species primate BG snRNA-seq log2(CPM+1) matrix (1,896,133 nuclei x 16,630 orthologs)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/expression_matrices/HMBA-10xMultiome-BG-Cross-Species/20261031/HMBA-10xMultiome-BG-Cross-Species-log2.h5ad"
+filename = "HMBA-10xMultiome-BG-Cross-Species-log2.h5ad"
+size = 15833210094
+md5 = "095b9a64cfbc6c5ed1f5e20130e1d23c"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "rna-cross-species-raw"
+title = "Cross-species primate BG snRNA-seq raw UMI count matrix (1,896,133 nuclei x 16,630 orthologs)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/expression_matrices/HMBA-10xMultiome-BG-Cross-Species/20261031/HMBA-10xMultiome-BG-Cross-Species-raw.h5ad"
+filename = "HMBA-10xMultiome-BG-Cross-Species-raw.h5ad"
+size = 15393010459
+md5 = "35dbaad0d1e30b096e8f96dcd87e719c"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "mouse-wmb-cells"
+title = "Mouse Whole Brain (WMB-10X) per-cell metadata (4.04M cells)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/WMB-10X/20241115/cell_metadata.csv"
+filename = "mouse_wmb_cell_metadata.csv"
+size = 1008037855
+md5 = "1ec09a9960c1e378475469723f71fa7f"
+source = "Allen Brain Cell (ABC) Atlas, Mouse Whole Brain (Yao et al., Nature 2023), metadata release 20241115"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "mouse-wmb-cluster-terms"
+title = "Mouse Whole Brain taxonomy cluster-to-supertype/subclass/class membership"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/WMB-taxonomy/20231215/cluster_to_cluster_annotation_membership.csv"
+filename = "mouse_wmb_cluster_to_cluster_annotation_membership.csv"
+size = 2208190
+md5 = "9257eef8bc89e05467eaeeb0dad5d625"
+source = "Allen Brain Cell (ABC) Atlas, Mouse Whole Brain taxonomy CCN20230722, release 20231215"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "mouse-wmb-str-log2"
+title = "Mouse Whole Brain WMB-10Xv3 Striatum (STR) log2(CPM+1) expression matrix"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/expression_matrices/WMB-10Xv3/20230630/WMB-10Xv3-STR-log2.h5ad"
+filename = "mouse_wmb_str.h5ad"
+size = 11915297204
+md5 = "4a10e4e97cdf9934af2592ef0a849ee1"
+source = "Allen Brain Cell (ABC) Atlas, Mouse Whole Brain WMB-10Xv3, release 20230630"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "mouse-wmb-pal-log2"
+title = "Mouse Whole Brain WMB-10Xv3 Pallidum (PAL) log2(CPM+1) expression matrix"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/expression_matrices/WMB-10Xv3/20230630/WMB-10Xv3-PAL-log2.h5ad"
+filename = "mouse_wmb_pal.h5ad"
+size = 4067049816
+md5 = "cd72cfda54013e7d7fa2bbf46688a437"
+source = "Allen Brain Cell (ABC) Atlas, Mouse Whole Brain WMB-10Xv3, release 20230630"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "mouse-wmb-mb-log2"
+title = "Mouse Whole Brain WMB-10Xv3 Midbrain (MB) log2(CPM+1) expression matrix"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/expression_matrices/WMB-10Xv3/20230630/WMB-10Xv3-MB-log2.h5ad"
+filename = "mouse_wmb_mb.h5ad"
+size = 13726487690
+md5 = "46d177ce332621b7f5e7fff7c9daea39"
+source = "Allen Brain Cell (ABC) Atlas, Mouse Whole Brain WMB-10Xv3, release 20230630"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "mouse-wmb-olf-log2"
+title = "Mouse Whole Brain WMB-10Xv3 Olfactory areas (OLF) log2(CPM+1) expression matrix"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/expression_matrices/WMB-10Xv3/20230630/WMB-10Xv3-OLF-log2.h5ad"
+filename = "mouse_wmb_olf.h5ad"
+size = 3114998442
+md5 = "ec24c33b8787b6e3683cfff47059033d"
+source = "Allen Brain Cell (ABC) Atlas, Mouse Whole Brain WMB-10Xv3, release 20230630"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "human-merscope-cells"
+title = "Human basal ganglia MERSCOPE per-cell metadata (5.43M cells)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-MERSCOPE-Human/20261101/cell_metadata.csv"
+filename = "human_merscope_cell_metadata.csv"
+size = 1161102639
+md5 = "0f11d2fc6038ba6dc20625a89f67852f"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-MERSCOPE-Human, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "human-merscope-mmc"
+title = "Human basal ganglia MERSCOPE MapMyCells taxonomy assignments"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-MERSCOPE-Human/20261101/mmc_results.csv"
+filename = "human_merscope_mmc_results.csv"
+size = 897845944
+md5 = "e66a650dcb3aa8275356ba2c573a47a9"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-MERSCOPE-Human, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "human-merscope-coords"
+title = "Human basal ganglia MERSCOPE registered slab-plane spatial coordinates"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-MERSCOPE-Human/20261101/slab_plane_coordinates.csv"
+filename = "human_merscope_slab_plane_coordinates.csv"
+size = 679537687
+md5 = "9f66ddd3dd44ba970c1367d196f37630"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-MERSCOPE-Human, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "human-merscope-anatomy"
+title = "Human basal ganglia MERSCOPE anatomical region annotations"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-MERSCOPE-Human/20261101/cell_anatomical_annotations.csv"
+filename = "human_merscope_cell_anatomical_annotations.csv"
+size = 447831754
+md5 = "8f175791cbc9fbf75cf1c84da9554fac"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-MERSCOPE-Human, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "macaque-merscope-cells"
+title = "Macaque basal ganglia MERSCOPE per-cell metadata (3.26M cells)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-MERSCOPE-Macaque/20261101/cell_metadata.csv"
+filename = "macaque_merscope_cell_metadata.csv"
+size = 725084143
+md5 = "44fc4a84d2fe6961d337b8f2d40e6fd1"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-MERSCOPE-Macaque, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "macaque-merscope-mmc"
+title = "Macaque basal ganglia MERSCOPE MapMyCells taxonomy assignments"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-MERSCOPE-Macaque/20261101/mmc_results.csv"
+filename = "macaque_merscope_mmc_results.csv"
+size = 513883099
+md5 = "3f69e17c8e1a85c91d46098bddeb6425"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-MERSCOPE-Macaque, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "macaque-merscope-coords"
+title = "Macaque basal ganglia MERSCOPE registered slab-plane spatial coordinates"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-MERSCOPE-Macaque/20261101/slab_plane_coordinates.csv"
+filename = "macaque_merscope_slab_plane_coordinates.csv"
+size = 438159839
+md5 = "2e8d330bf2c61701d9dca9bea9424e89"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-MERSCOPE-Macaque, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "macaque-merscope-anatomy"
+title = "Macaque basal ganglia MERSCOPE anatomical region annotations"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-MERSCOPE-Macaque/20261101/cell_anatomical_annotations.csv"
+filename = "macaque_merscope_cell_anatomical_annotations.csv"
+size = 274879587
+md5 = "b39a006e38e28243ac911e49faa7acbe"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-MERSCOPE-Macaque, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "marmoset-xenium-cells"
+title = "Marmoset basal ganglia Xenium per-cell metadata (1.36M cells)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-Xenium-Marmoset/20261101/cell_metadata.csv"
+filename = "marmoset_xenium_cell_metadata.csv"
+size = 377866647
+md5 = "14ac4cbb5c6c162a0701800165fec30a"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-Xenium-Marmoset, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "marmoset-xenium-mmc"
+title = "Marmoset basal ganglia Xenium MapMyCells taxonomy assignments"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-Xenium-Marmoset/20261101/mmc_results.csv"
+filename = "marmoset_xenium_mmc_results.csv"
+size = 215449792
+md5 = "37751335034ff06283193a6740eca3a6"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-Xenium-Marmoset, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "marmoset-xenium-coords"
+title = "Marmoset basal ganglia Xenium registered slab-plane spatial coordinates"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-Xenium-Marmoset/20261101/slab_plane_coordinates.csv"
+filename = "marmoset_xenium_slab_plane_coordinates.csv"
+size = 131291862
+md5 = "e383e33ab1a7554df193f7a88150c701"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-Xenium-Marmoset, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "marmoset-xenium-anatomy"
+title = "Marmoset basal ganglia Xenium anatomical region annotations"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-Xenium-Marmoset/20261101/cell_anatomical_annotations.csv"
+filename = "marmoset_xenium_cell_anatomical_annotations.csv"
+size = 116341195
+md5 = "7329a993f5fb86d173241951acc70f46"
+source = "Allen Brain Cell (ABC) Atlas, HMBA-BG-Xenium-Marmoset, release 20261101"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "mouse-merfish-cells"
+title = "Mouse whole-brain MERFISH (C57BL6J-638850) per-cell coordinates and taxonomy annotations (3.94M cells)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/MERFISH-C57BL6J-638850/20241115/views/cell_metadata_with_cluster_annotation.csv"
+filename = "mouse_merfish_cell_metadata.csv"
+size = 1018613800
+md5 = "b4cddf29d092d5cb29f73af1cc156f7a"
+source = "Allen Brain Cell (ABC) Atlas, MERFISH-C57BL6J-638850 (Yao et al., Nature 2023), release 20241115"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "atac-human-group-by-peaks"
+title = "Human snATAC-seq Group-by-peaks boolean accessibility matrix (1,360,548 cCREs x 60 Groups)"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/human/peaks/Group_by_peaks.csv"
+filename = "atac_human_Group_by_peaks.csv"
+size = 508312341
+md5 = "ebe8742eca4d16852d2bfb1018fbf72a"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "atac-human-consensus-peaks"
+title = "Human snATAC-seq consensus cCRE coordinates (GRCh38/hg38, 1,360,548 peaks)"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/human/peaks/consensus_peaks.bed"
+filename = "atac_human_consensus_peaks.bed"
+size = 32531627
+md5 = "5a4788f2cec31bf4c6c2710d07cfacaf"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "atac-human-umap-harmony"
+title = "Human snATAC-seq Harmony peak-matrix UMAP coordinates (863,439 nuclei)"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/BICAN_05072025_pre-print_release/ATAC/human/concatenated_peakmat_UMAP_harmony.csv"
+filename = "atac_human_concatenated_peakmat_UMAP_harmony.csv"
+size = 52164618
+md5 = "fb7d72bd4278070b6169f3070fde6c86"
+source = "Allen Institute HMBA Basal Ganglia public AWS S3 bucket (released-taxonomies, BICAN_05072025_pre-print_release)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "haqer-hg38-bed"
+title = "Mangan et al. (Cell 2022) 1,581 Human Ancestor Quickly Evolved Regions (HAQERs, hg38 BED)"
+url = "https://vertgenlab.cloud.duke.edu/publications/haqer/regionsOfInterest/haqersByAssembly/haqer.hg38.bed"
+filename = "haqer.hg38.bed"
+size = 57861
+md5 = "f033366f41661ff9b28754a7aa0f2511"
+source = "Vertebrate Genetics Laboratory (Craig Lowe Lab, Duke University), Mangan et al., Cell 2022 (DOI: 10.1016/j.cell.2022.10.016)"
+license = "CC-BY-4.0 (https://www.vertgenlab.org/)"
+access = "open"
+
+[[data]]
+id = "gta-v2-snapshot"
+title = "Allen Genetic Tools Atlas 2.0 snapshot (SpecimenMetadata.csv with hg38/mm10 coordinates for Hunker et al. 2025 striatal enhancers)"
+url = "https://allen-brain-map-cms-802451596237-us-west-2.s3.amazonaws.com/Genetic%20Tools/Genetic%20Tools%20Atlas%202.0%20data%20snapshot.zip"
+filename = "allen_gta_v2_snapshot.zip"
+size = 923333
+md5 = "cd7c85c77a7a13959bc1cc7969c82464"
+source = "Allen Brain Map Genetic Tools Atlas v2.0 public AWS S3 bucket"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "jaspar2024-core-meme"
+title = "JASPAR 2024 CORE vertebrates non-redundant TF motif PFMs (MEME format)"
+url = "https://jaspar.elixir.no/download/data/2024/CORE/JASPAR2024_CORE_vertebrates_non-redundant_pfms_meme.txt"
+filename = "JASPAR2024_CORE_vertebrates_non-redundant_pfms_meme.txt"
+size = 469100
+md5 = "96b2e87e2344de6b85f5f4e084e8486f"
+source = "JASPAR 2024 database (ELIXIR Norway, Rauluseviciute et al., NAR 2024)"
+license = "CC-BY-4.0 (https://jaspar.elixir.no/about/)"
+access = "open"
+
+[[data]]
+id = "magma-gene-loc-hg38"
+title = "NCBI GRCh38 gene locations for MAGMA v1.10 with extended MHC excluded"
+url = "https://raw.githubusercontent.com/AllenInstitute/BG_Consensus_Taxonomy/main/Human/Diseases/MAGMA/External_data/NCBI38.3.gene.loc.extendedMHCexcluded"
+filename = "NCBI38.3.gene.loc.extendedMHCexcluded"
+size = 710204
+md5 = "b3baa6951206ed7bc196dc58d92ab5e5"
+source = "AllenInstitute/BG_Consensus_Taxonomy (GitHub / Zenodo 10.5281/zenodo.22821534), derived from CNCR MAGMA NCBI38.3"
+license = "CC-BY-4.0 (Zenodo 10.5281/zenodo.22821534)"
+access = "open"
+
+[[data]]
+id = "magma-gene-loc-hg37"
+title = "NCBI GRCh37 gene locations for MAGMA v1.10 with extended MHC excluded"
+url = "https://raw.githubusercontent.com/AllenInstitute/BG_Consensus_Taxonomy/main/Human/Diseases/MAGMA/External_data/NCBI37.3.gene.loc.extendedMHCexcluded"
+filename = "NCBI37.3.gene.loc.extendedMHCexcluded"
+size = 678981
+md5 = "6c35771aed0358eda3f4e0afa7bca3cc"
+source = "AllenInstitute/BG_Consensus_Taxonomy (GitHub / Zenodo 10.5281/zenodo.22821534), originally from Bryois et al. 2020"
+license = "CC-BY-4.0 (Zenodo 10.5281/zenodo.22821534)"
+access = "open"
+
+[[data]]
+id = "ucsc-refseq-hg38"
+title = "UCSC GRCh38/hg38 curated RefSeq gene annotations (exon/intron models and TSS coordinates)"
+url = "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/ncbiRefSeqCurated.txt.gz"
+filename = "ncbiRefSeqCurated.txt.gz"
+size = 4801131
+md5 = "b079f98248c868e745f9cce1c48b703c"
+source = "UCSC Genome Browser GoldenPath (GRCh38/hg38 ncbiRefSeqCurated)"
+license = "Public domain / freely usable for all purposes (NCBI RefSeq / UCSC Genome Browser)"
+access = "open"
+
+[[data]]
+id = "atac-macaque-group-by-peaks"
+title = "Macaque snATAC-seq Group-by-peaks accessibility table (1,377,753 cCREs)"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/macaque/peaks/Group_by_peaks.bed"
+filename = "atac_macaque_Group_by_peaks.bed"
+size = 506603110
+md5 = "1bd6c9787d443fb312108fcfd0dfc88b"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "atac-macaque-consensus-peaks"
+title = "Macaque snATAC-seq consensus cCRE coordinates (rheMac10, 1,377,753 peaks)"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/macaque/peaks/consensus_peaks.bed"
+filename = "atac_macaque_consensus_peaks.bed"
+size = 41910635
+md5 = "2c16586d73068034bd286e52c177d04f"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "atac-marmoset-group-by-peaks"
+title = "Marmoset snATAC-seq Group-by-peaks accessibility table (1,226,781 cCREs)"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/marmoset/peaks/Group_by_peaks.bed"
+filename = "atac_marmoset_Group_by_peaks.bed"
+size = 430693959
+md5 = "d98bb6962328b11e91eef37d26614da0"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "atac-marmoset-consensus-peaks"
+title = "Marmoset snATAC-seq consensus cCRE coordinates (calJac4, 1,226,781 peaks)"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/marmoset/peaks/consensus_peaks.bed"
+filename = "atac_marmoset_consensus_peaks.bed"
+size = 29213517
+md5 = "6e99cc7cb6e2bab4c0a96fc6e2f8f967"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "bw-human-str-d2-smyd2"
+title = "Human snATAC-seq bigWig track: STR D2 SMYD2-HTR7 SPN"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/human/bigwigs/STR_D2_SMYD2-HTR7_SPN.bw"
+filename = "STR_D2_SMYD2-HTR7_SPN.bw"
+size = 959416994
+md5 = "67a7a03429b50f8377de8ed71fb3344f"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "bw-human-strd-d2-striosome"
+title = "Human snATAC-seq bigWig track: STRd D2 Striosome SPN"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/human/bigwigs/STRd_D2_Striosome_SPN.bw"
+filename = "STRd_D2_Striosome_SPN.bw"
+size = 1334314777
+md5 = "bfe11df248a8f5913b1242569c320c60"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "bw-human-strd-d2-matrix"
+title = "Human snATAC-seq bigWig track: STRd D2 Matrix SPN"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/human/bigwigs/STRd_D2_Matrix_SPN.bw"
+filename = "STRd_D2_Matrix_SPN.bw"
+size = 1669378718
+md5 = "95057f0d980df6c1457d2ee7848b0186"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "bw-human-str-d1d2-espn"
+title = "Human snATAC-seq bigWig track: STR D1D2 eSPN"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/human/bigwigs/STR_D1D2_eSPN.bw"
+filename = "STR_D1D2_eSPN.bw"
+size = 1301966900
+md5 = "6f74e6ab6d8711baa5f09bd60da69417"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "bw-human-gpe-meis2-sox6"
+title = "Human snATAC-seq bigWig track: GPe MEIS2-SOX6 GABA"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/final-release/ATAC/human/bigwigs/GPe_MEIS2-SOX6_GABA.bw"
+filename = "GPe_MEIS2-SOX6_GABA.bw"
+size = 809275425
+md5 = "47ef378a3b40ef0585591c45e456187f"
+source = "Allen Institute HMBA Basal Ganglia final-release public AWS S3 bucket (released-taxonomies)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "crested-human-model"
+title = "Pretrained DeepHumanBG CREsted sequence-to-accessibility CNN (finetune epoch 12, Keras)"
+url = "https://released-taxonomies-802451596237-us-west-2.s3.us-west-2.amazonaws.com/HMBA/BasalGanglia/BICAN_05072025_pre-print_release/crested/human_BG_20260204_finetune_epoch_12.keras"
+filename = "human_BG_20260204_finetune_epoch_12.keras"
+size = 76329881
+md5 = "c3afa9b248a4fe562ecf319168d16332"
+source = "Allen Institute HMBA Basal Ganglia public AWS S3 bucket (released-taxonomies, BICAN_05072025_pre-print_release)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "ref-hg38-fa-gz"
+title = "Human GRCh38/hg38 reference genome FASTA (gzipped, for DeepHumanBG & motif scanning)"
+url = "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz"
+filename = "hg38.fa.gz"
+size = 983659424
+md5 = "1c9dcaddfa41027f17cd8f7a82c7293b"
+source = "UCSC Genome Browser GoldenPath (GRCh38/hg38, Genome Reference Consortium)"
+license = "Public domain / freely usable for all purposes (Genome Reference Consortium / UCSC Genome Browser)"
+access = "open"
+
+[[data]]
+id = "ref-mm10-fa-gz"
+title = "Mouse GRCm38/mm10 reference genome FASTA (gzipped, for mouse-derived Hunker 2025 enhancers in Fig 5D/5E)"
+url = "https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/mm10.fa.gz"
+filename = "mm10.fa.gz"
+size = 870141360
+md5 = "db005b65828db31735f384e4c5787be5"
+source = "UCSC Genome Browser GoldenPath (GRCm38/mm10, Genome Reference Consortium)"
+license = "Public domain / freely usable for all purposes (Genome Reference Consortium / UCSC Genome Browser)"
+access = "open"
+
+[[data]]
+id = "magma-v1-10-linux-static"
+title = "MAGMA v1.10 Linux 64-bit static binary archive"
+url = "https://vu.data.surfsara.nl/index.php/s/lxDgt2dNdNr6DYt/download"
+filename = "magma_v1.10_static.zip"
+size = 3278944
+md5 = "e01c9ec24c7dd96d2f95477080bf7ad4"
+source = "CNCR Complex Trait Genetics Lab (VU Amsterdam), MAGMA v1.10 (https://cncr.nl/research/magma/)"
+license = "Free for academic/non-commercial research use (GPL-3.0 source; de Leeuw et al., PLoS Comput Biol 2015)"
+access = "open"
+
+[[data]]
+id = "magma-g1000-eur"
+title = "1000 Genomes Phase 3 European ancestry LD reference panel for MAGMA (PLINK bed/bim/fam + synonyms)"
+url = "https://vu.data.surfsara.nl/index.php/s/VZNByNwpD8qqINe/download"
+filename = "g1000_eur.zip"
+size = 511626945
+md5 = "1919cb5c79bbe7871aed71ae4abe6217"
+source = "CNCR Complex Trait Genetics Lab (VU Amsterdam), derived from 1000 Genomes Project Phase 3"
+license = "Open public reference data (1000 Genomes Project Phase 3 / CNCR MAGMA reference)"
+access = "open"
+
+[[data]]
+id = "gwas-ad-bellenguez-grch38"
+title = "Bellenguez et al. (2022) Alzheimer's disease GWAS summary statistics (European, GRCh38, GCST90027158)"
+url = "https://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90027001-GCST90028000/GCST90027158/GCST90027158_buildGRCh38.tsv.gz"
+filename = "GCST90027158_buildGRCh38.tsv.gz"
+size = 755201909
+md5 = "9d23b9ba23532da38ab83fb061bab18f"
+source = "NHGRI-EBI GWAS Catalog study GCST90027158 (Bellenguez et al., Nat Genet 2022, DOI: 10.1038/s41588-022-01024-z)"
+license = "CC0-1.0 / Open Access (NHGRI-EBI GWAS Catalog terms)"
+access = "open"
+
+[[data]]
+id = "gwas-scz-pgc3-eur"
+title = "PGC3 Schizophrenia Wave 3 GWAS summary statistics (European ancestry autosomes, GRCh37, Trubetskoy et al. 2022)"
+url = "https://ndownloader.figshare.com/files/34517828"
+filename = "PGC3_SCZ_wave3.european.autosome.public.v3.vcf.tsv.gz"
+size = 239710564
+md5 = "6ebe2376f5cda972d37efa0f214c4df0"
+source = "Psychiatric Genomics Consortium (PGC) scz2022 Figshare archive (DOI: 10.6084/m9.figshare.19426775; Trubetskoy et al., Nature 2022)"
+license = "CC-BY-4.0 (Figshare 10.6084/m9.figshare.19426775)"
+access = "open"
+
+[[data]]
+id = "rna-human-log2"
+title = "Human BG snRNA-seq full-gene log2(CPM+1) matrix (for 453-cluster MAGMA v1.10 specificity)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/expression_matrices/HMBA-10xMultiome-BG/20250630/HMBA-10xMultiome-BG-Human-log2.h5ad"
+filename = "HMBA-10xMultiome-BG-Human-log2.h5ad"
+size = 15647020882
+md5 = "b1fe2c1ac718ef7802327b264670abf1"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (HMBA-10xMultiome-BG 20250630)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[recipes]]
+id = "fig1a"
+title = "Dissection coverage dot plot across anatomical regions and three primates (anterior-to-posterior order; 3D/FACS schematic omitted)"
+panel = "Figure 1A"
+script = "recipes/fig1a.py"
+data = ["cells", "donors", "libraries", "value-sets", "cell-clusters", "clusters", "terms", "cluster-terms"]
+needs = { memory_gb = 4, gpu = false, minutes = 2 }
 
 [[recipes]]
 id = "fig1b"
 title = "Atlas tallies and Group composition: log10 nuclei, species proportions and dissected-region distributions across the 61 Groups (dendrogram omitted)"
 panel = "Figure 1B"
 script = "recipes/fig1b.py"
-tier = "lite"
 data = ["cells", "donors", "libraries", "value-sets", "cell-clusters", "clusters", "terms", "cluster-terms"]
-max_minutes = 20
-max_mem_gb = 6
+needs = { memory_gb = 4, gpu = false, minutes = 2 }
+
+[[recipes]]
+id = "fig1cd"
+title = "Cross-species integrated basal ganglia UMAP (61 Groups), species alignment entropy, dissected region, and neurotransmitter overlays"
+panel = "Figure 1C-D"
+script = "recipes/fig1cd.py"
+data = ["cells", "donors", "libraries", "value-sets", "cell-clusters", "clusters", "terms", "cluster-terms", "rna-cross-species-log2"]
+needs = { memory_gb = 64, gpu = true, minutes = 15 }
+
+[[recipes]]
+id = "fig1e"
+title = "Macaque MERSCOPE spatial localization of six striatal SPN Groups (top row; morphologies and voltage traces excluded)"
+panel = "Figure 1E"
+script = "recipes/fig1e.py"
+data = ["macaque-merscope-cells", "macaque-merscope-mmc", "macaque-merscope-coords", "macaque-merscope-anatomy"]
+needs = { memory_gb = 12, gpu = false, minutes = 2 }
+
+[[recipes]]
+id = "fig2a"
+title = "Cross-species Group expression profiles and Expressolog conservation AUROC for ADORA2A, MCHR2, KCNIP1, and OPRM1"
+panel = "Figure 2A"
+script = "recipes/fig2a.py"
+data = ["cells", "donors", "libraries", "cell-clusters", "clusters", "terms", "cluster-terms", "rna-cross-species-log2"]
+needs = { memory_gb = 24, gpu = false, minutes = 5 }
+
+[[recipes]]
+id = "fig2b"
+title = "Expressolog conservation (AUROC) vs donor-subsampled Tau specificity scatter and conserved transcription factor heatmap"
+panel = "Figure 2B"
+script = "recipes/fig2b.py"
+data = ["cells", "donors", "libraries", "cell-clusters", "clusters", "terms", "cluster-terms", "rna-cross-species-log2", "lambert-tfs"]
+needs = { memory_gb = 24, gpu = false, minutes = 5 }
+
+[[recipes]]
+id = "fig2c"
+title = "Mirrored horizontal SPN dendrogram tanglegram showing Dorsal/Ventral (all orthologs) to D1/D2 (TFs only) topological switch"
+panel = "Figure 2C"
+script = "recipes/fig2c.py"
+data = ["cells", "donors", "libraries", "cell-clusters", "clusters", "terms", "cluster-terms", "rna-cross-species-log2", "lambert-tfs"]
+needs = { memory_gb = 24, gpu = false, minutes = 5 }
+
+[[recipes]]
+id = "fig2de"
+title = "Cross-species integrated SPN UMAP (9 Groups, 841k nuclei) and 30-gene conserved SPN marker stacked violin plot"
+panel = "Figure 2D-E"
+script = "recipes/fig2de.py"
+data = ["cells", "donors", "libraries", "cell-clusters", "clusters", "terms", "cluster-terms", "rna-cross-species-log2"]
+needs = { memory_gb = 48, gpu = true, minutes = 10 }
 
 [[recipes]]
 id = "fig2f"
 title = "Per-donor proportions of the four classical D2 SPN Groups; the rare STR D2 SMYD2-HTR7 SPN"
 panel = "Figure 2F"
 script = "recipes/fig2f.py"
-tier = "lite"
 data = ["cells", "donors", "libraries", "cell-clusters", "clusters", "terms", "cluster-terms"]
-max_minutes = 20
-max_mem_gb = 6
+needs = { memory_gb = 4, gpu = false, minutes = 2 }
+
+[[recipes]]
+id = "fig2g"
+title = "SPN evolutionary axes divergence (Dorsal-Ventral, Striosome-Matrix, D1-D2 vs 5,000 HVG) via PyDESeq2 and LOWESS residuals"
+panel = "Figure 2G"
+script = "recipes/fig2g.py"
+data = ["cells", "donors", "libraries", "cell-clusters", "clusters", "terms", "cluster-terms", "rna-cross-species-log2", "rna-cross-species-raw"]
+needs = { memory_gb = 64, gpu = false, minutes = 15 }
+
+[[recipes]]
+id = "fig3a"
+title = "Primate vs. mouse basal ganglia cell sampling, 44-Group x mouse supertype homology heatmap, and 57-gene macaque-mouse conserved marker dot-pie"
+panel = "Figure 3A"
+script = "recipes/fig3a.py"
+data = ["cells", "donors", "cell-clusters", "terms", "cluster-terms", "rna-cross-species-log2", "mouse-wmb-cells", "mouse-wmb-cluster-terms", "mouse-wmb-str-log2", "mouse-wmb-pal-log2", "mouse-wmb-mb-log2", "mouse-wmb-olf-log2"]
+needs = { memory_gb = 32, gpu = false, minutes = 15 }
+
+[[recipes]]
+id = "fig3b"
+title = "Zoomed classical SPN Group (7 Groups) x mouse SPN supertype (14 supertypes) homology heatmap"
+panel = "Figure 3B"
+script = "recipes/fig3b.py"
+data = ["cells", "donors", "cell-clusters", "terms", "cluster-terms", "rna-cross-species-log2", "mouse-wmb-cells", "mouse-wmb-cluster-terms", "mouse-wmb-str-log2", "mouse-wmb-pal-log2", "mouse-wmb-mb-log2", "mouse-wmb-olf-log2"]
+needs = { memory_gb = 32, gpu = false, minutes = 15 }
+
+[[recipes]]
+id = "fig3c"
+title = "Mouse MERFISH coronal striatal distribution of STR D2 SMYD2-HTR7 homologous supertypes (0279 STR D2 Gaba_6 vs. 0276 STR D2 Gaba_3)"
+panel = "Figure 3C"
+script = "recipes/fig3c.py"
+data = ["mouse-merfish-cells"]
+needs = { memory_gb = 8, gpu = false, minutes = 2 }
+
+[[recipes]]
+id = "fig3d"
+title = "Conserved marker 3-slice pie-dot plot across OB Dopa-GABA and OB FRMD7 GABA in Human, Macaque, and Marmoset"
+panel = "Figure 3D"
+script = "recipes/fig3d.py"
+data = ["cells", "donors", "libraries", "cell-clusters", "clusters", "terms", "cluster-terms", "rna-cross-species-log2"]
+needs = { memory_gb = 24, gpu = false, minutes = 5 }
+
+[[recipes]]
+id = "fig3e"
+title = "Four-species (human, macaque, marmoset, mouse + mouse OB inset) peri-striatal spatial localization of OB Dopa-GABA and OB FRMD7 GABA Groups"
+panel = "Figure 3E"
+script = "recipes/fig3e.py"
+data = ["human-merscope-cells", "human-merscope-mmc", "human-merscope-coords", "human-merscope-anatomy", "macaque-merscope-cells", "macaque-merscope-mmc", "macaque-merscope-coords", "macaque-merscope-anatomy", "marmoset-xenium-cells", "marmoset-xenium-mmc", "marmoset-xenium-coords", "marmoset-xenium-anatomy", "mouse-merfish-cells"]
+needs = { memory_gb = 24, gpu = false, minutes = 5 }
+
+[[recipes]]
+id = "fig4d"
+title = "TF-motif cell-type specificity (Gini) versus RefSeq promoter enrichment across JASPAR2024 vertebrate motifs in human BG cCREs (447-mammal Cactus HAL unbundled)"
+panel = "Figure 4D"
+script = "recipes/fig4d.py"
+data = ["atac-human-group-by-peaks", "jaspar2024-core-meme", "ref-hg38-fa-gz", "ucsc-refseq-hg38"]
+needs = { memory_gb = 4, gpu = false, minutes = 5 }
+
+[[recipes]]
+id = "fig4e"
+title = "Three-species (Human, Macaque, Marmoset) Group-specific cCRE accessibility heatmaps, consensus cCRE counts, and Human SPN Jaccard similarity"
+panel = "Figure 4E"
+script = "recipes/fig4e.py"
+data = ["terms", "cluster-terms", "atac-human-group-by-peaks", "atac-human-consensus-peaks", "atac-macaque-group-by-peaks", "atac-macaque-consensus-peaks", "atac-marmoset-group-by-peaks", "atac-marmoset-consensus-peaks"]
+needs = { memory_gb = 6, gpu = false, minutes = 5 }
+
+[[recipes]]
+id = "fig4f"
+title = "Human snATAC-seq spiny projection neuron Harmony UMAP and cCRE Jaccard dendrogram"
+panel = "Figure 4F"
+script = "recipes/fig4f.py"
+data = ["terms", "cluster-terms", "atac-human-group-by-peaks", "atac-human-umap-harmony"]
+needs = { memory_gb = 4, gpu = false, minutes = 3 }
+
+[[recipes]]
+id = "fig4g"
+title = "Intersection of human basal ganglia cCREs with 1,581 HAQERs (504/1,581 exact) and 60-Group accessibility heatmap"
+panel = "Figure 4G"
+script = "recipes/fig4g.py"
+data = ["terms", "cluster-terms", "atac-human-group-by-peaks", "haqer-hg38-bed"]
+needs = { memory_gb = 4, gpu = false, minutes = 3 }
+
+[[recipes]]
+id = "fig5b"
+title = "DeepHumanBG latent sequence embeddings UMAP (top-100 cCREs per neuronal Group) and nucleotide Integrated Gradients tracks"
+panel = "Figure 5B"
+script = "recipes/fig5b.py"
+data = ["terms", "cluster-terms", "crested-human-model", "atac-human-group-by-peaks", "ref-hg38-fa-gz"]
+needs = { memory_gb = 16, gpu = true, minutes = 10 }
+
+[[recipes]]
+id = "fig5c"
+title = "DeepHumanBG cell-type TF-motif importance (JASPAR2024 IG) combined with scaled human snRNA-seq TF expression across 59 BG Groups"
+panel = "Figure 5C"
+script = "recipes/fig5c.py"
+data = ["cells", "donors", "cell-clusters", "terms", "cluster-terms", "rna-cross-species-log2", "crested-human-model", "atac-human-group-by-peaks", "ref-hg38-fa-gz", "jaspar2024-core-meme"]
+needs = { memory_gb = 24, gpu = true, minutes = 15 }
+
+[[recipes]]
+id = "fig5d"
+title = "DeepHumanBG predicted chromatin accessibility across all 48 Hunker et al. (2025) striatal AAV enhancers and core concatemers"
+panel = "Figure 5D"
+script = "recipes/fig5d.py"
+data = ["crested-human-model", "atac-human-group-by-peaks", "gta-v2-snapshot", "ref-hg38-fa-gz", "ref-mm10-fa-gz"]
+needs = { memory_gb = 16, gpu = true, minutes = 5 }
+
+[[recipes]]
+id = "fig5e"
+title = "DeepHumanBG D1-SPN nucleotide Integrated Gradients sequence logo for mouse enhancer AiE0779m (MEIS2/EGR1/RARB drivers) and concatemer strength (447-mammal HAL unbundled)"
+panel = "Figure 5E"
+script = "recipes/fig5e.py"
+data = ["crested-human-model", "atac-human-group-by-peaks", "gta-v2-snapshot", "ref-hg38-fa-gz", "ref-mm10-fa-gz", "jaspar2024-core-meme"]
+needs = { memory_gb = 16, gpu = true, minutes = 5 }
+
+[[recipes]]
+id = "fig6a"
+title = "Dot plot of 28 marker genes, ion channels, and neurotransmitter receptors across STR D2 SMYD2-HTR7 SPN and three comparison SPNs"
+panel = "Figure 6A"
+script = "recipes/fig6a.py"
+data = ["cells", "donors", "libraries", "cell-clusters", "clusters", "terms", "cluster-terms", "rna-cross-species-log2"]
+needs = { memory_gb = 24, gpu = false, minutes = 5 }
+
+[[recipes]]
+id = "fig6b"
+title = "Human snATAC-seq chromatin accessibility tracks at the SMYD2 locus across four SPN subtypes (companion methylation/histone/Hi-C tracks omitted)"
+panel = "Figure 6B"
+script = "recipes/fig6b.py"
+data = ["atac-human-consensus-peaks", "ucsc-refseq-hg38", "bw-human-str-d2-smyd2", "bw-human-strd-d2-striosome", "bw-human-strd-d2-matrix", "bw-human-str-d1d2-espn"]
+needs = { memory_gb = 4, gpu = false, minutes = 3 }
+
+[[recipes]]
+id = "fig6d"
+title = "Macaque MERSCOPE striosome neighborhood enrichment z-scores across coronal sections for five SPN Groups (DAPI microscopy inset excluded)"
+panel = "Figure 6D"
+script = "recipes/fig6d.py"
+data = ["macaque-merscope-cells", "macaque-merscope-mmc", "macaque-merscope-coords", "macaque-merscope-anatomy"]
+needs = { memory_gb = 12, gpu = false, minutes = 3 }
+
+[[recipes]]
+id = "fig6f"
+title = "Macaque Patch-seq Rheobase (pA) and 3 dB cutoff frequency (Hz) across six striatal SPN Groups (mouse recordings in companion Budzillo et al.)"
+panel = "Figure 6F"
+script = "recipes/fig6f.py"
+data = ["terms", "patchseq-cells", "patchseq-mmc", "patchseq-long-square", "patchseq-chirp", "patchseq-donors"]
+needs = { memory_gb = 2, gpu = false, minutes = 1 }
+
+[[recipes]]
+id = "fig7b"
+title = "From-scratch MAGMA v1.10 cell-type genetic risk enrichment across 453 human BG clusters on open Bellenguez AD (GRCh38) and PGC3 SCZ EUR (GRCh37) GWAS"
+panel = "Figure 7B"
+script = "recipes/fig7b.py"
+data = ["cell-clusters", "cluster-terms", "rna-human-log2", "magma-v1-10-linux-static", "magma-g1000-eur", "magma-gene-loc-hg38", "magma-gene-loc-hg37", "gwas-ad-bellenguez-grch38", "gwas-scz-pgc3-eur"]
+needs = { memory_gb = 16, gpu = false, minutes = 45 }
+
+[[recipes]]
+id = "fig7c"
+title = "DeepHumanBG predicted chromatin accessibility effects of 8 SCZ GWAS SNPs across 18 MAGMA-enriched BG neuronal Groups"
+panel = "Figure 7C"
+script = "recipes/fig7c.py"
+data = ["crested-human-model", "atac-human-group-by-peaks", "atac-human-consensus-peaks", "ref-hg38-fa-gz"]
+needs = { memory_gb = 16, gpu = true, minutes = 5 }
+
+[[recipes]]
+id = "fig7d"
+title = "CACNA1I locus RefSeq gene model, consensus cCREs, and GPe MEIS2-SOX6 GABA human snATAC-seq track highlighting rs1883123"
+panel = "Figure 7D"
+script = "recipes/fig7d.py"
+data = ["atac-human-consensus-peaks", "ucsc-refseq-hg38", "bw-human-gpe-meis2-sox6"]
+needs = { memory_gb = 4, gpu = false, minutes = 3 }
+
+[[recipes]]
+id = "fig7e"
+title = "DeepHumanBG nucleotide Integrated Gradients motif disruption (ATGCTAAT / TCF12) at SCZ SNP rs1883123 (chr22:39600877 C>T) in GPe MEIS2-SOX6 GABA"
+panel = "Figure 7E"
+script = "recipes/fig7e.py"
+data = ["crested-human-model", "atac-human-group-by-peaks", "atac-human-consensus-peaks", "ref-hg38-fa-gz"]
+needs = { memory_gb = 16, gpu = true, minutes = 5 }
