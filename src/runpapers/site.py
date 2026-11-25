@@ -318,8 +318,8 @@ def copy_prompt(card, base):
     panel = first.get("panel") or "a main figure"
     return (f"I want to work with the data from this paper using RunPapers:\n"
             f"  \"{card['title']}\" ({card.get('first_author', '').split()[-1] if card.get('first_author') else ''} et al., "
-            f"{card.get('journal', '')} {card.get('year', '')}), DOI {doi}\n"
-            f"Setup for you, the AI agent: fetch {base}/doi/{ids.doi_relpath(doi)}/AGENT.md (or `curl -sL` it) and follow it exactly.\n"
+            f"{card.get('journal', '')} {card.get('year', '')}), DOI {doi}" + (f", PMID {card['pmid']}" if card.get("pmid") else "") + "\n"
+            f"Setup for you, the AI agent: fetch {base}/{ids.page_path(doi)}/AGENT.md (or `curl -sL` it) and follow it exactly.\n"
             f"Then:\n"
             f"1) Reproduce {panel} and show it to me, with a table of the paper's numbers next to yours.\n"
             f"2) Answer my question using the paper's data: <write your question here>")
@@ -331,11 +331,12 @@ def _data_terms(card):
 
 def agent_md(card, base, install):
     doi = card["doi"]
+    pmid_txt = f", PMID {card['pmid']}" if card.get("pmid") else ""
     src_arg = f" --source {base}" if base != DEFAULT_BASE else ""
     terms = "; ".join(_data_terms(card)) or "see the paper page and original repository"
     return f"""# RunPapers: agent setup for "{card['title']}"
 
-You are helping a scientist use the verified RunPapers pack for this paper (DOI {doi}, version {card['version']}).
+You are helping a scientist use the verified RunPapers pack for this paper (DOI {doi}{pmid_txt}, version {card['version']}).
 Follow these steps in order. Ask the user before anything not listed here.
 
 1. Check that `uv` is installed: `uv --version`. If it is missing, install it with the official installer:
@@ -372,7 +373,7 @@ def paper_md(card, base, install="uvx runpapers"):
         card.get("summary", ""), "",
         "## Use it from your AI agent", "",
         "```", copy_prompt(card, base), "```", "",
-        f"Agent setup: {base}/doi/{ids.doi_relpath(doi)}/AGENT.md",
+        f"Agent setup: {base}/{ids.page_path(doi)}/AGENT.md",
         f"Terminal setup: `{install} get {doi}{src_arg}`", "",
         "## Reproducible panels", "",
     ]
@@ -389,9 +390,18 @@ def paper_md(card, base, install="uvx runpapers"):
     return "\n".join(lines) + "\n"
 
 
+def _redirect(d, url, title):
+    """The old address /doi/<prefix>/<suffix>/ (also what people type after a DOI) sends visitors to the paper's page."""
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "index.html").write_text(
+        f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{e(title)}</title>'
+        f'<link rel="canonical" href="{e(url)}"><meta http-equiv="refresh" content="0; url={e(url)}">'
+        f'<meta name="robots" content="noindex"></head><body><p>This paper is at <a href="{e(url)}">{e(url)}</a>.</p></body></html>\n')
+
+
 def paper_html(card, base, install, figs):
     doi = card["doi"]
-    depth = len(ids.doi_relpath(doi).split("/")) + 1
+    depth = len(ids.page_path(doi).split("/"))
     up = "../" * depth
     pid = "p0"
     src_arg = f" --source {base}" if base != DEFAULT_BASE else ""
@@ -452,7 +462,7 @@ def paper_html(card, base, install, figs):
 
 def _pack_cite(card, base):
     r = card.get("release") or {}
-    where = f"https://doi.org/{r['doi']}" if r.get("doi") else f"{base}/doi/{ids.doi_relpath(card['doi'])}/"
+    where = f"https://doi.org/{r['doi']}" if r.get("doi") else f"{base}/{ids.page_path(card['doi'])}/"
     return f"RunPapers pack for {card['doi']}, version {r.get('version') or card['version']}, {where}"
 
 
@@ -497,7 +507,7 @@ def index_md(cards, planned, base, install, repo="runpapers/runpapers", reqs=())
     if cards:
         for c in sorted(cards, key=lambda c: (c.get("year") or 0, c["title"]), reverse=True):
             badges = ", ".join(k for k, v in c["badges"].items() if v == "pass") or "in verification"
-            lines.append(f"- [{c['title']}]({base}/doi/{ids.doi_relpath(c['doi'])}/index.md) — "
+            lines.append(f"- [{c['title']}]({base}/{ids.page_path(c['doi'])}/index.md) — "
                          f"{c.get('first_author', '')} et al., *{c.get('journal', '')}* {c.get('year', '')} · "
                          f"DOI {c['doi']}" + (f" · PMID {c['pmid']}" if c.get("pmid") else "") + f" · badges: {badges}")
     else:
@@ -592,7 +602,7 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
         st = status(pk)
         card = {**pk.card(), **{k: st[k] for k in ("stage", "badges")}, "data": pk.data, "release": published(pk)}
         cards.append(card)
-        pdir = out / "doi" / ids.doi_relpath(pk.doi)
+        pdir = out / ids.page_path(pk.doi)
         (pdir / "pack").mkdir(parents=True)
         files = []
         for rel in pk.files():
@@ -614,6 +624,7 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
         (pdir / "index.html").write_text(paper_html(card, base, install, figs))
         (pdir / "index.md").write_text(paper_md(card, base, install))
         (pdir / "AGENT.md").write_text(agent_md(card, base, install))
+        _redirect(out / "doi" / ids.doi_relpath(pk.doi), f"{base}/{ids.page_path(pk.doi)}/", card["title"])
     planned = {d: p for d, p in reg.planned().items() if d not in {c["doi"] for c in cards}}
     reqs = requests_summary(reg)
     new_req = requests_issue_url(repo)
@@ -622,7 +633,7 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
     for c in sorted(cards, key=lambda c: (c.get("year") or 0, c["title"]), reverse=True):
         s = _search_blob(c)
         pmid_txt = f" · PMID {e(c['pmid'])}" if c.get("pmid") else ""
-        rows.append(f'<div class="card" data-s="{e(s)}"><a class="t" href="doi/{ids.doi_relpath(c["doi"])}/index.html">{e(c["title"])}</a>'
+        rows.append(f'<div class="card" data-s="{e(s)}"><a class="t" href="{ids.page_path(c["doi"])}/">{e(c["title"])}</a>'
                     f'<div class="m">{e(c.get("first_author", ""))} et al. · <i>{e(c.get("journal", ""))}</i> {e(c.get("year", ""))} · DOI {e(c["doi"])}{pmid_txt}</div>'
                     f'<div class="small mut" style="margin:4px 0 8px">{e(c.get("summary", ""))}</div>'
                     f'{"".join(badge_html(b, c["badges"].get(b, "none")) for b, _, _ in BADGES)}</div>')
@@ -671,8 +682,8 @@ and scientific guardrails that keep new analyses honest. Every pack is verified 
              "papers": [{k: c[k] for k in ("doi", "pmid", "pmcid", "preprint_doi", "title", "first_author", "senior_author", "journal",
                                             "year", "slug", "collections", "version", "summary", "profile", "recipes", "lite_bytes",
                                             "questions", "stage", "badges")}
-                        | {"data_terms": _data_terms(c), "release": c.get("release"), "url": f"{base}/doi/{ids.doi_relpath(c['doi'])}/",
-                           "agent": f"{base}/doi/{ids.doi_relpath(c['doi'])}/AGENT.md"}
+                        | {"data_terms": _data_terms(c), "release": c.get("release"), "url": f"{base}/{ids.page_path(c['doi'])}/",
+                           "agent": f"{base}/{ids.page_path(c['doi'])}/AGENT.md"}
                         for c in cards],
              "planned": [{"doi": d, **{k: p.get(k) for k in ("title", "pmid", "first_author", "journal", "year", "collection")}}
                          for d, p in planned.items()],
@@ -682,16 +693,16 @@ and scientific guardrails that keep new analyses honest. Every pack is verified 
     (out / "llms.txt").write_text("\n".join([
         "# RunPapers", "",
         "> Verified, agent-ready packs for published papers: original data, figure-reproducing recipes, paper target numbers and agent guardrails.",
-        "", f"To use a paper: fetch `{base}/doi/<doi-prefix>/<doi-suffix>/AGENT.md` (exact `agent` URL in `{base}/index.json`) and follow it.",
+        "", f"To use a paper: fetch `{base}/papers/<DOI as a name>/AGENT.md` (exact `agent` URL in `{base}/index.json`) and follow it.",
         f"CLI: `{install}` · Local MCP server (stdio, zero extra deps): `{install} mcp` · Multi-paper workspace: `{install} meeting \"<topic>\"`.",
         f"Machine-readable catalog: {base}/index.json · Guide for people: {base}/guide.md · How verification & data terms work: {base}/about.md · Requests: {base}/requests.md",
         "", "## Papers", ""] +
-        [f"- [{c['title']}]({base}/doi/{ids.doi_relpath(c['doi'])}/index.md): DOI {c['doi']}" + (f", PMID {c['pmid']}" if c.get("pmid") else "")
+        [f"- [{c['title']}]({base}/{ids.page_path(c['doi'])}/index.md): DOI {c['doi']}" + (f", PMID {c['pmid']}" if c.get("pmid") else "")
          + f"; badges: {', '.join(k for k, v in c['badges'].items() if v == 'pass') or 'none'}" for c in cards]) + "\n")
     (out / "AGENT.md").write_text(
         f"# RunPapers for AI agents\n\n"
         f"1. Search `{base}/index.json` (or run `{install} search \"<query>\" --json` / connect `{install} mcp`) by DOI, PMID, PMCID, title, author, species, tissue, assay, cell type or gene.\n"
-        f"2. Fetch the paper's `agent` URL (`{base}/doi/<doi-prefix>/<doi-suffix>/AGENT.md`) and follow its steps in order (or compare several papers with `{install} meeting \"<topic>\"`).\n"
+        f"2. Fetch the paper's `agent` URL (`{base}/papers/<DOI as a name>/AGENT.md`) and follow its steps in order (or compare several papers with `{install} meeting \"<topic>\"`).\n"
         f"3. Respect every guardrail in the pack's `SKILL.md` (replicate unit, confounders, unsupported questions) and inform the user of the source's `data_terms` before commercial use or publication.\n"
         f"4. Request or vote for a missing paper: `{install} request <DOI|PMID>` prints the GitHub link that files the request or adds the user's vote.\n"
     )

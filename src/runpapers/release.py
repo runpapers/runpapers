@@ -252,12 +252,19 @@ def license_for(pack):
     return "cc-by-nc-4.0" if any(_NC_RX.search(d.get("license", "")) for d in pack.data) else "cc-by-4.0"
 
 
+def _pm(paper, before="", after=""):
+    """' , PMID 43020019' style fragment, or '' when the paper has no PMID."""
+    return f"{before}{paper['pmid']}{after}" if paper.get("pmid") else ""
+
+
 def zenodo_metadata(reg, pack, version):
     p = pack.paper
     pub = reg.config.get("publish", {})
     base = reg.config.get("site", {}).get("base_url", DEFAULT_BASE).rstrip("/")
     rel_ids = [{"relation": "isSupplementTo", "identifier": pack.doi, "scheme": "doi", "resource_type": "publication-article"},
-               {"relation": "isDocumentedBy", "identifier": f"{base}/doi/{ids.doi_relpath(pack.doi)}/", "scheme": "url"}]
+               {"relation": "isDocumentedBy", "identifier": f"{base}/{ids.page_path(pack.doi)}/", "scheme": "url"}]
+    if p.get("pmid"):
+        rel_ids.append({"relation": "isSupplementTo", "identifier": str(p["pmid"]), "scheme": "pmid", "resource_type": "publication-article"})
     if p.get("preprint_doi"):
         rel_ids.append({"relation": "isSupplementTo", "identifier": p["preprint_doi"], "scheme": "doi", "resource_type": "publication-preprint"})
     for src in sorted({d["url"].split("/metadata/")[0] if "/metadata/" in d["url"] else d["url"] for d in pack.data})[:5]:
@@ -268,9 +275,10 @@ def zenodo_metadata(reg, pack, version):
         rel_ids.append({"relation": "isSupplementTo", "identifier": f"https://github.com/{gh}", "scheme": "url"})
     meta = {
         "upload_type": "software",
-        "title": f"RunPapers pack {pack.doi}: {pack.title} ({p.get('first_author', '').split()[-1] if p.get('first_author') else ''} et al., {p.get('journal', '')} {p.get('year', '')})",
+        "title": f"RunPapers pack {pack.doi}{_pm(p, ', PMID ')}: {pack.title} ({p.get('first_author', '').split()[-1] if p.get('first_author') else ''} et al., {p.get('journal', '')} {p.get('year', '')})",
         "creators": [{"name": pub.get("creator", "RunPapers")}],
-        "description": (f"<p>A verified, agent-ready pack for <a href='https://doi.org/{pack.doi}'>{pack.title}</a>. "
+        "description": (f"<p>A verified, agent-ready pack for <a href='https://doi.org/{pack.doi}'>{pack.title}</a> "
+                        f"(DOI {pack.doi}{_pm(p, ', PMID ')}). "
                         f"{pack.meta.get('pack', {}).get('summary', '')}</p><p>Any AI agent can use it to reproduce the "
                         f"paper's figures from the original data and answer new questions. The original data are not "
                         f"included: recipes download them from the original repositories. The reproduced tables and "
@@ -279,7 +287,7 @@ def zenodo_metadata(reg, pack, version):
                         f"available under the MIT license at <a href='https://github.com/{gh}'>github.com/{gh}</a>.</p>"),
         "version": version,
         "license": license_for(pack),
-        "keywords": ["RunPapers", pack.doi, "reproducibility", "AI agents", "agent skills", *pack.meta.get("profile", {}).get("assays", [])[:3],
+        "keywords": ["RunPapers", pack.doi, *([f"PMID {p['pmid']}"] if p.get("pmid") else []), "reproducibility", "AI agents", "agent skills", *pack.meta.get("profile", {}).get("assays", [])[:3],
                      *pack.meta.get("profile", {}).get("tissues", [])[:2]],
         "related_identifiers": rel_ids,
         "notes": "Data terms: " + "; ".join(sorted({d.get("license", "") for d in pack.data})),
@@ -375,7 +383,7 @@ configs:
 
 # RunPapers pack: {pack.title}
 
-{p.get('first_author', '')} et al., *{p.get('journal', '')}* {p.get('year', '')}, DOI [{pack.doi}](https://doi.org/{pack.doi}).
+{p.get('first_author', '')} et al., *{p.get('journal', '')}* {p.get('year', '')}, DOI [{pack.doi}](https://doi.org/{pack.doi}){f", PMID [{p['pmid']}]({ids.pubmed_url(p['pmid'])})" if p.get("pmid") else ""}.
 Pack version {version}.
 
 This dataset is the agent-ready layer of a [RunPapers](https://github.com/{reg.config.get('publish', {}).get('github_repo', 'runpapers/runpapers')})
@@ -388,8 +396,8 @@ Tables (`pack/SKILL.md` explains each one):
 
 The raw files are not re-hosted; `pack/pack.toml` lists their original locations and checksums.
 
-**Use it from an agent:** "Use RunPapers to work with the data of DOI {pack.doi}" or `{_install(reg)} get {pack.doi}`.
-Website: {reg.config.get("site", {}).get("base_url", DEFAULT_BASE).rstrip("/")}/doi/{ids.doi_relpath(pack.doi)}/
+**Use it from an agent:** "Use RunPapers to work with the data of DOI {pack.doi}{_pm(p, ' (PMID ', ')')}" or `{_install(reg)} get {pack.doi}`.
+Website: {reg.config.get("site", {}).get("base_url", DEFAULT_BASE).rstrip("/")}/{ids.page_path(pack.doi)}/
 
 **Terms:** the reproduced tables are derived from the original data, which stay under their source terms:
 {"; ".join(terms) or "see pack/pack.toml"}. Cite the paper and the data source as those terms require.
@@ -464,7 +472,7 @@ def publish_github(reg, pack):
     if p.returncode != 0:
         raise SystemExit(f"git push failed: {p.stderr[-400:]}")
     zpath = release_dir(reg, pack, entry["version"]) / entry["zip"]
-    notes = f"RunPapers pack for {pack.title} (DOI {pack.doi}), version {entry['version']}."
+    notes = f"RunPapers pack for {pack.title} (DOI {pack.doi}{_pm(pack.paper, ', PMID ')}), version {entry['version']}."
     r = subprocess.run(["gh", "release", "create", tag, str(zpath), "--title", f"{pack.doi} v{entry['version']}: {pack.title}"[:250], "--notes", notes],
                        cwd=root, capture_output=True, text=True)
     if r.returncode != 0 and "already exists" not in r.stderr:

@@ -391,7 +391,7 @@ class RemoteCatalog(_BaseCatalog):
         return out
 
     def _pack_listing(self, doi):
-        raw = self._fetch_bytes(f"{self.base_url}/doi/{ids.doi_relpath(doi)}/pack.json")
+        raw = self._fetch_bytes(f"{self.base_url}/{ids.page_path(doi)}/pack.json")
         return json.loads(raw)
 
     def read_pack_file(self, ident, relpath):
@@ -406,7 +406,7 @@ class RemoteCatalog(_BaseCatalog):
         cached = self.cache_dir / "packs" / ids.doi_relpath(doi) / p_hash / norm
         if cached.is_file() and sha256_file(cached) == want_sha:
             return cached.read_text(encoding="utf-8")
-        raw = self._fetch_bytes(f"{self.base_url}/doi/{ids.doi_relpath(doi)}/pack/{norm}")
+        raw = self._fetch_bytes(f"{self.base_url}/{ids.page_path(doi)}/pack/{norm}")
         if hashlib.sha256(raw).hexdigest() != want_sha:
             raise ValueError(f"{norm}: SHA-256 checksum mismatch against pack.json (corrupted or tampered file)")
         cached.parent.mkdir(parents=True, exist_ok=True)

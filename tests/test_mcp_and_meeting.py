@@ -417,7 +417,7 @@ class McpAndMeetingTests(unittest.TestCase):
             self.assertIn("Donors, not cells", sk["structuredContent"]["content_markdown"])
 
             # Tamper with remote reference file on disk -> RemoteCatalog detects SHA-256 mismatch against pack.json
-            ref_on_server = site_dir / "doi" / ids.doi_relpath(self.DOI_A) / "pack" / "references" / "notes.md"
+            ref_on_server = site_dir / ids.page_path(self.DOI_A) / "pack" / "references" / "notes.md"
             ref_on_server.write_text("TAMPERED CONTENT\n")
             tampered = mcp_server.handle_tool_call(rcat, "get_skill", {"id": "11111111", "reference": "notes.md"})
             self.assertTrue(tampered["isError"])

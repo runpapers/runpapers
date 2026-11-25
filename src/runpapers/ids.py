@@ -77,6 +77,12 @@ def doi_slug(doi):
     return s
 
 
+def page_path(doi):
+    """Where a paper lives on the website: papers/<DOI as a name> (runpapers.com/papers/10-1016-j-cell-2026-10-012/).
+    The old address /doi/<prefix>/<suffix>/ redirects there, so a DOI typed into the address bar still works."""
+    return "papers/" + doi_slug(doi)
+
+
 def skill_name(doi):
     """Agent Skills name of a paper's pack: lowercase letters, digits and single hyphens, at most 64 characters."""
     return "runpapers-" + doi_slug(doi)

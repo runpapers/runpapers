@@ -52,7 +52,7 @@ def _copy_from_registry(pack, dest):
 
 
 def _copy_from_site(base, doi, dest):
-    root = f"{base.rstrip('/')}/doi/{ids.doi_relpath(doi)}"
+    root = f"{base.rstrip('/')}/{ids.page_path(doi)}"
     listing = json.loads(_fetch_bytes(f"{root}/pack.json"))
     for f in listing["files"]:
         rel = f["path"]

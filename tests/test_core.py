@@ -287,16 +287,18 @@ class SiteAndWorkspace(Base):
         verify.run_l1(self.pack(), ci=False, quiet=True, keep_out=self.root / "build" / "l1" / ids.doi_relpath(DOI))
         out, n = site.build(self.reg, out=self.tmp / "site", base_url="http://x")
         self.assertEqual(n, 1)
-        pdir = out / "doi" / ids.doi_relpath(DOI)
+        pdir = out / "papers" / "10-9999-test-2026-001"   # the DOI as a name (2026-11-25)
         for f in ("index.html", "index.md", "AGENT.md", "pack.json"):
             self.assertTrue((pdir / f).is_file(), f)
+        old = (out / "doi" / ids.doi_relpath(DOI) / "index.html").read_text()
+        self.assertIn('url=http://x/papers/10-9999-test-2026-001/', old)   # the old address redirects
         listing = json.loads((pdir / "pack.json").read_text())
         self.assertFalse(any(f["path"].startswith("evals/") for f in listing["files"]))  # held-out questions stay out
         self.assertIn("Runs", (pdir / "index.html").read_text())
         idx = json.loads((out / "index.json").read_text())
         self.assertEqual(idx["papers"][0]["pmid"], "99999999")
         self.assertEqual(idx["papers"][0]["data_terms"], ["CC0"])
-        self.assertIn("http://x/doi/10.9999/test.2026.001/AGENT.md", (out / "llms.txt").read_text() + json.dumps(idx))
+        self.assertIn("http://x/papers/10-9999-test-2026-001/AGENT.md", (out / "llms.txt").read_text() + json.dumps(idx))
         for twin in ("index.md", "about.md", "requests.md"):
             self.assertTrue((out / twin).is_file(), twin)
         self.assertNotIn('onclick="tab(this,"', (pdir / "index.html").read_text())

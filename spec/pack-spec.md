@@ -9,7 +9,8 @@ not) analyse the data. It never contains the data, and never contains published 
   If only a preprint exists, its DOI is the id; when the journal version appears, the journal DOI becomes the id and
   the preprint DOI moves to `preprint_doi`.
 - Folder: `papers/<doi prefix>/<doi suffix>/`; characters outside `[a-z0-9._-]` in the suffix are percent-encoded
-  (`rp resolve <id>` prints the path). URLs use the same path: `/doi/<prefix>/<encoded suffix>/`.
+  (`rp resolve <id>` prints the path). On the website a paper lives at `/papers/<DOI as a name>/`
+  (below); the old address `/doi/<prefix>/<encoded suffix>/` redirects there.
 
 Wherever a DOI can't be written as is (the user's workspace folder, the Hugging Face dataset, git tags, the skill
 name, the Zenodo file name), the DOI itself is turned into a name: lowercase, every run of other characters becomes
