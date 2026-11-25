@@ -1,0 +1,29 @@
+# Runs on every pull request once the repository is public (inactive while it is local-only).
+name: validate
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --no-project python -m unittest discover -s tests
+  packs:
+    runs-on: ubuntu-latest          # 4 CPUs, 16 GB RAM: the lite tier must fit here
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: astral-sh/setup-uv@v6
+      - name: lint all packs
+        run: uvx --from . rp lint --all
+      - name: privacy scan (nothing private in tracked files)
+        run: uvx --from . rp ops prepublish || true
+      - name: L1 on packs changed in this pull request
+        if: github.event_name == 'pull_request'
+        run: |
+          for d in $(git diff --name-only origin/${{ github.base_ref }}... -- papers | cut -d/ -f2,3 | sort -u); do
+            uvx --from . rp verify "$(python3 -c "import urllib.parse,sys;p,s=sys.argv[1].split('/',1);print(p+'/'+urllib.parse.unquote(s))" "$d")" --no-cap
+          done

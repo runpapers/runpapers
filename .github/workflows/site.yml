@@ -1,0 +1,41 @@
+# The public website on GitHub Pages. Every deploy re-runs each pack's lite recipes from the original data, so the
+# figures and the "Runs" badge on the site always come from a fresh, independent run.
+name: site
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/runpapers/data
+          key: rp-data-${{ hashFiles('papers/**/pack.toml') }}
+          restore-keys: rp-data-
+      - name: Re-run every pack's lite recipes from the original data
+        run: uvx --from . rp verify --all --no-cap || echo "some packs did not pass; the site shows it"
+      - name: Build the site
+        run: uvx --from . rp site build --out _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

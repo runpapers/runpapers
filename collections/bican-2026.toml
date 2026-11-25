@@ -1,0 +1,318 @@
+# BICAN basal ganglia package (Cell Press family, 12 Nov 2026): 28 papers.
+# Identity is the DOI (lowercase). PMIDs verified against PubMed on 2026-11-20.
+title = "BICAN basal ganglia package (2026)"
+url = "https://brain-bican.org/science/basal-ganglia-publications"
+phase = 1
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.031"
+short = "bican-integrated-framework-overview"
+pmid = "43020018"
+title = "Toward an integrated framework for a human and mammalian brain cell atlas"
+first_author = "BRAIN Initiative Cell Atlas Network (BICAN)"
+senior_author = "BRAIN Initiative Cell Atlas Network (BICAN)"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.034"
+short = "human-genome-to-brain-cell-atlas"
+pmid = "43020015"
+title = "From the human genome to the human brain cell atlas"
+first_author = "Joseph Ecker"
+senior_author = "Guo-Qiang Zhang"
+journal = "Cell"
+year = 2026
+oa_status = "closed"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.012"
+short = "primate-basal-ganglia-multiomic-atlas"
+pmid = "43020019"
+preprint_doi = "10.64898/2025.12.15.694496"
+title = "Cross-species multiomic atlas of the primate basal ganglia"
+first_author = "Nelson J. Johansen"
+senior_author = "Trygve E. Bakken"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.026"
+short = "human-striatum-donor-variation"
+pmid = "43020022"
+title = "Common variation of cell abundances and gene expression in the human striatum"
+first_author = "Steven C. Burger"
+senior_author = "Steven A. McCarroll"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.09.041"
+short = "basal-ganglia-astrocyte-specialization"
+pmid = "43020029"
+title = "Circuit-aligned specialization of human basal ganglia astrocytes"
+first_author = "Yuanyuan Fu"
+senior_author = "Trygve E. Bakken"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.023"
+short = "primate-basal-ganglia-spatial-atlas"
+pmid = "43020020"
+preprint_doi = "10.1101/2025.11.22.688128"
+title = "Spatial transcriptomics reveals molecular organization of human and nonhuman primate basal ganglia"
+first_author = "Madeleine N. Hewitt"
+senior_author = "Stephanie C. Seeman"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.029"
+short = "striatum-mesoscale-aging-architecture"
+pmid = "43020021"
+title = "Mesoscale molecular architecture of the striatum across cell types and adult aging"
+first_author = "Andrew W. Kraft"
+senior_author = "Evan Z. Macosko"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.09.027"
+short = "human-basal-ganglia-multiscale-spatial"
+pmid = "43020025"
+title = "Multiscale spatial atlas of human basal ganglia cell types and communities"
+first_author = "Bereket Tesfay Berackey"
+senior_author = "Xiangmin Xu"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.007"
+short = "primate-subcortex-spatial-regulatory"
+pmid = "43020027"
+title = "Spatial and regulatory organization of cell identity across the primate subcortex"
+first_author = "Shu Dan"
+senior_author = "Fenna M. Krienen"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.019"
+short = "human-basal-ganglia-epigenome-3d-atlas"
+pmid = "43020023"
+title = "Multimodal single-cell epigenomic and 3D genome atlas of the human basal ganglia"
+first_author = "Wubin Ding"
+senior_author = "Joseph R. Ecker"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.09.008"
+short = "human-basal-ganglia-chromatin-transcriptome"
+pmid = "43020024"
+title = "Single-cell analysis of chromatin state and transcriptome in the human basal ganglia"
+first_author = "Lei Chang"
+senior_author = "Bing Ren"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.08.012"
+short = "human-brain-multimodal-regulatory-atlas"
+pmid = "43020026"
+title = "Single-cell multimodal atlas reveals regulatory programs in the human brain"
+first_author = "Yang Xie"
+senior_author = "Bing Ren"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.crmeth.2026.101567"
+short = "bican-comparative-epigenomic-portal"
+pmid = "43020065"
+title = "An integrated single-cell and epigenomic resource for comparative analysis of the basal ganglia from BICAN"
+first_author = "Wenjin Zhang"
+senior_author = "Daofeng Li"
+journal = "Cell Reports Methods"
+year = 2026
+oa_status = "gold"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.028"
+short = "primate-striatal-morphoelectric-patchseq"
+pmid = "43020028"
+title = "Morphoelectric diversity and specialization of primate striatal neuron types"
+first_author = "Xiao-Ping Liu"
+senior_author = "Brian E. Kalmbach"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.celrep.2026.118132"
+short = "enhancer-aav-aadc-parkinsons-therapy"
+pmid = "43020057"
+title = "Enhancer-based AAV approach for selective AADC delivery reduces motor symptoms and dyskinesia in Parkinson's mouse models"
+first_author = "Ananya Chowdhury"
+senior_author = "Tanya L. Daigle"
+journal = "Cell Reports"
+year = 2026
+oa_status = "gold"
+
+[[paper]]
+doi = "10.1016/j.xgen.2026.101427"
+short = "alzheimers-anterior-caudate-pathology-atlas"
+pmid = "43020054"
+title = "Amyloid and tau display distinct patterns across Alzheimer's in anterior caudate"
+first_author = "Omar Z. Kana"
+senior_author = "Jennie L. Close"
+journal = "Cell Genomics"
+year = 2026
+oa_status = "gold"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.027"
+short = "autism-striatal-spn-programs"
+pmid = "43020030"
+preprint_doi = "10.1101/2025.11.05.686845"
+title = "Disruption of cell-type-specific molecular programs of striatal spiny projection neurons in autism"
+first_author = "Guohua Yuan"
+senior_author = "Tomasz J. Nowakowski"
+journal = "Cell"
+year = 2026
+oa_status = "green"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.008"
+short = "developing-human-basal-ganglia-3d-atlas"
+pmid = "43020031"
+pmcid = "PMC13764103"
+title = "A single-cell and spatial 3D multi-omic atlas of developing human basal ganglia"
+first_author = "Matthew G. Heffel"
+senior_author = "Chongyuan Luo"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.033"
+short = "homba-primate-basal-ganglia-ontology-ccf"
+pmid = "43020034"
+title = "Harmonized brain ontology and 3D atlases for human, macaque, and marmoset basal ganglia"
+first_author = "Song-Lin Ding"
+senior_author = "Ed S. Lein"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.xgen.2026.101423"
+short = "nimp-tissue-to-bytes-digital-twin"
+pmid = "43020053"
+title = "Tissue-to-bytes: A digital twin for single-cell omics data integration across BRAIN Initiative Cell Atlas Network"
+first_author = "Shiqiang Tao"
+senior_author = "Guo-Qiang Zhang"
+journal = "Cell Genomics"
+year = 2026
+oa_status = "gold"
+
+[[paper]]
+doi = "10.1016/j.crmeth.2026.101650"
+short = "mapmycells-hierarchical-taxonomy-mapping"
+pmid = "43020063"
+title = "MapMyCells: High-performance mapping of cell-by-gene data to reference brain taxonomies"
+first_author = "Scott F. Daniel"
+senior_author = "Mike Hawrylycz"
+journal = "Cell Reports Methods"
+year = 2026
+oa_status = "gold"
+
+[[paper]]
+doi = "10.1016/j.cels.2026.101778"
+short = "uci-bican-brain-procurement-pipeline"
+pmid = "43020069"
+title = "UC Irvine's BRAIN Initiative Cell Atlas Network (BICAN) Brain Procurement Program for the Center for Multiomic Human Brain Cell Atlas Project"
+first_author = "Jillian V. Berry"
+senior_author = "Xiangmin Xu"
+journal = "Cell Systems"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.crmeth.2026.101661"
+short = "piano-variational-autoencoder-integration"
+pmid = "43020064"
+title = "PIANO enables generative modeling of gene expression and scales multi-omics integration to 100 million cells"
+first_author = "Ning Wang"
+senior_author = "Fenna M. Krienen"
+journal = "Cell Reports Methods"
+year = 2026
+oa_status = "gold"
+
+[[paper]]
+doi = "10.1016/j.crmeth.2026.101664"
+short = "multivib-contrastive-multiomics-integration"
+pmid = "43020067"
+title = "multiVIB: A unified probabilistic contrastive learning framework for atlas-scale integration of single-cell multi-omics data"
+first_author = "Yang Xu"
+senior_author = "Bing-Xing Huo"
+journal = "Cell Reports Methods"
+year = 2026
+oa_status = "gold"
+
+[[paper]]
+doi = "10.1016/j.neuron.2026.10.006"
+short = "primate-mouse-spinal-cord-consensus-atlas"
+pmid = "43020050"
+title = "A consensus spinal cord cell-type atlas across mouse, macaque, and human"
+first_author = "Matthew T. Schmitz"
+senior_author = "Trygve E. Bakken"
+journal = "Neuron"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.celrep.2026.118269"
+short = "human-neocortical-glutamatergic-patchseq"
+pmid = "43020056"
+title = "Human neocortical glutamatergic neurons revealed through multimodal profiling"
+first_author = "Rachel Dalley"
+senior_author = "Brian R. Lee"
+journal = "Cell Reports"
+year = 2026
+oa_status = "gold"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.09.014"
+short = "macaque-brain-lifespan-aging-atlas"
+pmid = "43020032"
+pmcid = "PMC13764095"
+title = "Single-cell, multi-region profiling of the macaque brain across the lifespan"
+first_author = "Wei Yang"
+senior_author = "Noah Snyder-Mackler"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"
+
+[[paper]]
+doi = "10.1016/j.cell.2026.10.022"
+short = "mouse-brain-integrative-epigenomic-atlas"
+pmid = "43020033"
+title = "An integrative single-cell epigenomic atlas annotates the regulatory genome of the adult mouse brain"
+first_author = "Zhaoning Wang"
+senior_author = "Bing Ren"
+journal = "Cell"
+year = 2026
+oa_status = "hybrid"

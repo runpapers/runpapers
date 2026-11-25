@@ -1,0 +1,290 @@
+# Numbers from the paper that each recipe must reproduce. Every expected value is the paper's, never ours.
+# required = false marks a known discrepancy inside the paper: it is checked and shown, but it can't fail the run.
+
+# ---- Figure 1B: atlas tallies (Table S1/S3/S4; main text p.5)
+[[target]]
+recipe = "fig1b"
+metric = "n_nuclei_total"
+expected = 1896133
+tolerance = { exact = true }
+source = "Table S1 (sum of the three species' QC Group tables); main text p.5 rounds down to '1.8 million nuclei'"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "composition_total"
+expected = 1896133
+tolerance = { exact = true }
+source = "Table S1 (sum of the three species' QC Group tables): the composition table must account for every nucleus"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_nuclei_human"
+expected = 1034819
+tolerance = { exact = true }
+source = "Table S1.Human_qc_Group"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_nuclei_macaque"
+expected = 548281
+tolerance = { exact = true }
+source = "Table S1.Macaque_qc_Group"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_nuclei_marmoset"
+expected = 313033
+tolerance = { exact = true }
+source = "Table S1.Marmoset_qc_Group"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_donors_total"
+expected = 22
+tolerance = { exact = true }
+source = "Table S4 (10 human, 8 macaque, 4 marmoset donors)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_groups_total"
+expected = 61
+tolerance = { exact = true }
+source = "main text p.5; Figure 1B (61 Groups)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_groups_human"
+expected = 60
+tolerance = { exact = true }
+source = "Table S1.Human_qc_Group (60 Group rows)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_groups_macaque"
+expected = 58
+tolerance = { exact = true }
+source = "Table S1.Macaque_qc_Group (58 Group rows)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_groups_marmoset"
+expected = 56
+tolerance = { exact = true }
+source = "Table S1.Marmoset_qc_Group (56 Group rows)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_clusters_human"
+expected = 453
+tolerance = { exact = true }
+source = "Table S3.Human; main text p.33 (453 human clusters tested in MAGMA)"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_clusters_macaque"
+expected = 388
+tolerance = { exact = true }
+source = "Table S3.Macaque"
+kind = "tally"
+
+[[target]]
+recipe = "fig1b"
+metric = "n_clusters_marmoset"
+expected = 594
+tolerance = { exact = true }
+source = "Table S3.Marmoset"
+kind = "tally"
+
+# ---- Figure 2F: D2 SPN Group proportions per donor (main text p.6-7; Figure 2F; Table S9)
+[[target]]
+recipe = "fig2f"
+metric = "smyd2_pct_of_d2_pooled"
+expected = 3.4
+tolerance = { range = [3.40, 3.50] }
+source = "main text p.7: 'comprising only 3.4% of classical STR D2 SPNs (Figure 2F)'"
+kind = "figure"
+note = "Main text p.7 writes '3.4%' by truncating 3.49% to one decimal place (similar to writing 1,896,133 nuclei as '1.8 million'); the truncation interval [3.40, 3.50] covers values that truncate to 3.4%."
+
+[[target]]
+recipe = "fig2f"
+metric = "smyd2_pct_of_spn_pooled"
+expected = 1.0
+tolerance = { abs = 0.3 }
+source = "main text p.7: 'and 1% of all SPNs (Figure S9; Table S9)'"
+kind = "discrepancy"
+required = false
+note = "Table S9 cell-level sheet totals 848,201 SPN nuclei including OT ICj Granule (13,483 / 848,201 = 1.59%), whereas the 9 classical and eccentric SPN Groups total 841,005 nuclei (13,483 / 841,005 = 1.60%). Table S9 donor-level means are 1.49% (human), 1.66% (macaque), and 1.03% (marmoset), making the marmoset donor mean a plausible source of the text's '1%'; kept as a documented discrepancy."
+
+[[target]]
+recipe = "fig2f"
+metric = "n_smyd2_human"
+expected = 7627
+tolerance = { exact = true }
+source = "Table S1.Human_qc_Group; Table S9 cell-level counts"
+kind = "tally"
+
+[[target]]
+recipe = "fig2f"
+metric = "n_smyd2_macaque"
+expected = 4782
+tolerance = { exact = true }
+source = "Table S1.Macaque_qc_Group"
+kind = "tally"
+
+[[target]]
+recipe = "fig2f"
+metric = "n_smyd2_marmoset"
+expected = 1074
+tolerance = { exact = true }
+source = "Table S1.Marmoset_qc_Group"
+kind = "tally"
+
+[[target]]
+recipe = "fig2f"
+metric = "n_donors_plotted_human"
+expected = 10
+tolerance = { exact = true }
+source = "Figure 2F donor dots (one human donor, subthalamic-nucleus only, sits at 1.0 in STRv D2 SPN); Table S4"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "n_donors_plotted_macaque"
+expected = 7
+tolerance = { exact = true }
+source = "Figure 2F donor dots (one macaque donor has no D2 SPN nuclei); Table S4"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "n_donors_plotted_marmoset"
+expected = 4
+tolerance = { exact = true }
+source = "Figure 2F donor dots; Table S4"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "smyd2_lowest_median_in_all_species"
+expected = true
+tolerance = { exact = true }
+source = "Figure 2F: STR D2 SMYD2-HTR7 SPN is the lowest box in every species"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "matrix_highest_median_in_all_species"
+expected = true
+tolerance = { exact = true }
+source = "Figure 2F: STRd D2 Matrix SPN is the highest box in every species"
+kind = "figure"
+
+# Donor medians read off the published Figure 2F (vector PDF rendered at 1200-2400 dpi, ~0.05 pp reading precision)
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_strv_human"
+expected = 18.95
+tolerance = { abs = 0.1 }
+source = "Figure 2F, STRv D2 SPN, human box median (digitized)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_strv_macaque"
+expected = 15.25
+tolerance = { abs = 0.1 }
+source = "Figure 2F, STRv D2 SPN, macaque box median (digitized)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_strv_marmoset"
+expected = 23.94
+tolerance = { abs = 0.1 }
+source = "Figure 2F, STRv D2 SPN, marmoset box median (digitized)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_striosome_human"
+expected = 13.86
+tolerance = { abs = 0.1 }
+source = "Figure 2F, STRd D2 Striosome SPN, human box median (digitized)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_striosome_macaque"
+expected = 14.52
+tolerance = { abs = 0.1 }
+source = "Figure 2F, STRd D2 Striosome SPN, macaque box median (digitized)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_striosome_marmoset"
+expected = 11.46
+tolerance = { abs = 0.1 }
+source = "Figure 2F, STRd D2 Striosome SPN, marmoset box median (digitized)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_matrix_human"
+expected = 62.8
+tolerance = { abs = 0.1 }
+source = "Figure 2F, STRd D2 Matrix SPN, human box median (digitized)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_matrix_macaque"
+expected = 63.21
+tolerance = { abs = 0.1 }
+source = "Figure 2F, STRd D2 Matrix SPN, macaque box median (digitized)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_matrix_marmoset"
+expected = 63.04
+tolerance = { abs = 0.1 }
+source = "Figure 2F, STRd D2 Matrix SPN, marmoset box median (digitized)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_smyd2_human"
+expected = 3.43
+tolerance = { abs = 0.1 }
+source = "Figure 2F, STR D2 SMYD2-HTR7 SPN, human box median (digitized)"
+kind = "figure"
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_smyd2_macaque"
+expected = 3.75
+tolerance = { range = [3.5, 4.0] }
+source = "Figure 2F, STR D2 SMYD2-HTR7 SPN, macaque box: at 1200-2400 dpi the median and upper-quartile strokes merge across 3.5-4.0% (lower quartile 3.17%)"
+kind = "figure"
+note = "Merged median and upper-quartile box strokes at high dpi constrain the published median to [3.5, 4.0]%."
+
+[[target]]
+recipe = "fig2f"
+metric = "median_pct_smyd2_marmoset"
+expected = 1.95
+tolerance = { range = [1.6, 2.3] }
+source = "Figure 2F, STR D2 SMYD2-HTR7 SPN, marmoset box: at 1200-2400 dpi the lower-quartile and median strokes merge across 1.6-2.3% (upper quartile 2.67%)"
+kind = "figure"
+note = "Merged lower-quartile and median box strokes at high dpi constrain the published median to [1.6, 2.3]%."

@@ -1,0 +1,301 @@
+{
+ "runs": [
+  {
+   "agent": "claude",
+   "family": "anthropic",
+   "model": "claude-sonnet-5-5",
+   "at": "2026-11-24T21:05:46-05:00",
+   "pack_hash": "cca4556180861036dae5848110e1ad14ac6a7b6ddc8121248cc6f1f431ec9690",
+   "version": "0.1.0",
+   "recipe": "fig1b",
+   "recipe_pass": true,
+   "answers": {
+    "q1": {
+     "ok": true,
+     "answer": 3.49,
+     "detail": "|3.49 - 3.49| = 0 (allowed 0.05)"
+    },
+    "q2": {
+     "ok": true,
+     "answer": 313033.0,
+     "detail": "exact match"
+    },
+    "q3": {
+     "ok": true,
+     "answer": "Marmoset",
+     "detail": "contains expected text"
+    },
+    "q4": {
+     "ok": true,
+     "answer": 9.0,
+     "detail": "exact match"
+    },
+    "q5": {
+     "ok": true,
+     "answer": "NAC",
+     "detail": "contains expected text"
+    },
+    "q6": {
+     "ok": true,
+     "answer": 13.21,
+     "detail": "|13.21 - 13.21| = 0 (allowed 0.05)"
+    }
+   },
+   "score": "6/6",
+   "pass": true,
+   "seconds": 201,
+   "error": null,
+   "run_id": "usertest/10.1016_j.cell.2026.10.012/claude-20261124-210224"
+  },
+  {
+   "agent": "agy",
+   "family": "google",
+   "model": "default",
+   "at": "2026-11-24T21:11:14-05:00",
+   "pack_hash": "cca4556180861036dae5848110e1ad14ac6a7b6ddc8121248cc6f1f431ec9690",
+   "version": "0.1.0",
+   "recipe": "fig1b",
+   "recipe_pass": true,
+   "answers": {
+    "q1": {
+     "ok": true,
+     "answer": 3.4907,
+     "detail": "|3.4907 - 3.49| = 0.0007 (allowed 0.05)"
+    },
+    "q2": {
+     "ok": true,
+     "answer": 313033.0,
+     "detail": "exact match"
+    },
+    "q3": {
+     "ok": true,
+     "answer": "Marmoset",
+     "detail": "contains expected text"
+    },
+    "q4": {
+     "ok": true,
+     "answer": 9.0,
+     "detail": "exact match"
+    },
+    "q5": {
+     "ok": true,
+     "answer": "NAC",
+     "detail": "contains expected text"
+    },
+    "q6": {
+     "ok": true,
+     "answer": 13.2085,
+     "detail": "|13.2085 - 13.21| = 0.0015 (allowed 0.05)"
+    }
+   },
+   "score": "6/6",
+   "pass": true,
+   "seconds": 315,
+   "error": null,
+   "run_id": "usertest/10.1016_j.cell.2026.10.012/agy-20261124-210558"
+  },
+  {
+   "agent": "codex",
+   "family": "openai",
+   "model": "default",
+   "at": "2026-11-24T21:13:23-05:00",
+   "pack_hash": "cca4556180861036dae5848110e1ad14ac6a7b6ddc8121248cc6f1f431ec9690",
+   "version": "0.1.0",
+   "recipe": "fig1b",
+   "recipe_pass": true,
+   "answers": {
+    "q1": {
+     "ok": true,
+     "answer": 3.4906991495255726,
+     "detail": "|3.4906991495255726 - 3.49| = 0.0006991 (allowed 0.05)"
+    },
+    "q2": {
+     "ok": true,
+     "answer": 313033.0,
+     "detail": "exact match"
+    },
+    "q3": {
+     "ok": true,
+     "answer": "Marmoset",
+     "detail": "contains expected text"
+    },
+    "q4": {
+     "ok": true,
+     "answer": 9.0,
+     "detail": "exact match"
+    },
+    "q5": {
+     "ok": true,
+     "answer": "NAC",
+     "detail": "contains expected text"
+    },
+    "q6": {
+     "ok": true,
+     "answer": 13.208493466007099,
+     "detail": "|13.208493466007099 - 13.21| = 0.001507 (allowed 0.05)"
+    }
+   },
+   "score": "6/6",
+   "pass": true,
+   "seconds": 129,
+   "error": null,
+   "run_id": "usertest/10.1016_j.cell.2026.10.012/codex-20261124-211114"
+  },
+  {
+   "agent": "claude",
+   "family": "anthropic",
+   "model": "claude-sonnet-5-5",
+   "at": "2026-11-24T22:44:46-05:00",
+   "pack_hash": "a1b34397ad90a77eed14429915299fb49ac1722ba95ab280d85c87784f7f203c",
+   "version": "0.1.0",
+   "recipe": "fig1b",
+   "recipe_pass": true,
+   "answers": {
+    "q1": {
+     "ok": true,
+     "answer": 3.49,
+     "detail": "|3.49 - 3.49| = 0 (allowed 0.05)"
+    },
+    "q2": {
+     "ok": true,
+     "answer": 313033.0,
+     "detail": "exact match"
+    },
+    "q3": {
+     "ok": true,
+     "answer": "Marmoset",
+     "detail": "contains expected text"
+    },
+    "q4": {
+     "ok": true,
+     "answer": 9.0,
+     "detail": "exact match"
+    },
+    "q5": {
+     "ok": true,
+     "answer": "NAC",
+     "detail": "contains expected text"
+    },
+    "q6": {
+     "ok": true,
+     "answer": 13.21,
+     "detail": "|13.21 - 13.21| = 0 (allowed 0.05)"
+    },
+    "q7": {
+     "ok": true,
+     "answer": "not available",
+     "detail": "contains expected text"
+    }
+   },
+   "score": "7/7",
+   "pass": true,
+   "seconds": 85,
+   "error": null,
+   "run_id": "usertest/10.1016_j.cell.2026.10.012/claude-20261124-224320"
+  },
+  {
+   "agent": "agy",
+   "family": "google",
+   "model": "default",
+   "at": "2026-11-24T22:47:31-05:00",
+   "pack_hash": "a1b34397ad90a77eed14429915299fb49ac1722ba95ab280d85c87784f7f203c",
+   "version": "0.1.0",
+   "recipe": "fig1b",
+   "recipe_pass": true,
+   "answers": {
+    "q1": {
+     "ok": true,
+     "answer": 3.4907,
+     "detail": "|3.4907 - 3.49| = 0.0007 (allowed 0.05)"
+    },
+    "q2": {
+     "ok": true,
+     "answer": 313033.0,
+     "detail": "exact match"
+    },
+    "q3": {
+     "ok": true,
+     "answer": "Marmoset",
+     "detail": "contains expected text"
+    },
+    "q4": {
+     "ok": true,
+     "answer": 9.0,
+     "detail": "exact match"
+    },
+    "q5": {
+     "ok": true,
+     "answer": "NAC",
+     "detail": "contains expected text"
+    },
+    "q6": {
+     "ok": true,
+     "answer": 13.2085,
+     "detail": "|13.2085 - 13.21| = 0.0015 (allowed 0.05)"
+    },
+    "q7": {
+     "ok": true,
+     "answer": "not available",
+     "detail": "contains expected text"
+    }
+   },
+   "score": "7/7",
+   "pass": true,
+   "seconds": 166,
+   "error": null,
+   "run_id": "usertest/10.1016_j.cell.2026.10.012/agy-20261124-224446"
+  },
+  {
+   "agent": "codex",
+   "family": "openai",
+   "model": "default",
+   "at": "2026-11-24T22:49:09-05:00",
+   "pack_hash": "a1b34397ad90a77eed14429915299fb49ac1722ba95ab280d85c87784f7f203c",
+   "version": "0.1.0",
+   "recipe": "fig1b",
+   "recipe_pass": true,
+   "answers": {
+    "q1": {
+     "ok": true,
+     "answer": 3.4906991495255726,
+     "detail": "|3.4906991495255726 - 3.49| = 0.0006991 (allowed 0.05)"
+    },
+    "q2": {
+     "ok": true,
+     "answer": 313033.0,
+     "detail": "exact match"
+    },
+    "q3": {
+     "ok": true,
+     "answer": "Marmoset",
+     "detail": "contains expected text"
+    },
+    "q4": {
+     "ok": true,
+     "answer": 9.0,
+     "detail": "exact match"
+    },
+    "q5": {
+     "ok": true,
+     "answer": "NAC",
+     "detail": "contains expected text"
+    },
+    "q6": {
+     "ok": true,
+     "answer": 13.208493466007099,
+     "detail": "|13.208493466007099 - 13.21| = 0.001507 (allowed 0.05)"
+    },
+    "q7": {
+     "ok": true,
+     "answer": "not available",
+     "detail": "contains expected text"
+    }
+   },
+   "score": "7/7",
+   "pass": true,
+   "seconds": 98,
+   "error": null,
+   "run_id": "usertest/10.1016_j.cell.2026.10.012/codex-20261124-224731"
+  }
+ ]
+}

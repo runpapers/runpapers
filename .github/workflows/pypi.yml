@@ -1,0 +1,18 @@
+# Publishes the rp tool to PyPI when a tool version tag (v0.1.0, ...) is pushed. Uses PyPI trusted publishing:
+# on pypi.org add a (pending) publisher for project "runpapers", this repository, workflow pypi.yml, environment pypi.
+name: pypi
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --no-project python -m unittest discover -s tests
+      - run: uv build
+      - uses: pypa/gh-action-pypi-publish@release/v1

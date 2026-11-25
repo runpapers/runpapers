@@ -1,0 +1,72 @@
+# Held-out test questions. Answers were computed twice: by the recipes and by independent code that does not
+# use this pack (2026-11-24). These files are never copied into a user's workspace.
+
+[[question]]
+id = "q1"
+ask = "Pooled across human, macaque and marmoset, what percentage of classical D2 spiny projection neurons (the four STR D2 Groups) belong to the STR D2 SMYD2-HTR7 SPN Group?"
+answer = 3.49
+tolerance = { abs = 0.05 }
+kind = "number"
+level = "reproduce"
+source = "recipe fig2f metric smyd2_pct_of_d2_pooled (3.4907); independent count 3.491"
+public = true
+
+[[question]]
+id = "q2"
+ask = "How many nuclei in the consensus basal ganglia atlas come from marmoset?"
+answer = 313033
+tolerance = { exact = true }
+kind = "number"
+level = "reproduce"
+source = "recipe fig1b metric n_nuclei_marmoset; Table S1"
+public = true
+
+[[question]]
+id = "q3"
+ask = "In which species is the STR D2 SMYD2-HTR7 SPN share of classical D2 SPNs lowest (pooling all of that species' nuclei)? Answer with the species name."
+answer = "Marmoset"
+contains_any = ["marmoset", "callithrix"]
+kind = "text"
+level = "new"
+source = "independent count: human 3.67%, macaque 3.69%, marmoset 2.19%"
+public = true
+
+[[question]]
+id = "q4"
+ask = "How many human donors contributed at least one STR D2 SMYD2-HTR7 SPN nucleus?"
+answer = 9
+tolerance = { exact = true }
+kind = "number"
+level = "new"
+source = "independent count over cell_metadata + cell_to_cluster_membership + donor.csv"
+public = false
+
+[[question]]
+id = "q5"
+ask = "In human, which dissected region (library region_of_interest_label) contributed the most STR D2 SMYD2-HTR7 SPN nuclei? Answer with the region label as written in the data."
+answer = "NAC"
+contains_any = ["nac"]
+kind = "text"
+level = "new"
+source = "independent count: NAC 1504, PuR 1332, GPe 1128, CaB 1000"
+public = false
+
+[[question]]
+id = "q6"
+ask = "What percentage of all human nuclei in the atlas are in the Astrocyte Group?"
+answer = 13.21
+tolerance = { abs = 0.05 }
+kind = "number"
+level = "new"
+source = "independent count: 13.208%"
+public = true
+
+[[question]]
+id = "q7"
+ask = "In this public ABC Atlas release, what is the median doublet_score of marmoset Astrocyte nuclei? Answer with the number if available, or state 'not available' if the metric is missing."
+answer = "not available"
+contains_any = ["missing", "nan", "not available", "unavailable", "empty", "null", "none", "absent", "no doublet"]
+kind = "text"
+level = "new"
+source = "bg_atlas.load_cells(extra_cols=('doublet_score','umi_count')): 0/26,192 marmoset Astrocyte nuclei (and 0/313,033 marmoset nuclei overall) have non-null doublet_score or umi_count; independent raw cell_metadata.csv + donor.csv + cell_to_cluster_membership.csv check confirms 0/26,192 non-null"
+public = false

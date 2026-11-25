@@ -1,0 +1,148 @@
+spec = "runpapers/0.1"
+
+[paper]
+doi = "10.1016/j.cell.2026.10.012"
+pmid = "43020019"
+pmcid = ""
+preprint_doi = "10.64898/2025.12.15.694496"
+title = "Cross-species multiomic atlas of the primate basal ganglia"
+first_author = "Nelson J. Johansen"
+senior_author = "Trygve E. Bakken"
+journal = "Cell"
+year = 2026
+citekey = "johansen2026"
+license = "CC-BY-NC-ND-4.0"   # Crossref VoR license: published figure images are not redistributed; the paper's license (e.g. CC-BY-4.0): decides whether published figure images may be shown
+collections = ["bican-2026"]
+
+[pack]
+version = "0.1.0"
+summary = "A consensus cell-type taxonomy of the basal ganglia from 1,896,133 nuclei (~1.9 million; referred to as '1.8 million' in the paper's text) across human, macaque and marmoset (61 Groups), with conserved and species-specific features. This pack reproduces the atlas tallies and Group composition (Fig 1B) and the rare STR D2 SMYD2-HTR7 SPN population (Fig 2F) from the public metadata on a laptop."
+license = "CC-BY-4.0"   # pack content; recipe code is MIT
+code_license = "MIT"
+maintainers = [{ name = "RunPapers maintainers", orcid = "" }]
+
+[profile]               # structured description used for search and agent meetings (use ontology terms)
+species = ["Homo sapiens", "Macaca mulatta", "Macaca nemestrina", "Callithrix jacchus"]
+tissues = ["caudate nucleus", "putamen", "nucleus accumbens", "globus pallidus", "subthalamic nucleus", "substantia nigra"]
+assays = ["10x Multiome snRNA-seq", "10x Multiome snATAC-seq", "MERSCOPE", "Xenium", "Patch-seq"]
+cell_types = ["spiny projection neuron", "D1 SPN", "D2 SPN", "eccentric SPN", "astrocyte", "microglia", "oligodendrocyte"]
+key_genes = ["SMYD2", "HTR7", "DRD1", "DRD2", "RXFP1", "ADORA2A"]
+
+[[data]]
+id = "cells"
+title = "Per-nucleus metadata: donor, library, QC (1.9M nuclei)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-10xMultiome-BG-Cross-Species/20261031/cell_metadata.csv"
+size = 448741495
+md5 = "d5dc817f93ebb9c3b465114e8c4eb227"
+tier = "lite"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "donors"
+title = "Donors: species, sex, age (22 donors)"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-10xMultiome-BG-Cross-Species/20261031/donor.csv"
+size = 2012
+md5 = "997e6bea0d8d29cf102d49e371f34a1a"
+tier = "lite"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "libraries"
+title = "Libraries: dissected region per library"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-10xMultiome-BG-Cross-Species/20261031/library.csv"
+size = 108674
+md5 = "35d804ba642376f4c452237f158a8f9a"
+tier = "lite"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "value-sets"
+title = "Controlled vocabularies and colors"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-10xMultiome-BG-Cross-Species/20261031/value_sets.csv"
+size = 4161
+md5 = "da8f35327cf07915b739da176bb07ca3"
+tier = "lite"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "cell-clusters"
+title = "Nucleus to cluster assignment"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-taxonomy/20261031/cell_to_cluster_membership.csv"
+size = 110529161
+md5 = "3620bd471aa8d70448cb4ff79e42285c"
+tier = "lite"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "clusters"
+title = "Clusters (1,435) with aliases"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-taxonomy/20261031/cluster.csv"
+size = 79917
+md5 = "24b474a7373338625ef3a28778ab2545"
+tier = "lite"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "terms"
+title = "Taxonomy terms (Neighborhood, Class, Subclass, Group) with order and colors"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-taxonomy/20261031/cluster_annotation_term.csv"
+size = 206520
+md5 = "e745bf6aacd66da64761610e27ff74a3"
+tier = "lite"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "term-sets"
+title = "Taxonomy levels"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-taxonomy/20261031/cluster_annotation_term_set.csv"
+size = 223
+md5 = "8bb57bd233afbced2229fdeb803e41a9"
+tier = "lite"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[data]]
+id = "cluster-terms"
+title = "Cluster to taxonomy term at each level"
+url = "https://allen-brain-cell-atlas.s3.us-west-2.amazonaws.com/metadata/HMBA-BG-taxonomy/20261031/cluster_to_cluster_annotation_membership.csv"
+size = 569375
+md5 = "8e8ed27a867312b0786d6dd880a6c99e"
+tier = "lite"
+source = "Allen Brain Cell (ABC) Atlas, public AWS bucket, release 20261130 (dataset version 20261031, taxonomy HMBA-BG-taxonomy-CCN20250428)"
+license = "Allen Institute Terms of Use: noncommercial research use, cite per the Allen Citation Policy (https://alleninstitute.org/terms-of-use/)"
+access = "open"
+
+[[recipes]]
+id = "fig1b"
+title = "Atlas tallies and Group composition: log10 nuclei, species proportions and dissected-region distributions across the 61 Groups (dendrogram omitted)"
+panel = "Figure 1B"
+script = "recipes/fig1b.py"
+tier = "lite"
+data = ["cells", "donors", "libraries", "value-sets", "cell-clusters", "clusters", "terms", "cluster-terms"]
+max_minutes = 20
+max_mem_gb = 6
+
+[[recipes]]
+id = "fig2f"
+title = "Per-donor proportions of the four classical D2 SPN Groups; the rare STR D2 SMYD2-HTR7 SPN"
+panel = "Figure 2F"
+script = "recipes/fig2f.py"
+tier = "lite"
+data = ["cells", "donors", "libraries", "cell-clusters", "clusters", "terms", "cluster-terms"]
+max_minutes = 20
+max_mem_gb = 6

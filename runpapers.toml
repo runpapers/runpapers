@@ -1,0 +1,16 @@
+# RunPapers registry root (this file marks it).
+name = "RunPapers"
+
+[site]
+# GitHub Pages until a domain is bought; the install command switches to "uvx runpapers" once the package is on PyPI
+base_url = "https://runpapers.github.io/runpapers"
+install_cmd = "uvx --from git+https://github.com/runpapers/runpapers runpapers"
+
+[publish]
+github_repo = "runpapers/runpapers"
+hf_org = "runpapers"
+creator = "RunPapers"               # Zenodo creator and the name on sign-offs
+# zenodo_community = "runpapers"    # once the community exists on zenodo.org
+
+[verify]
+min_agent_families = 2              # agent-tested needs passing naive-user runs from >= 2 companies

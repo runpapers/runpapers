@@ -1,0 +1,422 @@
+{
+ "level": "L1",
+ "pack_hash": "a1b34397ad90a77eed14429915299fb49ac1722ba95ab280d85c87784f7f203c",
+ "version": "0.1.0",
+ "at": "2026-11-24T22:12:51-05:00",
+ "rp_version": "0.1.0",
+ "platform": "Linux x86_64 py3.13.18",
+ "lint": [],
+ "recipes": {
+  "fig1b": {
+   "panel": "Figure 1B",
+   "status": "ok",
+   "seconds": 14.9,
+   "peak_rss_mb": 690,
+   "pass": true,
+   "checks": [
+    {
+     "metric": "n_nuclei_total",
+     "expected": 1896133,
+     "observed": 1896133,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1 (sum of the three species' QC Group tables); main text p.5 rounds down to '1.8 million nuclei'",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "composition_total",
+     "expected": 1896133,
+     "observed": 1896133,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1 (sum of the three species' QC Group tables): the composition table must account for every nucleus",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_nuclei_human",
+     "expected": 1034819,
+     "observed": 1034819,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1.Human_qc_Group",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_nuclei_macaque",
+     "expected": 548281,
+     "observed": 548281,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1.Macaque_qc_Group",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_nuclei_marmoset",
+     "expected": 313033,
+     "observed": 313033,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1.Marmoset_qc_Group",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_donors_total",
+     "expected": 22,
+     "observed": 22,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S4 (10 human, 8 macaque, 4 marmoset donors)",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_groups_total",
+     "expected": 61,
+     "observed": 61,
+     "ok": true,
+     "detail": "exact match",
+     "source": "main text p.5; Figure 1B (61 Groups)",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_groups_human",
+     "expected": 60,
+     "observed": 60,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1.Human_qc_Group (60 Group rows)",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_groups_macaque",
+     "expected": 58,
+     "observed": 58,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1.Macaque_qc_Group (58 Group rows)",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_groups_marmoset",
+     "expected": 56,
+     "observed": 56,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1.Marmoset_qc_Group (56 Group rows)",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_clusters_human",
+     "expected": 453,
+     "observed": 453,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S3.Human; main text p.33 (453 human clusters tested in MAGMA)",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_clusters_macaque",
+     "expected": 388,
+     "observed": 388,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S3.Macaque",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_clusters_marmoset",
+     "expected": 594,
+     "observed": 594,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S3.Marmoset",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    }
+   ],
+   "figures": [
+    "fig1b.png"
+   ]
+  },
+  "fig2f": {
+   "panel": "Figure 2F",
+   "status": "ok",
+   "seconds": 13.0,
+   "peak_rss_mb": 690,
+   "pass": true,
+   "checks": [
+    {
+     "metric": "smyd2_pct_of_d2_pooled",
+     "expected": 3.4,
+     "observed": 3.4907,
+     "ok": true,
+     "detail": "3.4907 in [3.4, 3.5]",
+     "source": "main text p.7: 'comprising only 3.4% of classical STR D2 SPNs (Figure 2F)'",
+     "kind": "figure",
+     "required": true,
+     "note": "Main text p.7 writes '3.4%' by truncating 3.49% to one decimal place (similar to writing 1,896,133 nuclei as '1.8 million'); the truncation interval [3.40, 3.50] covers values that truncate to 3.4%."
+    },
+    {
+     "metric": "smyd2_pct_of_spn_pooled",
+     "expected": 1.0,
+     "observed": 1.6032,
+     "ok": false,
+     "detail": "|1.6032 - 1.0| = 0.6032 (allowed 0.3)",
+     "source": "main text p.7: 'and 1% of all SPNs (Figure S9; Table S9)'",
+     "kind": "discrepancy",
+     "required": false,
+     "note": "Table S9 cell-level sheet totals 848,201 SPN nuclei including OT ICj Granule (13,483 / 848,201 = 1.59%), whereas the 9 classical and eccentric SPN Groups total 841,005 nuclei (13,483 / 841,005 = 1.60%). Table S9 donor-level means are 1.49% (human), 1.66% (macaque), and 1.03% (marmoset), making the marmoset donor mean a plausible source of the text's '1%'; kept as a documented discrepancy."
+    },
+    {
+     "metric": "n_smyd2_human",
+     "expected": 7627,
+     "observed": 7627,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1.Human_qc_Group; Table S9 cell-level counts",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_smyd2_macaque",
+     "expected": 4782,
+     "observed": 4782,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1.Macaque_qc_Group",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_smyd2_marmoset",
+     "expected": 1074,
+     "observed": 1074,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Table S1.Marmoset_qc_Group",
+     "kind": "tally",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_donors_plotted_human",
+     "expected": 10,
+     "observed": 10,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Figure 2F donor dots (one human donor, subthalamic-nucleus only, sits at 1.0 in STRv D2 SPN); Table S4",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_donors_plotted_macaque",
+     "expected": 7,
+     "observed": 7,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Figure 2F donor dots (one macaque donor has no D2 SPN nuclei); Table S4",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "n_donors_plotted_marmoset",
+     "expected": 4,
+     "observed": 4,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Figure 2F donor dots; Table S4",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "smyd2_lowest_median_in_all_species",
+     "expected": true,
+     "observed": true,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Figure 2F: STR D2 SMYD2-HTR7 SPN is the lowest box in every species",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "matrix_highest_median_in_all_species",
+     "expected": true,
+     "observed": true,
+     "ok": true,
+     "detail": "exact match",
+     "source": "Figure 2F: STRd D2 Matrix SPN is the highest box in every species",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_strv_human",
+     "expected": 18.95,
+     "observed": 18.95,
+     "ok": true,
+     "detail": "|18.95 - 18.95| = 0 (allowed 0.1)",
+     "source": "Figure 2F, STRv D2 SPN, human box median (digitized)",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_strv_macaque",
+     "expected": 15.25,
+     "observed": 15.25,
+     "ok": true,
+     "detail": "|15.25 - 15.25| = 0 (allowed 0.1)",
+     "source": "Figure 2F, STRv D2 SPN, macaque box median (digitized)",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_strv_marmoset",
+     "expected": 23.94,
+     "observed": 23.94,
+     "ok": true,
+     "detail": "|23.94 - 23.94| = 0 (allowed 0.1)",
+     "source": "Figure 2F, STRv D2 SPN, marmoset box median (digitized)",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_striosome_human",
+     "expected": 13.86,
+     "observed": 13.87,
+     "ok": true,
+     "detail": "|13.87 - 13.86| = 0.01 (allowed 0.1)",
+     "source": "Figure 2F, STRd D2 Striosome SPN, human box median (digitized)",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_striosome_macaque",
+     "expected": 14.52,
+     "observed": 14.51,
+     "ok": true,
+     "detail": "|14.51 - 14.52| = 0.01 (allowed 0.1)",
+     "source": "Figure 2F, STRd D2 Striosome SPN, macaque box median (digitized)",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_striosome_marmoset",
+     "expected": 11.46,
+     "observed": 11.45,
+     "ok": true,
+     "detail": "|11.45 - 11.46| = 0.01 (allowed 0.1)",
+     "source": "Figure 2F, STRd D2 Striosome SPN, marmoset box median (digitized)",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_matrix_human",
+     "expected": 62.8,
+     "observed": 62.79,
+     "ok": true,
+     "detail": "|62.79 - 62.8| = 0.01 (allowed 0.1)",
+     "source": "Figure 2F, STRd D2 Matrix SPN, human box median (digitized)",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_matrix_macaque",
+     "expected": 63.21,
+     "observed": 63.21,
+     "ok": true,
+     "detail": "|63.21 - 63.21| = 0 (allowed 0.1)",
+     "source": "Figure 2F, STRd D2 Matrix SPN, macaque box median (digitized)",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_matrix_marmoset",
+     "expected": 63.04,
+     "observed": 63.03,
+     "ok": true,
+     "detail": "|63.03 - 63.04| = 0.01 (allowed 0.1)",
+     "source": "Figure 2F, STRd D2 Matrix SPN, marmoset box median (digitized)",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_smyd2_human",
+     "expected": 3.43,
+     "observed": 3.45,
+     "ok": true,
+     "detail": "|3.45 - 3.43| = 0.02 (allowed 0.1)",
+     "source": "Figure 2F, STR D2 SMYD2-HTR7 SPN, human box median (digitized)",
+     "kind": "figure",
+     "required": true,
+     "note": ""
+    },
+    {
+     "metric": "median_pct_smyd2_macaque",
+     "expected": 3.75,
+     "observed": 3.63,
+     "ok": true,
+     "detail": "3.63 in [3.5, 4.0]",
+     "source": "Figure 2F, STR D2 SMYD2-HTR7 SPN, macaque box: at 1200-2400 dpi the median and upper-quartile strokes merge across 3.5-4.0% (lower quartile 3.17%)",
+     "kind": "figure",
+     "required": true,
+     "note": "Merged median and upper-quartile box strokes at high dpi constrain the published median to [3.5, 4.0]%."
+    },
+    {
+     "metric": "median_pct_smyd2_marmoset",
+     "expected": 1.95,
+     "observed": 2.16,
+     "ok": true,
+     "detail": "2.16 in [1.6, 2.3]",
+     "source": "Figure 2F, STR D2 SMYD2-HTR7 SPN, marmoset box: at 1200-2400 dpi the lower-quartile and median strokes merge across 1.6-2.3% (upper quartile 2.67%)",
+     "kind": "figure",
+     "required": true,
+     "note": "Merged lower-quartile and median box strokes at high dpi constrain the published median to [1.6, 2.3]%."
+    }
+   ],
+   "figures": [
+    "fig2f.png"
+   ]
+  }
+ },
+ "pass": true,
+ "notes": []
+}

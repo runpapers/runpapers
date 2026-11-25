@@ -1,0 +1,9 @@
+build/
+out/
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.cache/
+# private reference images (published figure crops) never go into the public repo
+refs/
