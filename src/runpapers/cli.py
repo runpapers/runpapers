@@ -309,7 +309,7 @@ def c_publish(a):
     reg = reg_()
     pk = reg.pack(a.id)
     fn = {"zenodo": lambda: release.publish_zenodo(reg, pk, sandbox=a.sandbox, publish=not a.draft),
-          "huggingface": lambda: release.publish_hf(reg, pk), "github": lambda: release.publish_github(reg, pk)}[a.target]
+          "huggingface": lambda: release.publish_hf(reg, pk, private=a.private), "github": lambda: release.publish_github(reg, pk)}[a.target]
     out(fn(), a.json)
 
 
@@ -428,7 +428,8 @@ def main(argv=None):
     s.add_argument("action", choices=["check", "build"]); s.add_argument("id"); s.add_argument("--version"); s.add_argument("--force", action="store_true")
     s = cmd("publish", c_publish, "Publish the built release: github (tag + release), zenodo (DOI), huggingface (dataset).")
     s.add_argument("target", choices=["github", "zenodo", "huggingface"]); s.add_argument("id")
-    s.add_argument("--sandbox", action="store_true", help="Zenodo sandbox (test DOI)"); s.add_argument("--draft", action="store_true", help="Zenodo: upload but don't publish")
+    s.add_argument("--sandbox", action="store_true", help="Zenodo sandbox (test DOI)"); s.add_argument("--draft", action="store_true", help="Zenodo: a private draft (DOI reserved), not published")
+    s.add_argument("--private", action="store_true", help="Hugging Face: a private dataset (preview)")
     s = cmd("ops", c_ops, "Maintainer: board, nightly, targets, prepublish (privacy scan), fresh-history, github-setup.")
     s.add_argument("action", choices=["board", "nightly", "targets", "prepublish", "fresh-history", "github-setup"]); s.add_argument("--repo")
     a = p.parse_args(argv)

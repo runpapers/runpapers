@@ -462,6 +462,9 @@ class Release(Base):
             card = release.hf_card(self.reg, pk, "0.1.0", "Org/x")
             self.assertNotIn("Allen", card)                                    # nothing paper-specific baked in
             self.assertIn("RunPapers", card)
+            self.assertEqual(release.license_for(pk), "cc-by-4.0")
+            pk.data[0]["license"] = "Allen Institute Terms of Use: noncommercial research use"
+            self.assertEqual(release.license_for(pk), "cc-by-nc-4.0")   # derived tables can't be more open than the source
         finally:
             fz.close()
             os.environ.pop("RUNPAPERS_ZENODO_TOKEN", None)

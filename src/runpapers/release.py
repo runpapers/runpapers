@@ -238,6 +238,20 @@ def _mark(pack, version, target, info):
 
 
 # --------------------------------------------------------------------------- Zenodo
+_NC_RX = re.compile(r"non-?commercial|\bNC\b|cc-by-nc", re.I)
+
+
+def html_escape(s):
+    import html
+    return html.escape(s, quote=False)
+
+
+def license_for(pack):
+    """The archive's license: CC BY 4.0, unless a data source allows only noncommercial use. The release contains
+    tables derived from the data, so it can't be more open than its most restrictive source."""
+    return "cc-by-nc-4.0" if any(_NC_RX.search(d.get("license", "")) for d in pack.data) else "cc-by-4.0"
+
+
 def zenodo_metadata(reg, pack, version):
     p = pack.paper
     pub = reg.config.get("publish", {})
@@ -248,7 +262,8 @@ def zenodo_metadata(reg, pack, version):
         rel_ids.append({"relation": "isSupplementTo", "identifier": p["preprint_doi"], "scheme": "doi", "resource_type": "publication-preprint"})
     for src in sorted({d["url"].split("/metadata/")[0] if "/metadata/" in d["url"] else d["url"] for d in pack.data})[:5]:
         rel_ids.append({"relation": "isDerivedFrom", "identifier": src, "scheme": "url"})
-    gh = pub.get("github_repo")
+    gh = pub.get("github_repo") or "runpapers/runpapers"
+    terms = sorted({d.get("license", "").strip() for d in pack.data if d.get("license", "").strip()}) or ["see pack/pack.toml"]
     if gh:
         rel_ids.append({"relation": "isSupplementTo", "identifier": f"https://github.com/{gh}", "scheme": "url"})
     meta = {
@@ -257,10 +272,13 @@ def zenodo_metadata(reg, pack, version):
         "creators": [{"name": pub.get("creator", "RunPapers")}],
         "description": (f"<p>A verified, agent-ready pack for <a href='https://doi.org/{pack.doi}'>{pack.title}</a>. "
                         f"{pack.meta.get('pack', {}).get('summary', '')}</p><p>Any AI agent can use it to reproduce the "
-                        f"paper's figures from the original data and answer new questions. Data are not included: recipes "
-                        f"download them from the original repositories under their own terms.</p>"),
+                        f"paper's figures from the original data and answer new questions. The original data are not "
+                        f"included: recipes download them from the original repositories. The reproduced tables and "
+                        f"figures in <code>reproduced/</code> are derived from those data and stay under the source's "
+                        f"terms: {html_escape('; '.join(terms))}. RunPapers' own instructions and recipes are also "
+                        f"available under the MIT license at <a href='https://github.com/{gh}'>github.com/{gh}</a>.</p>"),
         "version": version,
-        "license": "cc-by-4.0",
+        "license": license_for(pack),
         "keywords": ["RunPapers", "reproducibility", "AI agents", "agent skills", *pack.meta.get("profile", {}).get("assays", [])[:3],
                      *pack.meta.get("profile", {}).get("tissues", [])[:2]],
         "related_identifiers": rel_ids,
