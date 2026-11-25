@@ -3,12 +3,27 @@
   {
    "version": "0.1.0",
    "pack_hash": "8184628771f2149d24fa858d715c6517da0874cc0f8adefd2b9b2920c13d80f5",
-   "built": "2026-11-25T12:05:46-05:00",
+   "built": "2026-11-25T12:46:55-05:00",
    "rp_version": "0.1.0",
    "zip": "runpapers-10-1016-j-cell-2026-10-012-v0.1.0.zip",
-   "zip_sha256": "3e2226adadb4f49b5bcfa39bc31b1e2df77a8dfc9eadd01fef80f7a594fd6daf",
+   "zip_sha256": "1a934aa71e2a5efe9552ea1752b3a5314b058eb3f67bfbc36915837a0eb918f2",
    "zip_bytes": 500706,
-   "published": {}
+   "published": {
+    "zenodo-draft": {
+     "at": "2026-11-25T12:47:00-05:00",
+     "draft_id": 24521555,
+     "reserved_doi": "10.5281/zenodo.24521555",
+     "url": "https://zenodo.org/deposit/24521555",
+     "draft": true
+    },
+    "huggingface-preview": {
+     "at": "2026-11-25T12:47:02-05:00",
+     "repo": "RunPapers/10-1016-j-cell-2026-10-012",
+     "url": "https://huggingface.co/datasets/RunPapers/10-1016-j-cell-2026-10-012",
+     "private": true,
+     "commit": "https://huggingface.co/datasets/RunPapers/10-1016-j-cell-2026-10-012/commit/7ad6589b669b3ca59d57a45a3e325437646ff379"
+    }
+   }
   }
  ],
  "pack_hash": "8184628771f2149d24fa858d715c6517da0874cc0f8adefd2b9b2920c13d80f5",
