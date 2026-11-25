@@ -1,0 +1,23 @@
+# End-to-end check of the usage counter: marked requests through Cloudflare, read back from Analytics Engine with
+# the read-only token, plus both HTTPS certificates. Run it from the Actions tab ("Run workflow") after any change
+# to Cloudflare, the Worker or the token. Test rows are marked "st-..." and never counted on the website.
+name: usage-selftest
+on:
+  workflow_dispatch:
+  push:
+    branches: [ops/usage-selftest]
+permissions:
+  contents: read
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hide the account id in the log
+        run: echo "::add-mask::${{ vars.CLOUDFLARE_ACCOUNT_ID }}"
+      - name: Requests through Cloudflare, counts read back, certificates
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 deploy/cloudflare/selftest.py
