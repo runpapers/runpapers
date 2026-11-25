@@ -74,7 +74,9 @@ def extract_markdown_section(text, heading_query):
     raise KeyError(f"section {heading_query!r} not found in SKILL.md (available: {avail})")
 
 
-def _verification_warning(stage, badges):
+def _verification_warning(stage, badges, status=None):
+    if status == "available" and not badges and not stage:
+        return None
     runs_state = (badges or {}).get("runs", "none")
     if runs_state == "pass":
         return None
@@ -442,13 +444,18 @@ class RemoteCatalog(_BaseCatalog):
         seen_dois = set()
         for c in idx.get("papers") or []:
             seen_dois.add(c["doi"])
+            pub_st = c.get("status", "available")
+            inferred_stage = c.get("stage") or ("released" if c.get("release") else "runs")
+            inferred_badges = dict(c.get("badges") or ({"runs": "pass"} if pub_st == "available" else {}))
             out.append({
                 **c,
                 "tags": vocab.normalize_tags(c.get("tags")),
                 "other_dois": list(c.get("other_dois") or []),
                 "pack_hash": c.get("pack_hash"),
-                "status": c.get("status", "available"),
+                "status": pub_st,
                 "status_reason": None,
+                "stage": inferred_stage,
+                "badges": inferred_badges,
                 "data_terms": list(c.get("data_terms") or []),
                 "packed": True,
                 "votes": int(c.get("votes", reqs.get(c["doi"], 0)) or 0),
@@ -512,7 +519,7 @@ class RemoteCatalog(_BaseCatalog):
         return {
             **entry,
             "pack_hash": listing.get("pack_hash", "")[:12],
-            "verification_warning": _verification_warning(entry["stage"], entry["badges"]),
+            "verification_warning": _verification_warning(entry.get("stage"), entry.get("badges"), status=entry.get("status")),
             "data": data_list,
             "data_terms": terms or entry.get("data_terms", []),
             "available_references": sorted(refs),
@@ -529,6 +536,8 @@ class RemoteCatalog(_BaseCatalog):
         data_list = pack_toml.get("data", [])
         recipes_raw = pack_toml.get("recipes") or pack_toml.get("recipe", [])
         rows = []
+        det_badges = det.get("badges") or {}
+        l1_ok = True if (det.get("status") == "available" or det_badges.get("runs") == "pass") else None
         for r in recipes_raw:
             nd = recipe_needs_from_meta(r, data_list)
             if max_memory_gb is not None and nd["memory_gb"] > float(max_memory_gb):
@@ -547,13 +556,14 @@ class RemoteCatalog(_BaseCatalog):
                 "gpu": nd["gpu"],
                 "minutes": nd["minutes"],
                 "needs": {"memory_gb": nd["memory_gb"], "gpu": nd["gpu"], "minutes": nd["minutes"]},
-                "l1_pass": True if det["badges"].get("runs") == "pass" else None,
+                "l1_pass": l1_ok,
                 "run_command": f"rp run {doi} {rid}",
             }
             if include_targets:
                 item["targets"] = [t for t in targets_all if t.get("recipe") == rid]
             rows.append(item)
-        return {"doi": doi, "slug": det["slug"], "stage": det["stage"], "badges": det["badges"], "recipes": rows}
+        return {"doi": doi, "slug": det["slug"], "status": det.get("status", "available"),
+                "stage": det.get("stage", "released"), "badges": det_badges, "recipes": rows}
 
     def request_paper(self, ident, note="", by="local:mcp", resolve_online=False):
         doi = self.resolve_known(ident)

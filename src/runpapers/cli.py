@@ -195,7 +195,7 @@ def c_search(a):
                                                    "stage", "badges", "tags", "profile", "data_terms", "published_at")}}
             for sc, e in hits]
     txt = "\n".join(
-        f"{(r.get('status') or r['stage']):13} {(r.get('slug') or ''):16} {r['doi']:32} {(r.get('title') or '')[:60]}"
+        f"{(r.get('status') or r.get('stage') or 'available'):13} {(r.get('slug') or ''):16} {r['doi']:32} {(r.get('title') or '')[:60]}"
         for r in rows
     ) or "no matches"
     out(rows, a.json, txt)
@@ -375,13 +375,14 @@ def c_publish(a):
 def c_site(a):
     from . import site
     reg = reg_()
+    inc = bool(getattr(a, "include_unreleased", False))
     if a.action == "build":
-        d, n = site.build(reg, out=a.out, base_url=a.base_url, install_cmd=a.install)
+        d, n = site.build(reg, out=a.out, base_url=a.base_url, install_cmd=a.install, include_unreleased=inc)
         out({"dir": str(d), "papers": n}, a.json, f"built {n} paper page(s) into {d}")
     else:
         d = Path(a.out or reg.root / "build" / "site")
-        if not d.is_dir():
-            site.build(reg, out=d, base_url=f"http://{a.host}:{a.port}")
+        if not d.is_dir() or inc:
+            site.build(reg, out=d, base_url=f"http://{a.host}:{a.port}", include_unreleased=inc)
         httpd = site.serve(d, a.host, a.port)
         print(f"serving {d} at http://{a.host}:{a.port}/  (Ctrl-C to stop)")
         try:
@@ -493,7 +494,9 @@ def main(argv=None):
     s.add_argument("id"); s.add_argument("--agents", default="claude,agy,codex"); s.add_argument("--model", action="append", help="agent=model")
     s.add_argument("--timeout", type=int, default=45, help="minutes per agent"); s.add_argument("--no-record", action="store_true")
     s = cmd("site", c_site, "Build or serve the static website."); s.add_argument("action", choices=["build", "serve"])
-    s.add_argument("--out"); s.add_argument("--base-url"); s.add_argument("--install"); s.add_argument("--host", default="127.0.0.1"); s.add_argument("--port", type=int, default=8765)
+    s.add_argument("--out"); s.add_argument("--base-url"); s.add_argument("--install")
+    s.add_argument("--include-unreleased", action="store_true", help="include unreleased packs for local preview")
+    s.add_argument("--host", default="127.0.0.1"); s.add_argument("--port", type=int, default=8765)
     s = cmd("release", c_release, "Freeze a verified pack version (zip + archive metadata), or check readiness.")
     s.add_argument("action", choices=["check", "build"]); s.add_argument("id"); s.add_argument("--version"); s.add_argument("--force", action="store_true")
     s = cmd("publish", c_publish, "Publish the built release: github (tag + release), zenodo (DOI), huggingface (dataset).")

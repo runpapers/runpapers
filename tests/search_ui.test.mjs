@@ -18,7 +18,7 @@ const require = createRequire(import.meta.url);
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rp-search-ui-"));
 const siteDir = path.join(tmpRoot, "site");
 
-execFileSync(PYTHON, ["-m", "runpapers.cli", "site", "build", "--out", siteDir, "--base-url", "https://runpapers.com"], {
+execFileSync(PYTHON, ["-m", "runpapers.cli", "site", "build", "--out", siteDir, "--base-url", "https://runpapers.com", "--include-unreleased"], {
   cwd: ROOT,
   env: { ...process.env, RUNPAPERS_HOME: ROOT, PYTHONPATH: path.join(ROOT, "src") },
   stdio: "pipe",

@@ -11,8 +11,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv run --no-project python -m unittest discover -s tests
+      - run: node --test tests/search_ui.test.mjs
   packs:
-    runs-on: ubuntu-latest          # 4 CPUs, 16 GB RAM: the lite tier must fit here
+    runs-on: ubuntu-latest          # 4 CPUs, 16 GB RAM: CI-eligible recipes run here; heavier/GPU panels are recorded from HPC
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }

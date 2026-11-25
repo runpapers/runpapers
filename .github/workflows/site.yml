@@ -1,5 +1,5 @@
-# The public website on GitHub Pages. Every deploy re-runs each pack's lite recipes from the original data, so the
-# figures and the "Runs" badge on the site always come from a fresh, independent run.
+# The public website on GitHub Pages. Every deploy re-runs CI-eligible recipes from the original data and builds
+# the static site of publicly released packs.
 name: site
 on:
   push:
@@ -28,8 +28,8 @@ jobs:
           path: ~/.cache/runpapers/data
           key: rp-data-${{ hashFiles('papers/**/pack.toml') }}
           restore-keys: rp-data-
-      - name: Re-run every pack's lite recipes from the original data
-        run: uvx --from . rp verify --all --no-cap || echo "some packs did not pass; the site shows it"
+      - name: Re-run CI-eligible pack recipes from the original data
+        run: uvx --from . rp verify --all --no-cap || echo "some packs did not pass"
       - name: Snapshot the paper requests (issues labelled "request") and their votes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

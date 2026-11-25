@@ -165,18 +165,19 @@ def _fmt_search_markdown(payload):
     lines = [f"Found {payload['total']} matching paper(s):"]
     for m in matches:
         badges = ", ".join(k for k, v in (m.get("badges") or {}).items() if v == "pass")
-        b_txt = f"badges: {badges}" if badges else f"stage: {m['stage']}"
+        b_txt = f"badges: {badges}" if badges else f"status: {m.get('status') or m.get('stage', 'available')}"
         pmid_txt = f", PMID {m['pmid']}" if m.get("pmid") else ""
         lines.append(f"- **{m['title']}** ({m.get('first_author', '')} et al., *{m.get('journal', '')}* {m.get('year', '')}) — DOI `{m['doi']}`{pmid_txt} [{b_txt}]")
     return "\n".join(lines)
 
 
 def _fmt_paper_markdown(det):
+    st_label = det.get("stage") or det.get("status", "available")
     lines = [
         f"# {det['title']}",
         f"{det.get('first_author', '')} et al., *{det.get('journal', '')}* {det.get('year', '')} · DOI `{det['doi']}`"
         + (f" · PMID `{det['pmid']}`" if det.get("pmid") else ""),
-        f"Stage: `{det['stage']}`" + (f" · Version: `{det['version']}` · Hash: `{det['pack_hash']}`" if det.get("packed") else ""),
+        f"Stage: `{st_label}`" + (f" · Version: `{det['version']}` · Hash: `{det['pack_hash']}`" if det.get("packed") else ""),
     ]
     if det.get("verification_warning"):
         lines.append(f"Warning: {det['verification_warning']}")
@@ -233,7 +234,7 @@ def handle_tool_call(catalog, name, arguments):
                     "votes": int(e.get("votes") or 0),
                     "issue_url": e.get("issue_url"),
                     "published_at": e.get("published_at"),
-                    "stage": e["stage"],
+                    "stage": e.get("stage") or ("released" if search.public_status(e) == "available" else "planned"),
                     "badges": e.get("badges", {}),
                     "summary": e.get("summary", ""),
                     "tags": e.get("tags", {}),
@@ -257,7 +258,7 @@ def handle_tool_call(catalog, name, arguments):
             if not args.get("id"):
                 raise ValueError("missing required argument 'id'")
             sk = catalog.get_skill(args["id"], section=args.get("section"), reference=args.get("reference"))
-            header = [f"<!-- RunPapers skill {sk['skill_name']} v{sk['version']} ({sk['doi']}) | stage: {sk['stage']} -->"]
+            header = [f"<!-- RunPapers skill {sk['skill_name']} v{sk['version']} ({sk['doi']}) | status: {sk.get('stage') or sk.get('status', 'available')} -->"]
             if sk.get("verification_warning"):
                 header.append(f"> Warning: {sk['verification_warning']}")
             if sk.get("data_terms"):
@@ -274,7 +275,7 @@ def handle_tool_call(catalog, name, arguments):
                 gpu=args.get("gpu"),
                 include_targets=bool(args.get("include_targets", True)),
             )
-            lines = [f"Recipes for DOI `{res['doi']}` (stage: `{res['stage']}`):"]
+            lines = [f"Recipes for DOI `{res['doi']}` (stage: `{res.get('stage') or res.get('status', 'available')}`):"]
             for r in res["recipes"]:
                 nt = len(r.get("targets") or [])
                 t_info = f", {nt} target(s)" if "targets" in r else ""
@@ -316,7 +317,7 @@ def list_resources(catalog):
             "uri": f"skill://runpapers/{ids.doi_relpath(doi)}/SKILL.md",
             "name": fm["name"] or f"runpapers-{e['slug']}",
             "title": e["title"],
-            "description": f"{desc} [stage: {e['stage']}; badges: {badges}; data terms: {terms}]",
+            "description": f"{desc} [stage: {e.get('stage') or e.get('status', 'available')}; badges: {badges}; data terms: {terms}]",
             "mimeType": "text/markdown",
         })
     return {"resources": resources}

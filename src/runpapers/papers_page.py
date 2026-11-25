@@ -42,7 +42,7 @@ padding:4px 10px;font:600 13px/1.3 var(--rp-font-sans);cursor:pointer}
 line-height:1.35;color:var(--rp-hematoxylin);cursor:pointer;padding:2px 0}
 .filter-opt-left{display:flex;align-items:baseline;gap:7px;min-width:0}
 .filter-opt input{margin:0;accent-color:var(--rp-eosin-ink);flex:0 0 auto}
-.filter-opt.zero{color:var(--rp-counterstain);opacity:.72}
+.filter-opt.zero{color:var(--rp-counterstain)}
 .filter-count{font-size:12px;color:var(--rp-counterstain);font-variant-numeric:tabular-nums;flex:0 0 auto}
 .papers-main{min-width:0}
 .papers-section-title{font-size:15px;font-weight:700;color:var(--rp-counterstain);margin:24px 0 10px;
@@ -1092,7 +1092,7 @@ def papers_body_html(search_index, repo="runpapers/runpapers"):
             opts.append(
                 f'<label class="filter-opt{zero_cls}">'
                 f'<span class="filter-opt-left">'
-                f'<input type="checkbox" name="{_esc(g)}" value="{_esc(slug)}" data-group="{_esc(g)}" data-slug="{_esc(slug)}">'
+                f'<input type="checkbox" form="papers-form" name="{_esc(g)}" value="{_esc(slug)}" data-group="{_esc(g)}" data-slug="{_esc(slug)}">'
                 f'<span>{_esc(lbl)}</span></span>'
                 f'<span class="filter-count" data-count-for="{_esc(g)}:{_esc(slug)}">{cnt}</span>'
                 f'</label>'

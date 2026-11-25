@@ -62,22 +62,20 @@ def _find_result(root, rid):
 
 def run(reg, pack, agents, models=None, timeout_min=45, record=True, quiet=False, keep=True):
     """Run each agent once; returns the list of run records (also appended to verify/usertest.json)."""
-    from .verify import status
     models = models or {}
     questions = pack.evals
     if not pack.recipes:
         raise SystemExit("no recipe to test")
     ci_recs = [r for r in pack.recipes if fits_ci(pack, r)]
     rid = (ci_recs or pack.recipes)[0]["id"]
-    # Serve a fresh site build on a free local port, with the install command pointing at this source tree.
+    # Serve a fresh site build on a free local port (including this unreleased pack), pointing install at this source tree.
     tmp = Path(tempfile.mkdtemp(prefix="rp-site-"))
     httpd = site.serve(tmp, port=0, quiet=True)
     base = f"http://127.0.0.1:{httpd.server_address[1]}"
     install = f"uvx --from {reg.root} runpapers"
-    site.build(reg, out=tmp, base_url=base, install_cmd=install)
+    site.build(reg, out=tmp, base_url=base, install_cmd=install, include_unreleased=True)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    st = status(pack)
-    card = {**pack.card(), **{k: st[k] for k in ("stage", "badges")}}
+    card = pack.card()
     prompt = harness_prompt(card, base, questions)
     results = []
     try:

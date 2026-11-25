@@ -225,7 +225,7 @@ class TagsAndVocabTests(unittest.TestCase):
         self.assertEqual(pk2.tags["tissue_cell"], [])
 
         # Site build exposes `tags` in index.json and `workspace.get` over HTTP does not need tags.toml in pack.json.
-        sdir, _ = site.build(self.reg, out=self.tmp / "site", base_url="http://127.0.0.1")
+        sdir, _ = site.build(self.reg, out=self.tmp / "site", base_url="http://127.0.0.1", include_unreleased=True)
         idx = json.loads((sdir / "index.json").read_text())
         self.assertEqual(idx["papers"][0]["tags"]["species"], ["Human", "Mouse"])
         pack_json = json.loads((sdir / ids.page_path(DOI) / "pack.json").read_text())
@@ -447,7 +447,7 @@ class TagsAndVocabTests(unittest.TestCase):
             'data_type = ["Single-nucleus RNA-seq"]\n'
             'disease = ["None (healthy donors)"]\n'
         )
-        sdir, _ = site.build(self.reg, out=self.tmp / "site-ac3", base_url="http://127.0.0.1")
+        sdir, _ = site.build(self.reg, out=self.tmp / "site-ac3", base_url="http://127.0.0.1", include_unreleased=True)
         search_json_path = sdir / "papers" / "search.json"
         self.assertTrue(search_json_path.is_file())
         raw_search_json = search_json_path.read_text()
@@ -547,7 +547,7 @@ class TagsAndVocabTests(unittest.TestCase):
             resolve_online=False,
         )
 
-        sdir, _ = site.build(self.reg, out=self.tmp / "site-ac5", base_url="http://127.0.0.1")
+        sdir, _ = site.build(self.reg, out=self.tmp / "site-ac5", base_url="http://127.0.0.1", include_unreleased=True)
         sidx = json.loads((sdir / "papers" / "search.json").read_text())
         entries = sidx["entries"]
 
@@ -634,7 +634,7 @@ class TagsAndVocabTests(unittest.TestCase):
             tags_toml='species = ["Zebra finch"]\ntissue_cell = ["Basal ganglia"]\ndata_type = ["Patch-seq"]\ndisease = ["None (healthy donors)"]\n',
         )
 
-        sdir, _ = site.build(self.reg, out=self.tmp / "site-ac7", base_url="http://127.0.0.1")
+        sdir, _ = site.build(self.reg, out=self.tmp / "site-ac7", base_url="http://127.0.0.1", include_unreleased=True)
         sidx = json.loads((sdir / "papers" / "search.json").read_text())
         lcat = catalog.LocalCatalog(self.reg)
 

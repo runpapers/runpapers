@@ -306,7 +306,7 @@ class Requests(Base):
 class SiteAndWorkspace(Base):
     def test_site_and_get(self):
         verify.run_l1(self.pack(), ci=False, quiet=True, keep_out=self.root / "build" / "l1" / ids.doi_relpath(DOI))
-        out, n = site.build(self.reg, out=self.tmp / "site", base_url="http://x")
+        out, n = site.build(self.reg, out=self.tmp / "site", base_url="http://x", include_unreleased=True)
         self.assertEqual(n, 1)
         pdir = out / "papers" / "10-9999-test-2026-001"   # the DOI as a name (2026-11-25)
         for f in ("index.html", "index.md", "AGENT.md", "pack.json"):
@@ -315,12 +315,12 @@ class SiteAndWorkspace(Base):
         self.assertIn('url=http://x/papers/10-9999-test-2026-001/', old)   # the old address redirects
         listing = json.loads((pdir / "pack.json").read_text())
         self.assertFalse(any(f["path"].startswith("evals/") for f in listing["files"]))  # held-out questions stay out
-        self.assertIn("Runs", (pdir / "index.html").read_text())
+        self.assertIn("Pack v0.1.0", (pdir / "index.html").read_text())
         idx = json.loads((out / "index.json").read_text())
         self.assertEqual(idx["papers"][0]["pmid"], "99999999")
         self.assertEqual(idx["papers"][0]["data_terms"], ["CC0"])
         self.assertIn("http://x/papers/10-9999-test-2026-001/AGENT.md", (out / "llms.txt").read_text() + json.dumps(idx))
-        for twin in ("index.md", "about.md", "requests.md"):
+        for twin in ("index.md", "papers/index.md", "guide/index.md", "about/index.md", "requests/index.md"):
             self.assertTrue((out / twin).is_file(), twin)
         self.assertNotIn('onclick="tab(this,"', (pdir / "index.html").read_text())
         ws, _ = workspace.get("99999999", dest=self.tmp / "ws", source=str(self.root), quiet=True)
@@ -794,7 +794,7 @@ source = "Fig 6B interval"
         ghtml2 = (ops.gallery(self.reg, pk) / "index.html").read_text()
         self.assertIn("<td>[1.8, 2.2]</td><td>2.05</td>", ghtml2)
         self.assertIn("tracks.png", ghtml2)
-        sdir, _ = site.build(self.reg, out=self.tmp / "site-hpc", base_url="http://x")
+        sdir, _ = site.build(self.reg, out=self.tmp / "site-hpc", base_url="http://x", include_unreleased=True)
         pdir = sdir / "papers" / "10-9999-test-2026-001"
         self.assertTrue((pdir / "figures" / "fig6b-tracks.png").is_file())
         self.assertIn("fig6b-tracks.png", (pdir / "index.html").read_text())
@@ -814,7 +814,7 @@ source = "Fig 6B interval"
         from runpapers import mcp_server, meeting, newpack
 
         verify.run_l1(self.pack(), ci=False, quiet=True, keep_out=ops.l1_out(self.reg, self.pack()))
-        sdir, _ = site.build(self.reg, out=self.tmp / "site-clean", base_url="https://runpapers.com")
+        sdir, _ = site.build(self.reg, out=self.tmp / "site-clean", base_url="https://runpapers.com", include_unreleased=True)
         mdir, _ = meeting.build_meeting("A test paper", dest=self.tmp / "meeting-clean", source=str(self.root), quiet=True)
         scaf = newpack.scaffold(self.reg, "10.9999/planned.1")
 

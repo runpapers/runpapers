@@ -372,7 +372,7 @@ class McpAndMeetingTests(unittest.TestCase):
         site_dir = self.tmp / "site-req"
         httpd = site.serve(site_dir, port=0, quiet=True)
         url = f"http://127.0.0.1:{httpd.server_address[1]}"
-        site.build(self.reg, out=site_dir, base_url=url)
+        site.build(self.reg, out=site_dir, base_url=url, include_unreleased=True)
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         try:
             rcat = catalog.RemoteCatalog(url, cache_dir=self.tmp / "rcache-req")
@@ -394,7 +394,7 @@ class McpAndMeetingTests(unittest.TestCase):
         site_dir = self.tmp / "site-http"
         httpd = site.serve(site_dir, port=0, quiet=True)
         url = f"http://127.0.0.1:{httpd.server_address[1]}"
-        site.build(self.reg, out=site_dir, base_url=url)
+        site.build(self.reg, out=site_dir, base_url=url, include_unreleased=True)
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         old_cwd = os.getcwd()
         try:
