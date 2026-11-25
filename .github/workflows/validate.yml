@@ -20,7 +20,7 @@ jobs:
       - name: lint all packs
         run: uvx --from . rp lint --all
       - name: privacy scan (nothing private in tracked files)
-        run: uvx --from . rp ops prepublish || true
+        run: uvx --from . rp ops prepublish
       - name: L1 on packs changed in this pull request
         if: github.event_name == 'pull_request'
         run: |
