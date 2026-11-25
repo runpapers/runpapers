@@ -39,20 +39,20 @@ RunPapers is free, open source and non-profit; we never see your questions and n
 
 ## Search page
 - Heading: "Papers"
-- Filters (the tag groups): Species, Tissue, Data type, Cell types, Disease, Collection, Data terms, Runs on
-  ("a laptop" / "a computing cluster").
+- Filters: the five tag groups, nothing else: **Species**, **Tissue/cell** (a tissue or a cell line), **Data type**,
+  **Disease**, **Collection**.
 - Sort: "Most used" (default), "Newest", "Title".
 - Result row, in this order:
   1. Paper title (the paper's own title, in the serif).
   2. First author et al., Journal, year. DOI.
-  3. One plain sentence: what you can do with it. Example: "Reproduce the cell-type composition of the primate
-     basal ganglia across human, macaque and marmoset donors."
-  4. Up to four tags.
-  5. "Reproduces Figure 1B and Figure 2F. Data: 560 MB, runs on a laptop."
-  6. Counts, small: "2,140 views by people, 610 by AI agents, 85 downloads in the last 30 days". A new pack says
-     "New" instead of zeros.
-- Requested papers that have no pack yet appear at the end, marked "Requested, 12 votes", with "Vote" and the
-  link to GitHub.
+  3. One plain sentence about the paper and its data. Example: "Cell-type composition of the primate basal
+     ganglia across human, macaque and marmoset donors."
+  4. Its tags.
+  5. "Reproduces Figure 1B and Figure 2F."
+  6. Counts, small, always shown as they are (also 0): "2,140 views by people, 610 by AI agents, 85 downloads".
+     A pack published in the last 7 days also carries "New".
+- Requested papers that have no pack yet appear after the available ones, marked "Requested, 12 votes" (or "In
+  progress"), with "Vote" and the link to GitHub.
 - No results: "No pack matches "<query>" yet. Request it: papers with the most votes are built first." with a
   "Request this paper" button that opens the request form with the DOI filled in.
 
@@ -61,7 +61,8 @@ RunPapers is free, open source and non-profit; we never see your questions and n
 2. "What you can do with this pack" (two or three sentences, plain words).
 3. The prompt: heading "Copy this into your AI agent", tabs for the agent (Claude Code, Codex, Antigravity, other),
    button "Copy prompt", then "Copied". Line under it: "Run it in an empty folder. Your agent downloads about
-   560 MB from the original source."
+   560 MB from the original source." Everything runs on a laptop; if a pack has an analysis that needs a computing
+   cluster, the agent explains that part and how to do it.
 4. "Figures it reproduces" (each with what it shows and how close our numbers are to the paper's, in words).
 5. "Questions this data can answer" and "Questions it can't answer".
 6. "Data and terms": where the data stays, who provides it, the terms in one sentence, link to the full terms.

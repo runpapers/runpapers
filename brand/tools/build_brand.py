@@ -7,7 +7,7 @@
     uv run brand/tools/build_brand.py
 
 Writes: logo/*.svg (text as outlines, so they open the same everywhere), icons/*.svg|png, social/og-card.svg|png,
-color/tokens.css and color/runpapers.ase (Adobe swatches), fonts/*.woff2 (Latin subsets for the website).
+color/tokens.css and color/runpapers.ase (Adobe swatches), fonts/SourceSerif4-Variable-latin.woff2.
 The SVGs are plain shapes with named ids: once you edit one in Illustrator, that file is the source; rerunning this
 script overwrites it, so keep your edited copies (or change the numbers here).
 """
@@ -26,9 +26,8 @@ from fontTools.varLib import instancer
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # brand/
 FONTS = os.path.join(HERE, "fonts")
-SANS = os.path.join(FONTS, "AtkinsonHyperlegibleNext-Variable.ttf")
-MONO = os.path.join(FONTS, "AtkinsonHyperlegibleMono-Variable.ttf")
-SERIF = os.path.join(FONTS, "Newsreader-Variable.ttf")
+SANS = os.path.join(FONTS, "IBMPlexSans-Variable.ttf")        # interface, headings, the name
+SERIF = os.path.join(FONTS, "SourceSerif4-Variable.ttf")      # paper titles
 
 P = {c["id"]: c["hex"] for c in json.load(open(os.path.join(HERE, "color", "palette.json")))["colors"]}
 INK, EOSIN, EOSIN_BRIGHT, SLIDE, COVERSLIP, MUTED, WHITE = (
@@ -85,16 +84,17 @@ def mark(axes=INK, run=EOSIN, dx=0, dy=0, scale=1.0):
             f'  </g>')
 
 
-def wordmark(color, x, baseline, cap_target=32.0):
-    d, w, cap = text_path("RunPapers", 100, 0, 0, wght=700)
+def wordmark(color, x, baseline, cap_target=32.0, serif=False):
+    font = dict(path=SERIF, wght=700, opsz=60) if serif else dict(path=SANS, wght=700)
+    d, w, cap = text_path("RunPapers", 100, 0, 0, **font)
     size = 100 * cap_target / cap
-    d, w, _ = text_path("RunPapers", size, x, baseline, wght=700)
+    d, w, _ = text_path("RunPapers", size, x, baseline, **font)
     return f'  <path id="wordmark" fill="{color}" d="{d}"/>', w
 
 
-def lockup(axes, run, text, name):
+def lockup(axes, run, text, name, serif=False):
     # mark 0..64; caps 32 units tall, centred on the mark (baseline 48)
-    wm, w = wordmark(text, 76, 48)
+    wm, w = wordmark(text, 76, 48, serif=serif)
     width = 76 + w + 4
     out = svg(round(width, 1), 64, mark(axes, run) + "\n" + wm, "RunPapers")
     open(os.path.join(HERE, "logo", name), "w").write(out)
@@ -147,6 +147,7 @@ def main():
     lockup(INK, INK, INK, "runpapers-logo-ink.svg")
     lockup("#000000", "#000000", "#000000", "runpapers-logo-black.svg")
     lockup(WHITE, WHITE, WHITE, "runpapers-logo-white.svg")
+    lockup(INK, EOSIN, INK, "runpapers-logo-serif.svg", serif=True)   # alternate: the name in Source Serif 4
     write("logo/runpapers-mark.svg", svg(64, 64, mark()))
     write("logo/runpapers-mark-reverse.svg", svg(64, 64, mark(WHITE, EOSIN_BRIGHT)))
     write("logo/runpapers-mark-black.svg", svg(64, 64, mark("#000000", "#000000")))
@@ -157,7 +158,7 @@ def main():
     _, w, cap = text_path("RunPapers", 100, 0, 0, wght=700)
     size = 100 * 32 / cap
     write("logo/runpapers-logo-editable-text.svg", svg(round(76 + w * size / 100 + 4, 1), 64, mark() + "\n" +
-          f'  <text id="wordmark" x="76" y="48" font-family="Atkinson Hyperlegible Next" font-weight="700" '
+          f'  <text id="wordmark" x="76" y="48" font-family="IBM Plex Sans" font-weight="700" '
           f'font-size="{size:.2f}" fill="{INK}">RunPapers</text>'))
 
     # icons: a filled tile reads better at 16-32 px
@@ -176,7 +177,7 @@ def main():
     l2, _, _ = text_path("Then ask your own question.", 70, 80, 384, wght=700)
     sub1, _, _ = text_path("Ready-made packs for published papers. Your own AI agent reproduces", 30, 80, 470, wght=400)
     sub2, _, _ = text_path("the figures from the original data, then answers your questions.", 30, 80, 512, wght=400)
-    url, _, _ = text_path("runpapers.com", 28, 80, 566, path=MONO, wght=500)
+    url, _, _ = text_path("runpapers.com", 28, 80, 566, wght=600)
     card = (f'  <rect width="1200" height="630" fill="{SLIDE}"/>\n'
             f'  <g id="logo" transform="translate(80 72) scale(0.875)">\n{mark()}\n'
             f'  <g transform="translate(76 48)">{wm.strip()}</g>\n  </g>\n'
@@ -193,18 +194,17 @@ def main():
     css = ["/* RunPapers colour and type tokens. Generated from brand/color/palette.json by brand/tools/build_brand.py */",
            ":root {"]
     css += [f"  --rp-{c['id']}: {c['hex']};  /* {c['name']}: {c['use']} */" for c in pal["colors"]]
-    css += ['  --rp-font-sans: "Atkinson Hyperlegible Next", system-ui, sans-serif;',
-            '  --rp-font-mono: "Atkinson Hyperlegible Mono", ui-monospace, monospace;',
-            '  --rp-font-serif: "Newsreader", Georgia, serif;', "}"]
+    css += ['  --rp-font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;',
+            '  --rp-font-serif: "Source Serif 4", Georgia, serif;',
+            '  --rp-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;   /* commands only */', "}"]
     css += ["@media (prefers-color-scheme: dark) {", "  :root {"]
     css += [f"    --rp-{k}: {v};" for k, v in pal["dark"].items()]
     css += ["  }", "}"]
     write("color/tokens.css", "\n".join(css) + "\n")
 
-    # web fonts
-    woff2(SANS, "AtkinsonHyperlegibleNext-Variable-latin.woff2")
-    woff2(MONO, "AtkinsonHyperlegibleMono-Variable-latin.woff2")
-    woff2(SERIF, "Newsreader-Variable-latin.woff2")
+    # web fonts. IBM Plex Sans: IBM's own split woff2 files are used as they are (its licence reserves the name
+    # "Plex" for unmodified fonts, so we don't subset it). Source Serif 4 has no reserved name: subset to Latin.
+    woff2(SERIF, "SourceSerif4-Variable-latin.woff2")
     print("brand files written to", HERE)
 
 
