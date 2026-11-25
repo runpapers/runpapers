@@ -310,7 +310,18 @@ class UsageCounterAndHeadersTests(unittest.TestCase):
         self.assertEqual(rows[0]["kind"], "person")
         self.assertTrue(all(ok for ok, _, _ in selftest.results))
 
-        # 4. usage-selftest workflow does not run on routine pushes to main
+        # 4. clean() strips pasted whitespace and describe() never leaks credential text
+        sample_tok = "tok_Abc_123"
+        with mock.patch.dict(os.environ, {"CLOUDFLARE_API_TOKEN": f"  {sample_tok}\n"}, clear=False):
+            self.assertEqual(selftest.clean("CLOUDFLARE_API_TOKEN"), sample_tok)
+        desc_good = selftest.describe(sample_tok, r"[A-Za-z0-9_-]")
+        desc_bad = selftest.describe('Bearer "secret"', r"[A-Za-z0-9_-]")
+        self.assertIn("looks well-formed", desc_good)
+        self.assertNotIn(sample_tok, desc_good)
+        self.assertIn("unexpected character", desc_bad)
+        self.assertNotIn("secret", desc_bad)
+
+        # 5. usage-selftest workflow does not run on routine pushes to main
         wf = (REPO_ROOT / ".github" / "workflows" / "usage-selftest.yml").read_text()
         self.assertIn("workflow_dispatch:", wf)
         self.assertIn("ops/usage-selftest", wf)

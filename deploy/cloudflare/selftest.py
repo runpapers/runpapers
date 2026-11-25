@@ -94,8 +94,23 @@ def send_requests(action, sleep_seconds=2, site=None, host=None, cases=None):
           f"got {code} {headers.get('location', '')}")
 
 
+def clean(name):
+    """A pasted secret often carries a line break or spaces; Cloudflare's own values never contain whitespace."""
+    return "".join(os.environ.get(name, "").split())
+
+
+def describe(value, pattern):
+    """Say what is wrong with a credential without revealing it."""
+    if not value:
+        return "empty"
+    bad = sorted({c for c in value if not re.fullmatch(pattern, c)})
+    if bad:
+        return f"{len(value)} characters, {len(bad)} kind(s) of unexpected character (e.g. quotes, 'Bearer ', or non-ASCII)"
+    return f"{len(value)} characters, looks well-formed"
+
+
 def cf_api(path, body=None):
-    token, account = os.environ.get("CLOUDFLARE_API_TOKEN", ""), os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+    token, account = clean("CLOUDFLARE_API_TOKEN"), clean("CLOUDFLARE_ACCOUNT_ID")
     req = urllib.request.Request(
         "https://api.cloudflare.com/client/v4" + path.format(account=account),
         data=body.encode() if body is not None else None,
@@ -151,8 +166,14 @@ def main():
     action = "st-" + secrets.token_hex(4)
     print(f"Self-test run {action} against {SITE}\n", flush=True)
 
-    has_token = check(os.environ.get("CLOUDFLARE_API_TOKEN"), "GitHub secret CLOUDFLARE_API_TOKEN is set")
-    has_account = check(os.environ.get("CLOUDFLARE_ACCOUNT_ID"), "GitHub variable CLOUDFLARE_ACCOUNT_ID is set")
+    token, account = clean("CLOUDFLARE_API_TOKEN"), clean("CLOUDFLARE_ACCOUNT_ID")
+    raw = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+    if raw and raw != token:
+        print("note: the token secret has spaces or a line break around it; ignored", flush=True)
+    has_token = check(token and re.fullmatch(r"[A-Za-z0-9_-]+", token),
+                      "GitHub secret CLOUDFLARE_API_TOKEN is set", describe(token, r"[A-Za-z0-9_-]"))
+    has_account = check(account and re.fullmatch(r"[0-9a-f]{32}", account),
+                        "GitHub variable CLOUDFLARE_ACCOUNT_ID is set", describe(account, r"[0-9a-f]"))
     if has_token:
         code, text = cf_api("/user/tokens/verify")
         if code != 200 and has_account:
