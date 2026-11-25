@@ -89,6 +89,9 @@ def prepublish_scan(reg, extra_words=()):
                 break
     hist = subprocess.run(["git", "-C", str(reg.root), "log", "--exclude=refs/heads/pre-public-*", "--all", "-p",
                            "--format=%an <%ae> %cn <%ce>"], capture_output=True, text=True).stdout
+    # Commits are deposited from the PI's own GitHub account on purpose (2026-11-25): its public noreply address
+    # (<id>+<login>@users.noreply.github.com) may carry the login, which is not a leak.
+    hist = re.sub(r"\b\d+\+[A-Za-z0-9-]+@users\.noreply\.github\.com\b", "<github-noreply>", hist)
     if rx.search(hist):
         found.append(("error", "git history", "earlier commits contain private text; publish a fresh history (`rp ops fresh-history`)"))
     for m in email_rx.finditer(hist):
