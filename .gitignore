@@ -8,3 +8,4 @@ __pycache__/
 # private reference images (published figure crops) never go into the public repo
 refs/
 requests/github.json
+.worktrees/

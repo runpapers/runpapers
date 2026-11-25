@@ -1,0 +1,22 @@
+{
+  "about": "RunPapers colours, named after the H&E stain on a glass slide: hematoxylin (blue-violet ink) and eosin (pink). Contrast ratios are WCAG 2 against the colour named.",
+  "colors": [
+    {"id": "hematoxylin", "name": "Hematoxylin", "hex": "#2A2C6B", "use": "text, headings, the logo's axes; 12.6:1 on white"},
+    {"id": "eosin", "name": "Eosin", "hex": "#D9466F", "use": "the logo's run triangle and large accents only (4.2:1 on white: not for small text)"},
+    {"id": "eosin-ink", "name": "Eosin ink", "hex": "#C2335E", "use": "links and primary buttons (white text on it 5.3:1)"},
+    {"id": "eosin-bright", "name": "Eosin bright", "hex": "#FF6B93", "use": "the run triangle on dark backgrounds (4.7:1 on hematoxylin)"},
+    {"id": "eosin-wash", "name": "Eosin wash", "hex": "#FCEEF2", "use": "the copy-prompt panel and highlights (hematoxylin on it 11.2:1)"},
+    {"id": "slide", "name": "Slide", "hex": "#F7F7FB", "use": "page background"},
+    {"id": "coverslip", "name": "Coverslip", "hex": "#E3E2EE", "use": "lines, borders, table rules"},
+    {"id": "counterstain", "name": "Counterstain", "hex": "#5D5A85", "use": "secondary text: authors, dates, counts (6.0:1 on slide)"}
+  ],
+  "dark": {
+    "hematoxylin": "#ECEBF7",
+    "slide": "#14152E",
+    "coverslip": "#34366A",
+    "counterstain": "#A9A6CF",
+    "eosin-ink": "#FF7FA3",
+    "eosin-wash": "#2A1F3F",
+    "eosin": "#FF6B93"
+  }
+}

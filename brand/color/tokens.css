@@ -1,0 +1,25 @@
+/* RunPapers colour and type tokens. Generated from brand/color/palette.json by brand/tools/build_brand.py */
+:root {
+  --rp-hematoxylin: #2A2C6B;  /* Hematoxylin: text, headings, the logo's axes; 12.6:1 on white */
+  --rp-eosin: #D9466F;  /* Eosin: the logo's run triangle and large accents only (4.2:1 on white: not for small text) */
+  --rp-eosin-ink: #C2335E;  /* Eosin ink: links and primary buttons (white text on it 5.3:1) */
+  --rp-eosin-bright: #FF6B93;  /* Eosin bright: the run triangle on dark backgrounds (4.7:1 on hematoxylin) */
+  --rp-eosin-wash: #FCEEF2;  /* Eosin wash: the copy-prompt panel and highlights (hematoxylin on it 11.2:1) */
+  --rp-slide: #F7F7FB;  /* Slide: page background */
+  --rp-coverslip: #E3E2EE;  /* Coverslip: lines, borders, table rules */
+  --rp-counterstain: #5D5A85;  /* Counterstain: secondary text: authors, dates, counts (6.0:1 on slide) */
+  --rp-font-sans: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --rp-font-mono: "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+  --rp-font-serif: "Newsreader", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rp-hematoxylin: #ECEBF7;
+    --rp-slide: #14152E;
+    --rp-coverslip: #34366A;
+    --rp-counterstain: #A9A6CF;
+    --rp-eosin-ink: #FF7FA3;
+    --rp-eosin-wash: #2A1F3F;
+    --rp-eosin: #FF6B93;
+  }
+}

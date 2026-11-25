@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="319.8" height="64" viewBox="0 0 319.8 64">
+  <title>RunPapers</title>
+  <g id="mark">
+    <path id="axes" d="M12 12V52H52" fill="none" stroke="#2A2C6B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path id="run" d="M24 18V42L44 30Z" fill="#D9466F" stroke="#D9466F" stroke-width="5" stroke-linejoin="round"/>
+  </g>
+  <text id="wordmark" x="76" y="48" font-family="Atkinson Hyperlegible Next" font-weight="700" font-size="47.90" fill="#2A2C6B">RunPapers</text>
+</svg>
