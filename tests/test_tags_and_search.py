@@ -6,6 +6,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -458,7 +459,7 @@ class TagsAndVocabTests(unittest.TestCase):
         self.assertEqual(tuple(sidx["vocab"]), vocab.GROUPS)
         lcat = catalog.LocalCatalog(self.reg)
 
-        # 1. Exact BG-03 lookups: "marmoset" and "Callithrix" MUST NOT match macaque_only_doi via "NHP".
+        # 1. Exact primate basal ganglia pack lookups: "marmoset" and "Callithrix" MUST NOT match macaque_only_doi via "NHP".
         for q in (
             "marmoset",
             "Callithrix",
@@ -477,7 +478,7 @@ class TagsAndVocabTests(unittest.TestCase):
             mcp_hits = mcp_server.handle_tool_call(lcat, "search_papers", {"query": q})
             self.assertEqual([m["doi"] for m in mcp_hits["structuredContent"]["matches"]], [bg03_doi], q)
 
-        # 2. "putamen" matches BG-03 only (NOT caudate_only_doi via shared "STRd");
+        # 2. "putamen" matches the primate basal ganglia pack only (NOT caudate_only_doi via shared "STRd");
         #    umbrella queries "NHP" and "STRd" match both respective packs.
         self.assertEqual([e["doi"] for e in search.filter_search_index(sidx, query="putamen")["entries"]], [bg03_doi])
         self.assertEqual(
@@ -716,6 +717,62 @@ class TagsAndVocabTests(unittest.TestCase):
         finally:
             httpd.shutdown()
             httpd.server_close()
+
+    # Real repository check: 10.1016/j.cell.2026.10.012 carries verified five-group tags without changing its content hash,
+    # all 28 BICAN collection entries pass lint, /papers/ builds cleanly, and `node --test tests/search_ui.test.mjs` passes.
+    def test_real_repo_bican_tags_and_papers_search_page(self):
+        real_reg = Registry(ROOT)
+        pk = real_reg.pack("10.1016/j.cell.2026.10.012")
+        self.assertTrue(pk.has_tags_file)
+        self.assertEqual(
+            pk.tags,
+            {
+                "species": ["Human", "Macaque", "Marmoset"],
+                "tissue_cell": [
+                    "Caudate nucleus",
+                    "Putamen",
+                    "Nucleus accumbens",
+                    "Globus pallidus",
+                    "Subthalamic nucleus",
+                    "Substantia nigra",
+                ],
+                "data_type": ["Single-nucleus multiome", "Spatial transcriptomics", "Patch-seq"],
+                "disease": ["None (healthy donors)"],
+                "collection": ["BICAN basal ganglia 2026"],
+            },
+        )
+        self.assertEqual(
+            pk.content_hash(),
+            "8184628771f2149d24fa858d715c6517da0874cc0f8adefd2b9b2920c13d80f5",
+        )
+        st = verify.status(pk)
+        for badge_name in ("runs", "checked", "reproduces", "agent-tested"):
+            self.assertEqual(st["badges"][badge_name], "pass", badge_name)
+
+        pack_lint = spec.lint(pk, expected_dir=real_reg.pack_dir(pk.doi))
+        self.assertEqual(spec.errors(pack_lint), [])
+        self.assertFalse(any(code.startswith(("tags.", "vocab.")) for _, code, _ in pack_lint), pack_lint)
+        self.assertEqual(spec.lint_collections(real_reg), {})
+        self.assertEqual(len(real_reg.planned()), 28)
+
+        sdir, _ = site.build(real_reg, out=self.tmp / "real-site", base_url="https://runpapers.com")
+        for rel in ("papers/index.html", "papers/index.md", "papers/search.json", "search.js"):
+            p = sdir / rel
+            self.assertTrue(p.is_file(), rel)
+            txt = p.read_text()
+            self.assertIsNone(
+                re.search(r"\b(lite|full|tier|tiers|tiered|stage|badges|badge)\b", txt, re.I),
+                f"forbidden token in {rel}",
+            )
+
+        if shutil.which("node"):
+            r = subprocess.run(
+                ["node", "--test", str(ROOT / "tests" / "search_ui.test.mjs")],
+                cwd=str(ROOT),
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(r.returncode, 0, r.stdout + "\n" + r.stderr)
 
 
 if __name__ == "__main__":

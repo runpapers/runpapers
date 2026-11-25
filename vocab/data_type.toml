@@ -8,7 +8,7 @@ synonyms = ["10x Multiome", "snMultiome", "multiome", "snRNA+snATAC", "10x Multi
 [[terms]]
 slug = "spatial-transcriptomics"
 label = "Spatial transcriptomics"
-synonyms = ["MERFISH", "MERSCOPE", "Xenium", "Visium", "Slide-seq", "STARmap", "COSMx", "spatial"]
+synonyms = ["MERFISH", "MERFISH+", "MERSCOPE", "Xenium", "Visium", "Slide-seq", "Slide-tags", "Stereo-seq", "STARmap", "COSMx", "spatial"]
 
 [[terms]]
 slug = "patch-seq"
@@ -23,7 +23,7 @@ synonyms = ["scRNA-seq", "scRNA", "Smart-seq", "SMART-Seq v4"]
 [[terms]]
 slug = "single-nucleus-rna-seq"
 label = "Single-nucleus RNA-seq"
-synonyms = ["snRNA-seq", "snRNA"]
+synonyms = ["snRNA-seq", "snRNA", "sci-RNA-seq3"]
 
 [[terms]]
 slug = "single-nucleus-atac-seq"
@@ -43,7 +43,7 @@ synonyms = ["snm3C-seq", "Hi-C", "single-cell Hi-C", "chromatin conformation"]
 [[terms]]
 slug = "histone-modification-profiling"
 label = "Histone modification profiling"
-synonyms = ["Paired-Tag", "CUT&Tag", "ChIP-seq"]
+synonyms = ["Paired-Tag", "Droplet Paired-Tag", "CUT&Tag", "ChIP-seq"]
 
 [[terms]]
 slug = "gwas-and-genetic-association"
@@ -59,3 +59,28 @@ synonyms = ["CCF", "common coordinate framework", "MRI", "histology"]
 slug = "computational-method"
 label = "Computational method"
 synonyms = ["software", "algorithm", "integration method", "taxonomy mapping"]
+
+[[terms]]
+slug = "whole-genome-sequencing"
+label = "Whole-genome sequencing"
+synonyms = ["WGS", "genome sequencing"]
+
+[[terms]]
+slug = "bulk-rna-seq"
+label = "Bulk RNA-seq"
+synonyms = ["bulk transcriptomics"]
+
+[[terms]]
+slug = "enhancer-aav"
+label = "Enhancer-AAV"
+synonyms = ["AAV", "enhancer AAV", "viral vector", "gene therapy"]
+
+[[terms]]
+slug = "neuropathology-and-histology"
+label = "Neuropathology and histology"
+synonyms = ["histology", "immunohistochemistry", "IHC", "Nissl", "smFISH", "RNAscope", "quantitative neuropathology"]
+
+[[terms]]
+slug = "data-resource-and-portal"
+label = "Data resource and portal"
+synonyms = ["web portal", "epigenome browser", "data infrastructure", "workflow platform"]

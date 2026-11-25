@@ -8,7 +8,7 @@ import shutil
 from functools import partial
 from pathlib import Path
 
-from . import DEFAULT_BASE, __version__, ids, search, vocab
+from . import DEFAULT_BASE, __version__, ids, papers_page, search, vocab
 from .recipes import check_tolerance, format_expected
 from .registry import read_json, sha256_file
 from .requests_log import issue_url as requests_issue_url
@@ -305,18 +305,19 @@ def badge_html(b, state):
     return f'<span class="badge off" title="{e(tip)}">{e(lab)}</span>'
 
 
-def page(title, body, depth=0, desc="", md_twin=None):
+def page(title, body, depth=0, desc="", md_twin=None, extra_scripts=()):
     up = "../" * depth
     alt = f'<link rel="alternate" type="text/markdown" href="{e(md_twin)}">' if md_twin else ""
     twin_note = f' · <a href="{e(md_twin)}">{e(md_twin)}</a>' if md_twin else ""
+    scripts_html = "".join(f'<script src="{e(src)}" defer></script>' for src in extra_scripts)
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{e(title)}</title><meta name="description" content="{e(desc)}">{alt}
 <link rel="stylesheet" href="{up}style.css"></head><body>
 <header><div class="wrap"><a class="logo" href="{up}index.html">Run<span>Papers</span></a>
-<nav><a href="{up}index.html">Papers</a><a href="{up}guide.html">Guide</a><a href="{up}requests.html">Requests</a><a href="{up}about.html">How it works</a><a href="{up}llms.txt">For agents</a></nav></div></header>
+<nav><a href="{up}papers/">Papers</a><a href="{up}guide.html">Guide</a><a href="{up}requests.html">Requests</a><a href="{up}about.html">How it works</a><a href="{up}llms.txt">For agents</a></nav></div></header>
 <main class="wrap">{body}</main>
 <footer class="wrap">RunPapers v{__version__} · open source · every page has a plain-text twin for AI agents (<a href="{up}llms.txt">llms.txt</a>, <a href="{up}index.json">index.json</a>{twin_note}).</footer>
-<script>{COPY_JS}</script></body></html>"""
+<script>{COPY_JS}</script>{scripts_html}</body></html>"""
 
 
 def fmt_minutes(m):
@@ -734,7 +735,8 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
         shutil.rmtree(out)
     out.mkdir(parents=True)
     (out / "papers").mkdir(parents=True, exist_ok=True)
-    (out / "style.css").write_text(CSS)
+    (out / "style.css").write_text(CSS + papers_page.PAPERS_CSS)
+    (out / "search.js").write_text(papers_page.SEARCH_JS)
     l1_dir = Path(l1_dir or reg.root / "build" / "l1")
     cards = []
     for pk in reg.packs():
@@ -816,7 +818,19 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
             seen_search.add(d)
             search_sources.append(_planned_entry(d, {"title": r.get("title") or d}, votes=r.get("votes", 0),
                                                  repo=repo, issue_url=r.get("issue")))
-    (out / "papers" / "search.json").write_text(json.dumps(search.build_search_index(search_sources, voc=voc, repo=repo), indent=1))
+    search_index = search.build_search_index(search_sources, voc=voc, repo=repo)
+    (out / "papers" / "search.json").write_text(json.dumps(search_index, indent=1))
+    (out / "papers" / "index.html").write_text(
+        page(
+            "Papers · RunPapers",
+            papers_page.papers_body_html(search_index, repo=repo),
+            depth=1,
+            desc="RunPapers turns published papers into packs your own AI agent can run: it reproduces the figures from the original data, then answers your questions.",
+            md_twin="index.md",
+            extra_scripts=("../search.js",),
+        )
+    )
+    (out / "papers" / "index.md").write_text(papers_page.papers_md(search_index, base, install=install, repo=repo))
     # index
     rows = []
     for c in sorted(cards, key=lambda c: (c.get("year") or 0, c["title"]), reverse=True):

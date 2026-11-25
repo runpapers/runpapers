@@ -14,6 +14,20 @@ senior_author = "BRAIN Initiative Cell Atlas Network (BICAN)"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human", "Macaque", "Marmoset", "Mouse"]
+tissue_cell = ["Basal ganglia", "Whole brain"]
+data_type = [
+  "Single-nucleus multiome",
+  "Spatial transcriptomics",
+  "Patch-seq",
+  "Single-cell DNA methylome",
+  "3D genome conformation",
+  "Histone modification profiling",
+  "3D anatomical reference atlas",
+  "Data resource and portal",
+]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.034"
@@ -25,6 +39,10 @@ senior_author = "Guo-Qiang Zhang"
 journal = "Cell"
 year = 2026
 oa_status = "closed"
+[paper.tags]
+species = ["Human"]
+tissue_cell = ["Whole brain", "Basal ganglia"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.012"
@@ -37,6 +55,19 @@ senior_author = "Trygve E. Bakken"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human", "Macaque", "Marmoset"]
+tissue_cell = [
+  "Caudate nucleus",
+  "Putamen",
+  "Nucleus accumbens",
+  "Globus pallidus",
+  "Subthalamic nucleus",
+  "Substantia nigra",
+]
+data_type = ["Single-nucleus multiome", "Spatial transcriptomics", "Patch-seq"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.026"
@@ -48,6 +79,12 @@ senior_author = "Steven A. McCarroll"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human"]
+tissue_cell = ["Caudate nucleus", "Putamen", "Nucleus accumbens", "Cerebral cortex"]
+data_type = ["Single-nucleus RNA-seq", "Whole-genome sequencing", "Bulk RNA-seq", "GWAS and genetic association"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.09.041"
@@ -59,6 +96,19 @@ senior_author = "Trygve E. Bakken"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human", "Macaque", "Marmoset", "Mouse"]
+tissue_cell = [
+  "Caudate nucleus",
+  "Putamen",
+  "Nucleus accumbens",
+  "Globus pallidus",
+  "Subthalamic nucleus",
+  "Substantia nigra",
+]
+data_type = ["Single-nucleus multiome", "Spatial transcriptomics"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.023"
@@ -71,6 +121,19 @@ senior_author = "Stephanie C. Seeman"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human", "Macaque", "Marmoset"]
+tissue_cell = [
+  "Caudate nucleus",
+  "Putamen",
+  "Nucleus accumbens",
+  "Globus pallidus",
+  "Subthalamic nucleus",
+  "Substantia nigra",
+]
+data_type = ["Spatial transcriptomics"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.029"
@@ -82,6 +145,12 @@ senior_author = "Evan Z. Macosko"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human", "Macaque", "Mouse"]
+tissue_cell = ["Striatum", "Caudate nucleus", "Putamen", "Nucleus accumbens"]
+data_type = ["Spatial transcriptomics", "Single-nucleus RNA-seq"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.09.027"
@@ -93,6 +162,12 @@ senior_author = "Xiangmin Xu"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human", "Mouse"]
+tissue_cell = ["Caudate nucleus", "Putamen", "Nucleus accumbens", "Globus pallidus", "Thalamus"]
+data_type = ["Spatial transcriptomics"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.007"
@@ -104,6 +179,23 @@ senior_author = "Fenna M. Krienen"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Marmoset"]
+tissue_cell = [
+  "Basal ganglia",
+  "Striatum",
+  "Globus pallidus",
+  "Substantia nigra",
+  "Subthalamic nucleus",
+  "Thalamus",
+  "Hypothalamus",
+  "Hippocampus",
+  "Amygdala",
+  "Midbrain",
+]
+data_type = ["Single-nucleus multiome", "Spatial transcriptomics"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.019"
@@ -115,6 +207,17 @@ senior_author = "Joseph R. Ecker"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human"]
+tissue_cell = ["Caudate nucleus", "Putamen", "Nucleus accumbens", "Globus pallidus", "Subthalamic nucleus"]
+data_type = [
+  "Single-cell DNA methylome",
+  "3D genome conformation",
+  "Spatial transcriptomics",
+  "Whole-genome sequencing",
+]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.09.008"
@@ -126,6 +229,12 @@ senior_author = "Bing Ren"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human"]
+tissue_cell = ["Caudate nucleus", "Putamen", "Nucleus accumbens", "Globus pallidus", "Subthalamic nucleus"]
+data_type = ["Histone modification profiling", "Single-nucleus RNA-seq", "Spatial transcriptomics"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.08.012"
@@ -137,6 +246,12 @@ senior_author = "Bing Ren"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human", "Mouse"]
+tissue_cell = ["Cerebral cortex", "Cerebellum", "Pons"]
+data_type = ["Histone modification profiling", "Single-nucleus RNA-seq", "Spatial transcriptomics"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.crmeth.2026.101567"
@@ -148,6 +263,24 @@ senior_author = "Daofeng Li"
 journal = "Cell Reports Methods"
 year = 2026
 oa_status = "gold"
+[paper.tags]
+species = ["Human", "Macaque", "Marmoset", "Mouse"]
+tissue_cell = [
+  "Basal ganglia",
+  "Caudate nucleus",
+  "Putamen",
+  "Nucleus accumbens",
+  "Globus pallidus",
+  "Subthalamic nucleus",
+]
+data_type = [
+  "Data resource and portal",
+  "Single-nucleus multiome",
+  "Single-cell DNA methylome",
+  "3D genome conformation",
+  "Histone modification profiling",
+]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.028"
@@ -159,6 +292,12 @@ senior_author = "Brian E. Kalmbach"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Macaque", "Squirrel monkey", "Mouse"]
+tissue_cell = ["Striatum", "Caudate nucleus", "Putamen", "Nucleus accumbens"]
+data_type = ["Patch-seq", "Enhancer-AAV"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.celrep.2026.118132"
@@ -170,6 +309,12 @@ senior_author = "Tanya L. Daigle"
 journal = "Cell Reports"
 year = 2026
 oa_status = "gold"
+[paper.tags]
+species = ["Mouse", "Macaque"]
+tissue_cell = ["Striatum", "Caudate nucleus", "Putamen", "Substantia nigra", "Ventral tegmental area"]
+data_type = ["Enhancer-AAV", "Neuropathology and histology"]
+disease = ["Parkinson's disease"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.xgen.2026.101427"
@@ -181,6 +326,17 @@ senior_author = "Jennie L. Close"
 journal = "Cell Genomics"
 year = 2026
 oa_status = "gold"
+[paper.tags]
+species = ["Human"]
+tissue_cell = ["Caudate nucleus", "Cerebral cortex"]
+data_type = [
+  "Single-nucleus RNA-seq",
+  "Single-nucleus multiome",
+  "Spatial transcriptomics",
+  "Neuropathology and histology",
+]
+disease = ["Alzheimer's disease"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.027"
@@ -193,6 +349,12 @@ senior_author = "Tomasz J. Nowakowski"
 journal = "Cell"
 year = 2026
 oa_status = "green"
+[paper.tags]
+species = ["Human", "Mouse"]
+tissue_cell = ["Putamen", "Striatum", "Cerebral cortex", "Hippocampus", "Thalamus", "Brain organoids"]
+data_type = ["Single-nucleus multiome", "Single-cell RNA-seq", "Bulk RNA-seq", "GWAS and genetic association"]
+disease = ["Autism spectrum disorder"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.008"
@@ -205,6 +367,28 @@ senior_author = "Chongyuan Luo"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human"]
+tissue_cell = [
+  "Ganglionic eminence",
+  "Basal ganglia",
+  "Caudate nucleus",
+  "Putamen",
+  "Globus pallidus",
+  "Cerebral cortex",
+  "Hippocampus",
+  "Amygdala",
+  "Thalamus",
+  "Hypothalamus",
+]
+data_type = [
+  "Single-cell DNA methylome",
+  "3D genome conformation",
+  "Spatial transcriptomics",
+  "Single-nucleus multiome",
+]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.033"
@@ -216,6 +400,21 @@ senior_author = "Ed S. Lein"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human", "Macaque", "Marmoset"]
+tissue_cell = [
+  "Basal ganglia",
+  "Caudate nucleus",
+  "Putamen",
+  "Nucleus accumbens",
+  "Globus pallidus",
+  "Subthalamic nucleus",
+  "Substantia nigra",
+  "Ventral tegmental area",
+]
+data_type = ["3D anatomical reference atlas", "Spatial transcriptomics", "Single-nucleus multiome"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.xgen.2026.101423"
@@ -227,6 +426,11 @@ senior_author = "Guo-Qiang Zhang"
 journal = "Cell Genomics"
 year = 2026
 oa_status = "gold"
+[paper.tags]
+species = ["Human"]
+tissue_cell = ["Whole brain", "Basal ganglia"]
+data_type = ["Data resource and portal"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.crmeth.2026.101650"
@@ -238,6 +442,11 @@ senior_author = "Mike Hawrylycz"
 journal = "Cell Reports Methods"
 year = 2026
 oa_status = "gold"
+[paper.tags]
+species = ["Human", "Macaque", "Marmoset", "Mouse"]
+tissue_cell = ["Whole brain", "Basal ganglia", "Cerebral cortex"]
+data_type = ["Computational method"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cels.2026.101778"
@@ -249,6 +458,12 @@ senior_author = "Xiangmin Xu"
 journal = "Cell Systems"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human"]
+tissue_cell = ["Whole brain", "Basal ganglia"]
+data_type = ["Neuropathology and histology", "3D anatomical reference atlas"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.crmeth.2026.101661"
@@ -260,6 +475,11 @@ senior_author = "Fenna M. Krienen"
 journal = "Cell Reports Methods"
 year = 2026
 oa_status = "gold"
+[paper.tags]
+species = ["Human", "Macaque", "Marmoset", "Mouse"]
+tissue_cell = ["Whole brain", "Basal ganglia"]
+data_type = ["Computational method"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.crmeth.2026.101664"
@@ -271,6 +491,11 @@ senior_author = "Bing-Xing Huo"
 journal = "Cell Reports Methods"
 year = 2026
 oa_status = "gold"
+[paper.tags]
+species = ["Human", "Macaque", "Marmoset", "Mouse"]
+tissue_cell = ["Whole brain", "Basal ganglia", "Cerebral cortex"]
+data_type = ["Computational method"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.neuron.2026.10.006"
@@ -282,6 +507,12 @@ senior_author = "Trygve E. Bakken"
 journal = "Neuron"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Human", "Macaque", "Mouse"]
+tissue_cell = ["Spinal cord"]
+data_type = ["Single-nucleus multiome", "Single-nucleus RNA-seq", "Spatial transcriptomics"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.celrep.2026.118269"
@@ -293,6 +524,11 @@ senior_author = "Brian R. Lee"
 journal = "Cell Reports"
 year = 2026
 oa_status = "gold"
+[paper.tags]
+species = ["Human", "Macaque", "Mouse"]
+tissue_cell = ["Cerebral cortex"]
+data_type = ["Patch-seq", "Spatial transcriptomics", "Enhancer-AAV"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.09.014"
@@ -305,6 +541,20 @@ senior_author = "Noah Snyder-Mackler"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Macaque"]
+tissue_cell = [
+  "Cerebral cortex",
+  "Hippocampus",
+  "Caudate nucleus",
+  "Nucleus accumbens",
+  "Thalamus",
+  "Midbrain",
+  "Cerebellum",
+]
+data_type = ["Single-nucleus RNA-seq"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]
 
 [[paper]]
 doi = "10.1016/j.cell.2026.10.022"
@@ -316,3 +566,25 @@ senior_author = "Bing Ren"
 journal = "Cell"
 year = 2026
 oa_status = "hybrid"
+[paper.tags]
+species = ["Mouse"]
+tissue_cell = [
+  "Striatum",
+  "Nucleus accumbens",
+  "Cerebral cortex",
+  "Hippocampus",
+  "Amygdala",
+  "Hypothalamus",
+  "Substantia nigra",
+  "Ventral tegmental area",
+]
+data_type = [
+  "Histone modification profiling",
+  "Single-nucleus RNA-seq",
+  "Single-nucleus ATAC-seq",
+  "Single-cell DNA methylome",
+  "3D genome conformation",
+  "Spatial transcriptomics",
+]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]

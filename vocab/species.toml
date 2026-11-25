@@ -10,7 +10,7 @@ synonyms = ["humans"]
 slug = "macaque"
 label = "Macaque"
 scientific_name = "Macaca mulatta"
-synonyms = ["macaques", "rhesus macaque", "pig-tailed macaque", "Macaca nemestrina", "rhesus", "Macaca", "nonhuman primate", "NHP"]
+synonyms = ["macaques", "rhesus macaque", "pig-tailed macaque", "cynomolgus macaque", "Macaca nemestrina", "Macaca fascicularis", "rhesus", "Macaca", "nonhuman primate", "NHP"]
 
 [[terms]]
 slug = "marmoset"
@@ -29,3 +29,9 @@ slug = "rat"
 label = "Rat"
 scientific_name = "Rattus norvegicus"
 synonyms = ["rats"]
+
+[[terms]]
+slug = "squirrel-monkey"
+label = "Squirrel monkey"
+scientific_name = "Saimiri sciureus"
+synonyms = ["squirrel monkeys", "Saimiri", "nonhuman primate", "NHP"]

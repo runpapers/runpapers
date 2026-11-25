@@ -1,0 +1,14 @@
+# Five-group controlled tags for Johansen et al., Cell 2026 (DOI: 10.1016/j.cell.2026.10.012).
+
+species = ["Human", "Macaque", "Marmoset"]
+tissue_cell = [
+  "Caudate nucleus",
+  "Putamen",
+  "Nucleus accumbens",
+  "Globus pallidus",
+  "Subthalamic nucleus",
+  "Substantia nigra",
+]
+data_type = ["Single-nucleus multiome", "Spatial transcriptomics", "Patch-seq"]
+disease = ["None (healthy donors)"]
+collection = ["BICAN basal ganglia 2026"]

@@ -3,12 +3,12 @@
 [[terms]]
 slug = "caudate-nucleus"
 label = "Caudate nucleus"
-synonyms = ["caudate", "anterior caudate", "STRd", "dorsal striatum"]
+synonyms = ["caudate", "anterior caudate", "CaH", "CaB", "CaT", "STRd", "dorsal striatum"]
 
 [[terms]]
 slug = "putamen"
 label = "Putamen"
-synonyms = ["STRd", "dorsal striatum"]
+synonyms = ["PuR", "PuC", "STRd", "dorsal striatum"]
 
 [[terms]]
 slug = "nucleus-accumbens"
@@ -18,12 +18,12 @@ synonyms = ["NAc", "NAC", "STRv", "ventral striatum"]
 [[terms]]
 slug = "globus-pallidus"
 label = "Globus pallidus"
-synonyms = ["GP", "GPe", "GPi", "external globus pallidus", "internal globus pallidus", "pallidum"]
+synonyms = ["GP", "GPe", "GPi", "VeP", "ventral pallidum", "external globus pallidus", "internal globus pallidus", "pallidum"]
 
 [[terms]]
 slug = "subthalamic-nucleus"
 label = "Subthalamic nucleus"
-synonyms = ["STN", "subthalamus"]
+synonyms = ["STN", "STH", "subthalamus"]
 
 [[terms]]
 slug = "substantia-nigra"
@@ -84,3 +84,33 @@ synonyms = ["HEK293T", "HEK-293"]
 slug = "ipsc-derived-neurons"
 label = "iPSC-derived neurons"
 synonyms = ["hPSC-derived neurons", "iPSC", "hESC"]
+
+[[terms]]
+slug = "amygdala"
+label = "Amygdala"
+synonyms = ["AMY", "amygdaloid"]
+
+[[terms]]
+slug = "hypothalamus"
+label = "Hypothalamus"
+synonyms = ["HYP", "HTH", "hypothalamic"]
+
+[[terms]]
+slug = "midbrain"
+label = "Midbrain"
+synonyms = ["mesencephalon"]
+
+[[terms]]
+slug = "pons"
+label = "Pons"
+synonyms = ["brainstem"]
+
+[[terms]]
+slug = "ganglionic-eminence"
+label = "Ganglionic eminence"
+synonyms = ["LGE", "MGE", "CGE", "developing basal ganglia"]
+
+[[terms]]
+slug = "brain-organoids"
+label = "Brain organoids"
+synonyms = ["striatal organoids", "organoid", "organoids"]

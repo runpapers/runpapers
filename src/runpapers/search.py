@@ -448,6 +448,7 @@ def build_search_entry(entry, voc=None, repo="runpapers/runpapers"):
     return {
         "doi": doi,
         "pmid": str(entry["pmid"]) if entry.get("pmid") else None,
+        "preprint_doi": str(entry["preprint_doi"]) if entry.get("preprint_doi") else None,
         "slug": slug,
         "url": f"/{ids.page_path(doi)}/" if st == "available" else None,
         "title": entry.get("title") or doi,
