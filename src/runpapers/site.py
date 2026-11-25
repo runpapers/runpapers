@@ -8,7 +8,7 @@ import shutil
 from functools import partial
 from pathlib import Path
 
-from . import DEFAULT_BASE, __version__, ids
+from . import DEFAULT_BASE, __version__, ids, search, vocab
 from .recipes import check_tolerance, format_expected
 from .registry import read_json, sha256_file
 from .requests_log import issue_url as requests_issue_url
@@ -620,15 +620,8 @@ def _release_html(card):
     return f'<div class="small" style="margin:0 0 8px">Released v{e(r["version"])}: {" · ".join(x for x in links if x)}</div>'
 
 
-def _search_blob(card):
-    prof = card.get("profile") or {}
-    prof_terms = [x for vals in prof.values() if isinstance(vals, list) for x in vals]
-    parts = [
-        card.get("title"), card.get("doi"), card.get("pmid"), card.get("pmcid"),
-        card.get("first_author"), card.get("senior_author"), card.get("journal"),
-        " ".join(card.get("collections") or []), card.get("summary"), *prof_terms,
-    ]
-    return " ".join(str(x).lower() for x in parts if x)
+def _search_blob(card, voc=None):
+    return search.build_search_text(card, voc=voc)
 
 
 def _req_link(repo, doi, reqs):
@@ -730,18 +723,34 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
     base = (base_url or cfg.get("base_url") or DEFAULT_BASE).rstrip("/")
     install = install_cmd or cfg.get("install_cmd") or "uvx runpapers"
     repo = reg.config.get("publish", {}).get("github_repo", "runpapers/runpapers")
+    from .catalog import _planned_entry, _published_at
     from .release import published
+    voc = vocab.load(root=reg.root)
+    reqs = requests_summary(reg)
+    req_votes = {r["doi"]: r["votes"] for r in reqs}
+    req_issues = {r["doi"]: r.get("issue") for r in reqs if r.get("issue")}
     out = Path(out or reg.root / "build" / "site")
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
+    (out / "papers").mkdir(parents=True, exist_ok=True)
     (out / "style.css").write_text(CSS)
     l1_dir = Path(l1_dir or reg.root / "build" / "l1")
     cards = []
     for pk in reg.packs():
         st = status(pk)
-        card = {**pk.card(), **{k: st[k] for k in ("stage", "badges")}, "data": pk.data, "release": published(pk),
-                "resources": resources(pk, l1_dir)}
+        card = {
+            **pk.card(),
+            **{k: st[k] for k in ("stage", "badges")},
+            "status": "available",
+            "votes": req_votes.get(pk.doi, 0),
+            "issue_url": req_issues.get(pk.doi),
+            "published_at": _published_at(pk),
+            "usage": None,
+            "data": pk.data,
+            "release": published(pk),
+            "resources": resources(pk, l1_dir),
+        }
         cards.append(card)
         pdir = out / ids.page_path(pk.doi)
         (pdir / "pack").mkdir(parents=True)
@@ -793,13 +802,25 @@ def build(reg, out=None, base_url=None, install_cmd=None, l1_dir=None):
         (pdir / "index.md").write_text(paper_md(card, base, install, panel_results))
         (pdir / "AGENT.md").write_text(agent_md(card, base, install))
         _redirect(out / "doi" / ids.doi_relpath(pk.doi), f"{base}/{ids.page_path(pk.doi)}/", card["title"])
-    planned = {d: p for d, p in reg.planned().items() if d not in {c["doi"] for c in cards}}
-    reqs = requests_summary(reg)
+    card_dois = {c["doi"] for c in cards}
+    planned = {d: p for d, p in reg.planned().items() if d not in card_dois}
     new_req = requests_issue_url(repo)
+    search_sources = list(cards)
+    seen_search = set(card_dois)
+    for d, p in planned.items():
+        seen_search.add(d)
+        search_sources.append(_planned_entry(d, p, votes=req_votes.get(d, 0), repo=repo, issue_url=req_issues.get(d)))
+    for r in reqs:
+        d = r["doi"]
+        if d not in seen_search:
+            seen_search.add(d)
+            search_sources.append(_planned_entry(d, {"title": r.get("title") or d}, votes=r.get("votes", 0),
+                                                 repo=repo, issue_url=r.get("issue")))
+    (out / "papers" / "search.json").write_text(json.dumps(search.build_search_index(search_sources, voc=voc, repo=repo), indent=1))
     # index
     rows = []
     for c in sorted(cards, key=lambda c: (c.get("year") or 0, c["title"]), reverse=True):
-        s = _search_blob(c)
+        s = _search_blob(c, voc=voc)
         pmid_txt = f" · PMID {e(c['pmid'])}" if c.get("pmid") else ""
         rows.append(f'<div class="card" data-s="{e(s)}"><a class="t" href="{ids.page_path(c["doi"])}/">{e(c["title"])}</a>'
                     f'<div class="m">{e(c.get("first_author", ""))} et al. · <i>{e(c.get("journal", ""))}</i> {e(c.get("year", ""))} · DOI {e(c["doi"])}{pmid_txt}</div>'
@@ -846,14 +867,17 @@ and scientific guardrails that keep new analyses honest. Every pack is verified 
     (out / "about.html").write_text(page("How RunPapers works", about_html(install),
                                          desc="How RunPapers verifies packs and handles original data terms", md_twin="about.md"))
     (out / "about.md").write_text(about_md(install))
-    index = {"generated": now(), "rp_version": __version__, "base_url": base, "install": install,
+    index = {"generated": now(), "rp_version": __version__, "base_url": base, "install": install, "github_repo": repo,
+             "vocab": voc.to_dict(),
              "papers": [{k: c[k] for k in ("doi", "pmid", "pmcid", "preprint_doi", "title", "first_author", "senior_author", "journal",
                                             "year", "slug", "collections", "version", "summary", "tags", "profile", "recipes", "data_bytes", "resources",
-                                            "questions", "stage", "badges")}
+                                            "questions", "status", "votes", "published_at", "stage", "badges")}
                         | {"data_terms": _data_terms(c), "release": c.get("release"), "url": f"{base}/{ids.page_path(c['doi'])}/",
                            "agent": f"{base}/{ids.page_path(c['doi'])}/AGENT.md"}
                         for c in cards],
-             "planned": [{"doi": d, **{k: p.get(k) for k in ("title", "pmid", "first_author", "journal", "year", "collection", "tags")}}
+             "planned": [{"doi": d, **{k: p.get(k) for k in ("title", "pmid", "first_author", "senior_author", "journal", "year",
+                                                             "collection", "tags", "status", "status_reason")},
+                          "votes": req_votes.get(d, 0), "issue_url": req_issues.get(d) or requests_issue_url(repo, d)}
                          for d, p in planned.items()],
              "requests": reqs}
     (out / "index.json").write_text(json.dumps(index, indent=1))

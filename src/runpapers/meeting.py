@@ -202,6 +202,8 @@ def build_meeting(
         genes=genes,
         collection=collection,
         include_planned=True,
+        match_all_tokens=False,
+        voc=cat.vocab(),
         limit=100,
     )
 

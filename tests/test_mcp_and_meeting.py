@@ -407,6 +407,13 @@ class McpAndMeetingTests(unittest.TestCase):
             srch = mcp_server.handle_tool_call(rcat, "search_papers", {"query": "SMYD2"})
             self.assertEqual(srch["structuredContent"]["matches"][0]["doi"], self.DOI_A)
 
+            srch_tags = mcp_server.handle_tool_call(
+                rcat,
+                "search_papers",
+                {"species": ["human"], "tissue_cell": ["putamen"], "data_type": ["patch-seq"]},
+            )
+            self.assertEqual([m["doi"] for m in srch_tags["structuredContent"]["matches"]], [self.DOI_B])
+
             det = mcp_server.handle_tool_call(rcat, "get_paper", {"id": "11111111"})
             self.assertEqual(det["structuredContent"]["doi"], self.DOI_A)
             self.assertIn(f"--source {url}", det["structuredContent"]["workspace_command"])

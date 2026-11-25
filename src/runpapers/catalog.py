@@ -83,15 +83,36 @@ def _verification_warning(stage, badges):
     return f"Pack is at stage {stage!r} (`runs` badge: {runs_state}); it has not passed automatic L1 target checks yet."
 
 
-def _planned_entry(doi, p, votes=0):
+def _published_at(pack):
+    from .release import current
+    h = pack.content_hash()
+    rel_entry = current(pack)
+    if rel_entry:
+        pub = rel_entry.get("published") or {}
+        pub_times = sorted(
+            info["at"] for tgt, info in pub.items()
+            if tgt in verify.PUBLIC_TARGETS and isinstance(info, dict) and info.get("at")
+        )
+        if pub_times:
+            return pub_times[0]
+        if rel_entry.get("built"):
+            return rel_entry["built"]
+    l1 = verify.record(pack, "l1") or {}
+    if l1.get("pack_hash") == h and l1.get("at"):
+        return l1["at"]
+    return None
+
+
+def _planned_entry(doi, p, votes=0, repo="runpapers/runpapers", issue_url=None):
     cols = p.get("collections") or ([p["collection"]] if p.get("collection") else [])
+    pub_status = p.get("status") if p.get("status") in ("requested", "in_progress", "not_possible") else "requested"
     return {
         "doi": doi,
         "pmid": p.get("pmid"),
         "pmcid": p.get("pmcid"),
         "preprint_doi": p.get("preprint_doi"),
         "other_dois": list(p.get("other_dois") or []),
-        "title": p.get("title") or "",
+        "title": p.get("title") or doi,
         "first_author": p.get("first_author") or "",
         "senior_author": p.get("senior_author") or "",
         "journal": p.get("journal") or "",
@@ -100,17 +121,22 @@ def _planned_entry(doi, p, votes=0):
         "collections": cols,
         "version": None,
         "pack_hash": None,
-        "summary": "",
+        "summary": p.get("summary") or "",
         "tags": vocab.normalize_tags(p.get("tags")),
         "profile": {},
         "recipes": [],
         "data_bytes": 0,
         "questions": [],
         "stage": "planned",
+        "status": pub_status,
+        "status_reason": p.get("status_reason") if pub_status == "not_possible" else None,
         "badges": {},
         "data_terms": [],
         "packed": False,
-        "votes": votes,
+        "votes": int(votes or 0),
+        "issue_url": issue_url or p.get("issue_url") or requests_log.issue_url(repo, doi),
+        "published_at": None,
+        "usage": None,
     }
 
 
@@ -147,6 +173,9 @@ def _standalone_request(doi, note="", by="local:mcp", title=None, github_repo="r
 class _BaseCatalog:
     source_str = ""
     github_repo = "runpapers/runpapers"
+
+    def vocab(self):
+        return vocab.load()
 
     def resolve_known(self, ident):
         kind, val = ids.parse_id(ident)
@@ -216,39 +245,60 @@ class LocalCatalog(_BaseCatalog):
         self.source_str = str(reg.root)
         self.github_repo = reg.config.get("publish", {}).get("github_repo", "runpapers/runpapers")
 
+    def vocab(self):
+        return vocab.load(root=self.reg.root)
+
     def entries(self, include_planned=True):
-        reqs = {r["doi"]: r["votes"] for r in requests_log.summary(self.reg)}
+        req_rows = requests_log.summary(self.reg)
+        reqs = {r["doi"]: r["votes"] for r in req_rows}
+        req_issues = {r["doi"]: r.get("issue") for r in req_rows if r.get("issue")}
         out = []
-        packed_dois = set()
+        seen_dois = set()
         for pk in self.reg.packs():
             st = verify.status(pk)
             terms = sorted({d.get("license", "").strip() for d in pk.data if d.get("license", "").strip()})
-            packed_dois.add(pk.doi)
+            seen_dois.add(pk.doi)
             out.append({
                 **pk.card(),
                 "other_dois": list(pk.paper.get("other_dois") or []),
                 "pack_hash": pk.content_hash()[:12],
                 "stage": st["stage"],
+                "status": "available",
+                "status_reason": None,
                 "badges": st["badges"],
                 "data_terms": terms,
                 "packed": True,
                 "votes": reqs.get(pk.doi, 0),
+                "issue_url": req_issues.get(pk.doi),
+                "published_at": _published_at(pk),
+                "usage": None,
             })
         if include_planned:
             for d, p in self.reg.planned().items():
-                if d not in packed_dois:
-                    out.append(_planned_entry(d, p, votes=reqs.get(d, 0)))
+                if d not in seen_dois:
+                    seen_dois.add(d)
+                    out.append(_planned_entry(d, p, votes=reqs.get(d, 0), repo=self.github_repo, issue_url=req_issues.get(d)))
+            for r in req_rows:
+                d = r["doi"]
+                if d not in seen_dois:
+                    seen_dois.add(d)
+                    out.append(_planned_entry(d, {"title": r.get("title") or d}, votes=r.get("votes", 0),
+                                              repo=self.github_repo, issue_url=r.get("issue")))
         return out
 
     def paper_detail(self, ident):
         doi = self.resolve_known(ident)
         if not doi:
             raise KeyError(f"unknown paper {ident!r}: not in packs or planned collections")
-        reqs = {r["doi"]: r["votes"] for r in requests_log.summary(self.reg)}
+        req_rows = requests_log.summary(self.reg)
+        reqs = {r["doi"]: r["votes"] for r in req_rows}
+        req_by_doi = {r["doi"]: r for r in req_rows}
         pdir = self.reg.pack_dir(doi)
         if not (pdir / "pack.toml").is_file():
-            p = self.reg.planned()[doi]
-            e = _planned_entry(doi, p, votes=reqs.get(doi, 0))
+            planned_map = self.reg.planned()
+            req_row = req_by_doi.get(doi) or {}
+            p = planned_map.get(doi) or {"title": req_row.get("title") or doi}
+            e = _planned_entry(doi, p, votes=reqs.get(doi, 0), repo=self.github_repo, issue_url=req_row.get("issue"))
             return {**e, "verification_warning": "Not packed yet (planned).",
                     "request_hint": f"Use request_paper(id={doi!r}) or `rp request {doi}` to vote for this paper."}
         pk = self.reg.pack(doi)
@@ -259,6 +309,8 @@ class LocalCatalog(_BaseCatalog):
             **pk.card(),
             "pack_hash": pk.content_hash()[:12],
             "stage": st["stage"],
+            "status": "available",
+            "status_reason": None,
             "next": st["next"],
             "badges": st["badges"],
             "verification_warning": _verification_warning(st["stage"], st["badges"]),
@@ -268,6 +320,9 @@ class LocalCatalog(_BaseCatalog):
             "workspace_command": f"uvx runpapers get {doi}",
             "packed": True,
             "votes": reqs.get(doi, 0),
+            "issue_url": (req_by_doi.get(doi) or {}).get("issue"),
+            "published_at": _published_at(pk),
+            "usage": None,
         }
 
     def list_recipes(self, ident, max_memory_gb=None, gpu=None, include_targets=True):
@@ -353,44 +408,67 @@ class RemoteCatalog(_BaseCatalog):
         with urllib.request.urlopen(req, timeout=30) as r:
             return r.read()
 
+    def vocab(self):
+        return vocab.from_dict(self.index().get("vocab"))
+
     def index(self, refresh=False):
         if self._index is not None and not refresh:
             return self._index
         idx_file = self.cache_dir / "index.json"
         if not refresh and idx_file.is_file() and (time.time() - idx_file.stat().st_mtime) < self.ttl:
             self._index = json.loads(idx_file.read_text())
+            self.github_repo = self._index.get("github_repo", "runpapers/runpapers")
             return self._index
         try:
             raw = self._fetch_bytes(f"{self.base_url}/index.json")
             obj = json.loads(raw)
             write_json(idx_file, obj)
             self._index = obj
+            self.github_repo = obj.get("github_repo", "runpapers/runpapers")
             return obj
         except OSError:
             if idx_file.is_file():
                 self._index = json.loads(idx_file.read_text())
+                self.github_repo = self._index.get("github_repo", "runpapers/runpapers")
                 return self._index
             raise
 
     def entries(self, include_planned=True):
         idx = self.index()
-        reqs = {r["doi"]: r.get("votes", 0) for r in (idx.get("requests") or [])}
+        req_rows = idx.get("requests") or []
+        reqs = {r["doi"]: r.get("votes", 0) for r in req_rows}
+        req_issues = {r["doi"]: r.get("issue") for r in req_rows if r.get("issue")}
         out = []
-        packed = set()
+        seen_dois = set()
         for c in idx.get("papers") or []:
-            packed.add(c["doi"])
+            seen_dois.add(c["doi"])
             out.append({
                 **c,
+                "tags": vocab.normalize_tags(c.get("tags")),
                 "other_dois": list(c.get("other_dois") or []),
                 "pack_hash": c.get("pack_hash"),
+                "status": c.get("status", "available"),
+                "status_reason": None,
                 "data_terms": list(c.get("data_terms") or []),
                 "packed": True,
-                "votes": reqs.get(c["doi"], 0),
+                "votes": int(c.get("votes", reqs.get(c["doi"], 0)) or 0),
+                "issue_url": c.get("issue_url") or req_issues.get(c["doi"]),
+                "published_at": c.get("published_at"),
+                "usage": c.get("usage"),
             })
         if include_planned:
             for p in idx.get("planned") or []:
-                if p["doi"] not in packed:
-                    out.append(_planned_entry(p["doi"], p, votes=reqs.get(p["doi"], 0)))
+                d = p["doi"]
+                if d not in seen_dois:
+                    seen_dois.add(d)
+                    out.append(_planned_entry(d, p, votes=p.get("votes", reqs.get(d, 0)),
+                                              repo=self.github_repo, issue_url=p.get("issue_url") or req_issues.get(d)))
+            for r in req_rows:
+                d = r["doi"]
+                if d not in seen_dois:
+                    seen_dois.add(d)
+                    out.append(_planned_entry(d, {"title": r.get("title") or d}, votes=r.get("votes", 0),
+                                              repo=self.github_repo, issue_url=r.get("issue")))
         return out
 
     def _pack_listing(self, doi):

@@ -267,7 +267,8 @@ def lint(pack, expected_dir=None, vocab_dir=None):
             add("warn", "skill.size", "SKILL.md is long; move detail into references/ so agents load it on demand")
 
     # five-group tags (outside content_hash) & controlled vocabulary
-    reg_root = pack.dir.parents[2] if len(pack.dir.parents) >= 3 and (pack.dir.parents[2] / "runpapers.toml").is_file() else None
+    pdir = pack.dir.resolve()
+    reg_root = pdir.parents[2] if len(pdir.parents) >= 3 and (pdir.parents[2] / "runpapers.toml").is_file() else None
     voc, v_findings = vocab.load_for_root(root=reg_root, vocab_dir=vocab_dir)
     f.extend(v_findings)
     if getattr(pack, "tags_parse_error", None):

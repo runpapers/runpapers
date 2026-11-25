@@ -18,7 +18,9 @@ GROUP_TITLES = {
 }
 SLUG_RX = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 ALLOWED_TERM_KEYS = frozenset({"slug", "label", "scientific_name", "synonyms"})
-DEFAULT_VOCAB_DIR = Path(__file__).resolve().parents[2] / "vocab"
+_REPO_VOCAB_DIR = Path(__file__).resolve().parents[2] / "vocab"
+_PKG_VOCAB_DIR = Path(__file__).resolve().parent / "_vocab"
+DEFAULT_VOCAB_DIR = _REPO_VOCAB_DIR if _REPO_VOCAB_DIR.is_dir() else _PKG_VOCAB_DIR
 
 
 def empty_tags():
@@ -31,7 +33,8 @@ def normalize_tags(raw):
     out = {}
     for g in GROUPS:
         vals = raw.get(g)
-        out[g] = [str(v) for v in vals if isinstance(v, str) and v.strip()] if isinstance(vals, list) else []
+        clean = [str(v).strip() for v in vals if isinstance(v, str) and v.strip()] if isinstance(vals, list) else []
+        out[g] = list(dict.fromkeys(clean))
     return out
 
 
@@ -43,6 +46,7 @@ class Vocab:
         self.by_label = {g: {} for g in GROUPS}
         self.by_slug = {g: {} for g in GROUPS}
         self._lookup = {g: {} for g in GROUPS}
+        self._syn_slugs = {g: {} for g in GROUPS}
         self._synonym_sets = {}
         for g, terms in self.groups.items():
             for t in terms:
@@ -55,8 +59,9 @@ class Vocab:
                 lower_set = {a.strip().lower() for a in aliases if a and a.strip()}
                 for low in lower_set:
                     self._lookup[g].setdefault(low, t)
+                    self._syn_slugs[g].setdefault(low, set()).add(t["slug"])
                     self._synonym_sets.setdefault(low, set()).update(lower_set)
-            # Prefer exact label / slug hits over shared synonyms (e.g. "NHP" shared by Macaque & Marmoset).
+            # Prefer exact label / slug / scientific_name hits over shared synonyms (e.g. "NHP" shared by Macaque & Marmoset).
             for t in terms:
                 self._lookup[g][t["slug"].lower()] = t
                 self._lookup[g][t["label"].lower()] = t
@@ -77,7 +82,12 @@ class Vocab:
             return self.by_label[group][q]
         if q in self.by_slug[group]:
             return self.by_slug[group][q]
-        return self._lookup[group].get(q.lower())
+        low = q.lower()
+        if low in self._lookup[group]:
+            return self._lookup[group][low]
+        if low.endswith("s") and len(low) > 3 and low[:-1] in self._lookup[group]:
+            return self._lookup[group][low[:-1]]
+        return None
 
     def resolve_slug(self, group, value):
         t = self.resolve(group, value)
@@ -86,6 +96,52 @@ class Vocab:
     def resolve_label(self, group, value):
         t = self.resolve(group, value)
         return t["label"] if t else None
+
+    def matching_slugs(self, group, value):
+        """Return the set of canonical slugs in `group` matching `value` (exact slug/label/scientific_name first, else synonyms)."""
+        if group not in self.groups or not isinstance(value, str):
+            return set()
+        q = value.strip()
+        if not q:
+            return set()
+        low = q.lower()
+        for t in self.groups[group]:
+            prim = {t["slug"].lower(), t["label"].lower()}
+            if t.get("scientific_name"):
+                prim.add(t["scientific_name"].lower())
+            if low in prim:
+                return {t["slug"]}
+        hits = set(self._syn_slugs[group].get(low, ()))
+        if not hits and low.endswith("s") and len(low) > 3:
+            hits = set(self._syn_slugs[group].get(low[:-1], ()))
+        return hits
+
+    def tag_slugs(self, tags):
+        """Convert normalized 5-group `tags` into `{group: [slug, ...]}` preserving order without duplicates."""
+        norm = normalize_tags(tags)
+        out = {}
+        for g in GROUPS:
+            slugs = []
+            for label in norm[g]:
+                s = self.resolve_slug(g, label)
+                if s:
+                    slugs.append(s)
+            out[g] = list(dict.fromkeys(slugs))
+        return out
+
+    def term_texts(self, group, value):
+        """All search strings (label, slug, scientific_name, synonyms) associated with `value` in `group`."""
+        if not isinstance(value, str) or not value.strip():
+            return []
+        vals = [value.strip()]
+        for slug in sorted(self.matching_slugs(group, value)):
+            t = self.by_slug[group].get(slug)
+            if t:
+                vals.extend([t["label"], t["slug"]])
+                if t.get("scientific_name"):
+                    vals.append(t["scientific_name"])
+                vals.extend(t.get("synonyms") or [])
+        return vals
 
     def suggest(self, group, bad_value):
         """Return the closest canonical label in `group` (via synonym/slug/scientific_name or fuzzy match), or None."""
@@ -135,6 +191,27 @@ class Vocab:
                 rows.append(item)
             out[g] = rows
         return out
+
+
+def from_dict(raw):
+    """Hydrate a `Vocab` instance from an `index.json` or `search.json` `vocab` dictionary."""
+    if not isinstance(raw, dict):
+        return load()
+    groups_map = {}
+    for g in GROUPS:
+        rows = []
+        for t in raw.get(g) or []:
+            if isinstance(t, dict) and t.get("slug") and t.get("label"):
+                item = {
+                    "slug": str(t["slug"]),
+                    "label": str(t["label"]),
+                    "synonyms": [str(s) for s in (t.get("synonyms") or []) if isinstance(s, str) and s.strip()],
+                }
+                if t.get("scientific_name"):
+                    item["scientific_name"] = str(t["scientific_name"])
+                rows.append(item)
+        groups_map[g] = rows
+    return Vocab(groups_map) if any(groups_map.values()) else load()
 
 
 def validate_dir(vdir):

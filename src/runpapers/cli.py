@@ -178,19 +178,26 @@ def c_search(a):
         cat.entries(include_planned=not a.no_planned),
         query=" ".join(a.query or []),
         species=a.species or (),
-        tissues=a.tissue or (),
-        assays=a.assay or (),
+        tissue_cell=[*(a.tissue_cell or ()), *(a.tissue or ())],
+        data_type=[*(a.data_type or ()), *(a.assay or ())],
+        disease=a.disease or (),
         cell_types=a.cell_type or (),
         genes=a.gene or (),
-        collection=a.collection,
+        collection=a.collection or (),
         min_stage=a.min_stage,
         include_planned=not a.no_planned,
+        sort=a.sort,
+        voc=cat.vocab(),
         limit=a.limit,
     )
     rows = [{"score": sc, **{k: e.get(k) for k in ("doi", "pmid", "title", "first_author", "journal", "year", "slug",
-                                                   "packed", "stage", "badges", "profile", "data_terms")}}
+                                                   "packed", "status", "status_reason", "votes", "issue_url",
+                                                   "stage", "badges", "tags", "profile", "data_terms", "published_at")}}
             for sc, e in hits]
-    txt = "\n".join(f"{r['stage']:13} {(r.get('slug') or ''):16} {r['doi']:32} {(r.get('title') or '')[:60]}" for r in rows) or "no matches"
+    txt = "\n".join(
+        f"{(r.get('status') or r['stage']):13} {(r.get('slug') or ''):16} {r['doi']:32} {(r.get('title') or '')[:60]}"
+        for r in rows
+    ) or "no matches"
     out(rows, a.json, txt)
 
 
@@ -439,10 +446,18 @@ def main(argv=None):
     s = cmd("resolve", c_resolve, "Turn a PMID/PMCID/URL/DOI into the canonical DOI."); s.add_argument("id"); s.add_argument("--online", action="store_true")
     cmd("list", c_list, "Every paper in the registry and collections with its pipeline stage.")
     s = cmd("show", c_show, "A pack's card and status."); s.add_argument("id")
-    s = cmd("search", c_search, "Search packs and planned papers by query and biological [profile] facets.")
-    s.add_argument("query", nargs="*"); s.add_argument("--species", action="append"); s.add_argument("--tissue", action="append")
-    s.add_argument("--assay", action="append"); s.add_argument("--cell-type", action="append"); s.add_argument("--gene", action="append")
-    s.add_argument("--collection"); s.add_argument("--min-stage"); s.add_argument("--no-planned", action="store_true")
+    s = cmd("search", c_search, "Search available packs and requested papers by query and five-group tags.")
+    s.add_argument("query", nargs="*")
+    s.add_argument("--species", action="append")
+    s.add_argument("--tissue-cell", dest="tissue_cell", action="append", help="filter by Tissue/cell tag")
+    s.add_argument("--data-type", dest="data_type", action="append", help="filter by Data type tag")
+    s.add_argument("--disease", action="append", help="filter by Disease tag")
+    s.add_argument("--tissue", action="append", help="alias for --tissue-cell")
+    s.add_argument("--assay", action="append", help="alias for --data-type")
+    s.add_argument("--cell-type", action="append"); s.add_argument("--gene", action="append")
+    s.add_argument("--collection", action="append", help="filter by Collection slug or label")
+    s.add_argument("--sort", default="most_used", choices=["most_used", "newest", "title"])
+    s.add_argument("--min-stage"); s.add_argument("--no-planned", action="store_true")
     s.add_argument("--limit", type=int, default=20); s.add_argument("--source")
     s = cmd("mcp", c_mcp, "Run the local Model Context Protocol (MCP) server (stdio by default, zero extra dependencies).")
     s.add_argument("--source", help="registry folder or site URL")
