@@ -12,17 +12,19 @@ reproduces a published panel and then answers new questions correctly. Every ste
 1. `rp resolve <DOI|PMID> --online`, then `rp new <DOI>` (scaffolds `papers/<doi>/`). The DOI is the id everywhere.
 2. Read the paper: main text, figure legends, STAR Methods / Methods, **data and code availability**, supplementary
    tables. Use a local copy if you have one.
-3. List every main-figure panel and classify it: reproducible from open data on a laptop (**lite**), reproducible but
-   heavy (**full**), or not reproducible (schematic, microscopy, controlled-access data, missing files). Say why.
-4. Pick 2-3 lite panels that carry the paper's main claims. A pack with one honest lite panel beats one with five
-   panels that only run on a cluster.
+3. List every main-figure panel and classify it: reproducible from open data, or not reproducible (schematic,
+   microscopy, controlled-access data, missing files). Say why for each one that isn't.
+4. Build **one pack** that reproduces every reproducible main-figure panel. There are no tiers and never two packs
+   for one paper. Some recipes run in a minute on a laptop, others need a cluster or a GPU: each recipe states what
+   it needs, and the user's agent decides with the user where to run.
 
 ## 1. Data
 - Point to the **original** repository (Allen/ABC, NeMO, CELLxGENE, GEO, Zenodo, figshare...). Never re-host data.
 - For each file record `url`, `size` (bytes), `md5` or `sha256` (compute after one download if the source has none),
   `source` (repository + release), `license`, `access`. Controlled-access files (dbGaP, NDA, EGA, NeMO restricted)
-  are `access = "controlled"` with an `access_note`, never lite, never downloaded.
-- Keep the lite tier small (aim < 2 GB). Prefer metadata and summary tables over full matrices.
+  are `access = "controlled"` with an `access_note`, never downloaded.
+- Each recipe downloads only the files it uses. Prefer the smallest public file that carries the numbers (metadata
+  and summary tables over full matrices) when it reproduces the panel faithfully.
 
 ## 2. Targets FIRST
 Lock the paper's numbers in `targets.toml` **before running anything**, each with its exact source (page, panel,
@@ -33,7 +35,8 @@ keep the paper's value, set `required = false`, and explain in `note`. Don't abs
 ## 3. Recipes
 - One script per panel with a PEP 723 header; shared loaders in a helper module (`recipes/<name>.py`).
 - Inputs from `$RP_DATA_DIR`, outputs to `$RP_OUT_DIR`: `metrics.json`, one PNG that resembles the published panel,
-  and the tables behind it. Deterministic. No network. Lite recipes: < 30 min, < 14 GB RAM.
+  and the tables behind it. Deterministic. No network. Record what the recipe needs (memory, GPU, minutes); runs
+  measure it too, and the paper page shows it.
 - Follow the paper's own definitions (which samples, which filters, which denominator). When the Methods are
   ambiguous, try the readings, report which one matches, and say so in SKILL.md.
 - `rp run <DOI> <recipe>` while developing.

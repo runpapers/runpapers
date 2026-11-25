@@ -21,9 +21,9 @@ Give your agent a checkout of this repository and prompt:
 
 Every pack must follow these scientific and technical rules before you open a pull request:
 
-- **Laptop-first (`lite`) tier:** Include at least one main-figure recipe that runs from open data on a standard laptop
-  (aiming under 2 GB of downloads, max 8 GB, fitting within 4 CPUs and 14 GB RAM). Put 15-30 GB expression or chromatin
-  matrices in an optional `full` tier instead.
+- **One pack per paper, every main-figure panel:** reproduce every main-figure panel that open data allow, in one
+  pack (no tiers). Each recipe says what it needs (data size, memory, GPU, time) and downloads only its own files;
+  panels that can't be reproduced are listed in SKILL.md with the reason.
 - **Verify source-specific data terms — never assume CC BY:** Point `[[data]]` URLs to the original public repository
   with exact byte size and MD5 or SHA-256 checksum, and record the repository's actual license or terms of use. For
   example, data from the **Allen Brain Cell Atlas** are under the **Allen Institute Terms of Use** (noncommercial
