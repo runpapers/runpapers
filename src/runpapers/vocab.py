@@ -47,26 +47,48 @@ class Vocab:
         self.by_slug = {g: {} for g in GROUPS}
         self._lookup = {g: {} for g in GROUPS}
         self._syn_slugs = {g: {} for g in GROUPS}
-        self._synonym_sets = {}
+        self._exclusive_aliases = {g: {} for g in GROUPS}
+        self._group_expand = {g: {} for g in GROUPS}
+        self._global_expand = {}
         for g, terms in self.groups.items():
+            term_aliases = {}
             for t in terms:
+                slug = t["slug"]
                 self.by_label[g][t["label"]] = t
-                self.by_slug[g][t["slug"]] = t
-                aliases = [t["slug"], t["label"]]
+                self.by_slug[g][slug] = t
+                aliases = [slug, t["label"]]
                 if t.get("scientific_name"):
                     aliases.append(t["scientific_name"])
                 aliases.extend(t.get("synonyms") or [])
                 lower_set = {a.strip().lower() for a in aliases if a and a.strip()}
+                term_aliases[slug] = lower_set
                 for low in lower_set:
                     self._lookup[g].setdefault(low, t)
-                    self._syn_slugs[g].setdefault(low, set()).add(t["slug"])
-                    self._synonym_sets.setdefault(low, set()).update(lower_set)
+                    self._syn_slugs[g].setdefault(low, set()).add(slug)
             # Prefer exact label / slug / scientific_name hits over shared synonyms (e.g. "NHP" shared by Macaque & Marmoset).
             for t in terms:
                 self._lookup[g][t["slug"].lower()] = t
                 self._lookup[g][t["label"].lower()] = t
                 if t.get("scientific_name"):
                     self._lookup[g][t["scientific_name"].lower()] = t
+            # Separate term-exclusive aliases (1 owner) from shared umbrella synonyms (>1 owners, e.g. "NHP", "STRd")
+            # so querying "marmoset" or "Callithrix" never hops through "NHP" to match Macaque-only papers,
+            # while querying "NHP" itself still expands to both Macaque and Marmoset.
+            for slug, aset in term_aliases.items():
+                self._exclusive_aliases[g][slug] = {low for low in aset if len(self._syn_slugs[g][low]) == 1}
+            for low, owners in self._syn_slugs[g].items():
+                if len(owners) == 1:
+                    only_slug = next(iter(owners))
+                    expanded = set(self._exclusive_aliases[g][only_slug])
+                else:
+                    expanded = {low}
+                    for s in owners:
+                        expanded.update(self._exclusive_aliases[g][s])
+                    for other_low, other_owners in self._syn_slugs[g].items():
+                        if len(other_owners) > 1 and other_owners <= owners:
+                            expanded.add(other_low)
+                self._group_expand[g][low] = expanded
+                self._global_expand.setdefault(low, set()).update(expanded)
 
     def has_label(self, group, label):
         return group in self.by_label and label in self.by_label[group]
@@ -159,23 +181,16 @@ class Vocab:
         return None
 
     def expand(self, text, group=None):
-        """Expand `text` to all lowercased synonyms/scientific names/labels/slugs in `group` (or across all groups)."""
+        """Expand `text` to term-exclusive synonyms/scientific names/labels/slugs (or all member terms when `text` itself is a shared umbrella synonym)."""
         q = (text or "").strip().lower()
         if not q:
             return set()
         out = {q}
-        if group in self.groups:
-            for t in self.groups[group]:
-                names = {t["slug"].lower(), t["label"].lower(), *(s.lower() for s in (t.get("synonyms") or []))}
-                if t.get("scientific_name"):
-                    names.add(t["scientific_name"].lower())
-                if q in names or (q.endswith("s") and len(q) > 3 and q[:-1] in names):
-                    out.update(names)
-            return out
-        if q in self._synonym_sets:
-            out.update(self._synonym_sets[q])
-        if q.endswith("s") and len(q) > 3 and q[:-1] in self._synonym_sets:
-            out.update(self._synonym_sets[q[:-1]])
+        table = self._group_expand.get(group) if group in self.groups else self._global_expand
+        if q in table:
+            out.update(table[q])
+        elif q.endswith("s") and len(q) > 3 and q[:-1] in table:
+            out.update(table[q[:-1]])
         return out
 
     def to_dict(self):

@@ -52,7 +52,13 @@ TOOLS = [
                 "assays": {"type": "array", "items": {"type": "string"}, "description": "Alias for data_type."},
                 "cell_types": {"type": "array", "items": {"type": "string"}, "description": "Optional [profile] cell-type filter (e.g. 'D2 SPN', 'astrocyte')."},
                 "genes": {"type": "array", "items": {"type": "string"}, "description": "Optional [profile] key-gene filter (e.g. 'HTR7', 'SMYD2')."},
-                "collection": {"type": "string", "description": "Optional collection slug or label (e.g. 'bican-2026' or 'BICAN basal ganglia 2026')."},
+                "collection": {
+                    "anyOf": [
+                        {"type": "array", "items": {"type": "string"}},
+                        {"type": "string"},
+                    ],
+                    "description": "Filter by collection slug(s) or label(s) (e.g. ['bican-2026'] or 'BICAN basal ganglia 2026').",
+                },
                 "sort": {"type": "string", "enum": ["most_used", "newest", "title"], "default": "most_used", "description": "Sort order when query is empty."},
                 "min_stage": {"type": "string", "enum": STAGES, "description": "Minimum verification stage (e.g. 'runs', 'reproduces')."},
                 "include_planned": {"type": "boolean", "default": True, "description": "Include requested and unpacked papers after available packs."},
@@ -505,7 +511,7 @@ def serve_streamable_http(catalog, host="127.0.0.1", port=8766):
                       data_type: list[str] | None = None, disease: list[str] | None = None,
                       tissues: list[str] | None = None, assays: list[str] | None = None,
                       cell_types: list[str] | None = None, genes: list[str] | None = None,
-                      collection: str | None = None, sort: str = "most_used",
+                      collection: list[str] | str | None = None, sort: str = "most_used",
                       min_stage: str | None = None, include_planned: bool = True, limit: int = 20) -> dict:
         return handle_tool_call(catalog, "search_papers", {
             "query": query, "species": species, "tissue_cell": tissue_cell, "data_type": data_type,

@@ -2,6 +2,7 @@
 
 Shared across `rp search`, MCP `search_papers`, `rp meeting`, and `papers/search.json` so CLI, MCP, and
 the website return identical matching DOIs and rank available packs ahead of requested papers."""
+import functools
 import re
 
 from . import ids, requests_log, vocab
@@ -145,6 +146,21 @@ def build_search_text(entry, voc=None):
     return " ".join(dict.fromkeys(seen))
 
 
+@functools.lru_cache(maxsize=2048)
+def _term_rx(v):
+    # Short words/acronyms (<= 4 chars), pure numbers, and DOIs require whole-token boundaries on both sides;
+    # longer terms/phrases (>= 5 chars) require a left word boundary and allow word suffixes (plurals/possessives).
+    if len(v) <= 4 or v.isdigit() or "/" in v:
+        return re.compile(rf"(?<![a-z0-9]){re.escape(v)}(?![a-z0-9])")
+    return re.compile(rf"(?<![a-z0-9]){re.escape(v)}")
+
+
+def _term_in_text(v, text):
+    if not v or not text:
+        return False
+    return bool(_term_rx(v).search(text))
+
+
 def _value_matches(variants, haystacks, exact_only=False):
     for h in haystacks:
         hl = str(h or "").lower()
@@ -158,10 +174,7 @@ def _value_matches(variants, haystacks, exact_only=False):
                 return True
         else:
             for v in variants:
-                if len(v) <= 2:
-                    if v in re.findall(r"[a-z0-9][a-z0-9._-]*", hl):
-                        return True
-                elif v in hl or hl in v:
+                if _term_in_text(v, hl):
                     return True
     return False
 
@@ -225,10 +238,12 @@ def _id_match(entry, query):
 
 
 def _token_in_search_text(tok, search_text, voc):
-    if tok in search_text:
+    if _term_in_text(tok, search_text):
+        return True
+    if tok.endswith("s") and len(tok) >= 4 and _term_in_text(tok[:-1], search_text):
         return True
     for variant in voc.expand(tok):
-        if variant in search_text:
+        if _term_in_text(variant, search_text):
             return True
     return False
 

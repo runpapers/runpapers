@@ -305,7 +305,16 @@ class TagsAndVocabTests(unittest.TestCase):
         marm = voc.expand("marmoset", group="species")
         self.assertIn("callithrix jacchus", marm)
         self.assertIn("callithrix", marm)
+        self.assertNotIn("nhp", marm)
+        self.assertNotIn("nonhuman primate", marm)
         self.assertIn("marmoset", voc.expand("Callithrix"))
+        self.assertNotIn("nhp", voc.expand("Callithrix"))
+        # Shared umbrella synonyms expand to all member terms only when queried directly.
+        nhp = voc.expand("NHP", group="species")
+        self.assertIn("macaque", nhp)
+        self.assertIn("marmoset", nhp)
+        self.assertNotIn("strd", voc.expand("putamen", group="tissue_cell"))
+        self.assertTrue({"caudate nucleus", "putamen"} <= voc.expand("STRd", group="tissue_cell"))
 
         # Deduplicate repeated labels in normalize_tags and allow Pack(".") lint from inside a pack directory.
         dedup = vocab.normalize_tags({"species": ["Human", "Marmoset", "Human"], "disease": ["None (healthy donors)", "None (healthy donors)"]})
@@ -381,10 +390,13 @@ class TagsAndVocabTests(unittest.TestCase):
             cli.main(["search", *args, "--json"])
         return [r["doi"] for r in json.loads(buf.getvalue())]
 
-    # Searching "marmoset", "Callithrix", the DOI, the PMID or "SMYD2" finds the primate basal ganglia pack;
+    # Searching "marmoset", "Callithrix", the DOI, the PMID or "SMYD2" finds the primate basal ganglia pack
+    # without cross-species/umbrella false positives or mid-word acronym false positives;
     # papers/search.json contains zero tier, stage, or badge strings.
     def test_search_finds_bg03_by_common_scientific_doi_pmid_and_gene(self):
         bg03_doi = "10.1016/j.cell.2026.10.012"
+        macaque_only_doi = "10.9999/macaque.only.2026"
+        caudate_only_doi = "10.9999/caudate.only.2026"
         self._add_pack(
             bg03_doi,
             pmid="43020019",
@@ -395,11 +407,44 @@ class TagsAndVocabTests(unittest.TestCase):
             cell_types=["D2 SPN", "astrocyte"],
             tags_toml=BG03_LIKE_TAGS,
         )
+        # Macaque-only cortex pack (shares umbrella synonym "NHP" with Marmoset, but has zero Marmoset).
+        self._add_pack(
+            macaque_only_doi,
+            pmid="43020091",
+            title="Rhesus macaque cortical Patch-seq map",
+            first_author="Mina Macaque",
+            tags_toml=(
+                'species = ["Macaque"]\n'
+                'tissue_cell = ["Cerebral cortex"]\n'
+                'data_type = ["Patch-seq"]\n'
+                'disease = ["None (healthy donors)"]\n'
+            ),
+        )
+        # Caudate-only human pack (shares umbrella synonym "STRd" with Putamen, but has zero Putamen).
+        self._add_pack(
+            caudate_only_doi,
+            pmid="43020092",
+            title="Integrated caudate atlas across human individuals and mammals",
+            first_author="Ada Tester",
+            tags_toml=(
+                'species = ["Human"]\n'
+                'tissue_cell = ["Caudate nucleus"]\n'
+                'data_type = ["Single-nucleus RNA-seq"]\n'
+                'disease = ["None (healthy donors)"]\n'
+            ),
+        )
+        # Healthy adult mouse snRNA-seq pack containing words with mid-word substrings ("Adult", "broad", "Ada", "snrna-seq").
+        (self.dir / "pack.toml").write_text(
+            PACK_TOML.replace(
+                'title = "Tagged primate basal ganglia test paper"',
+                'title = "Adult mouse cortex broad transcriptomic map"',
+            )
+        )
         (self.dir / "tags.toml").write_text(
             'species = ["Mouse"]\n'
-            'tissue_cell = ["Spinal cord"]\n'
-            'data_type = ["Single-cell RNA-seq"]\n'
-            'disease = ["Chronic pain"]\n'
+            'tissue_cell = ["Cerebral cortex"]\n'
+            'data_type = ["Single-nucleus RNA-seq"]\n'
+            'disease = ["None (healthy donors)"]\n'
         )
         sdir, _ = site.build(self.reg, out=self.tmp / "site-ac3", base_url="http://127.0.0.1")
         search_json_path = sdir / "papers" / "search.json"
@@ -411,7 +456,9 @@ class TagsAndVocabTests(unittest.TestCase):
         )
         sidx = json.loads(raw_search_json)
         self.assertEqual(tuple(sidx["vocab"]), vocab.GROUPS)
+        lcat = catalog.LocalCatalog(self.reg)
 
+        # 1. Exact BG-03 lookups: "marmoset" and "Callithrix" MUST NOT match macaque_only_doi via "NHP".
         for q in (
             "marmoset",
             "Callithrix",
@@ -422,12 +469,33 @@ class TagsAndVocabTests(unittest.TestCase):
             "10.64898/2025.12.15.694496",
             "SMYD2",
             "MERFISH",
+            "SN",
         ):
             res_page = search.filter_search_index(sidx, query=q)
             self.assertEqual([e["doi"] for e in res_page["entries"]], [bg03_doi], q)
             self.assertEqual(self._cli_search_dois([q]), [bg03_doi], q)
-            mcp_hits = mcp_server.handle_tool_call(catalog.LocalCatalog(self.reg), "search_papers", {"query": q})
+            mcp_hits = mcp_server.handle_tool_call(lcat, "search_papers", {"query": q})
             self.assertEqual([m["doi"] for m in mcp_hits["structuredContent"]["matches"]], [bg03_doi], q)
+
+        # 2. "putamen" matches BG-03 only (NOT caudate_only_doi via shared "STRd");
+        #    umbrella queries "NHP" and "STRd" match both respective packs.
+        self.assertEqual([e["doi"] for e in search.filter_search_index(sidx, query="putamen")["entries"]], [bg03_doi])
+        self.assertEqual(
+            set(e["doi"] for e in search.filter_search_index(sidx, query="NHP")["entries"]),
+            {bg03_doi, macaque_only_doi},
+        )
+        self.assertEqual(
+            set(e["doi"] for e in search.filter_search_index(sidx, query="STRd")["entries"]),
+            {bg03_doi, caudate_only_doi},
+        )
+
+        # 3. Short acronyms and disease/species terms do NOT match mid-word substrings
+        #    ("Alzheimer"/"ad" vs "Adult"/"broad"/"Ada", "rat" vs "Integrated", "ALS" vs "individuals"/"mammals").
+        for absent_q in ("Alzheimer", "ALS", "rat"):
+            self.assertEqual(search.filter_search_index(sidx, query=absent_q)["entries"], [], absent_q)
+            self.assertEqual(self._cli_search_dois([absent_q]), [], absent_q)
+            mcp_none = mcp_server.handle_tool_call(lcat, "search_papers", {"query": absent_q})
+            self.assertEqual(mcp_none["structuredContent"]["matches"], [], absent_q)
 
     # A requested paper (GitHub issue with votes) appears after all available papers with its vote count.
     def test_requested_papers_rank_after_available_with_votes(self):
@@ -599,7 +667,7 @@ class TagsAndVocabTests(unittest.TestCase):
                 ["--species", "human", "--tissue", "putamen", "--assay", "Single-nucleus multiome",
                  "--disease", "None (healthy donors)", "--collection", "bican-2026"],
                 {"species": ["Human"], "tissues": ["Putamen"], "assays": ["Single-nucleus multiome"],
-                 "disease": ["none"], "collection": "BICAN basal ganglia 2026"},
+                 "disease": ["none"], "collection": ["BICAN basal ganglia 2026"]},
                 [DOI],
             ),
             # 5. Custom registry vocab synonym ("Taeniopygia guttata") resolved via index.json on RemoteCatalog
